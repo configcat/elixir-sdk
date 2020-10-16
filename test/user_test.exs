@@ -8,7 +8,7 @@ defmodule ConfigCat.UserTest do
       identifier = "IDENTIFIER"
       user = User.new(identifier)
 
-      assert %User{identifier: ^identifier, email: "", country: "", custom: ""} = user
+      assert %User{identifier: ^identifier, email: "", country: "", custom: %{}} = user
     end
 
     test "creates a user with additional properties" do
@@ -17,7 +17,7 @@ defmodule ConfigCat.UserTest do
       country = "COUNTRY"
       user = User.new(identifier, email: email, country: country)
 
-      assert %User{identifier: ^identifier, email: ^email, country: ^country, custom: ""} = user
+      assert %User{identifier: ^identifier, email: ^email, country: ^country, custom: %{}} = user
     end
 
     test "creates a user with custom properties" do
