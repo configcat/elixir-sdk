@@ -1,6 +1,6 @@
 defmodule ConfigCat.User do
   @enforce_keys :identifier
-  defstruct [:identifier, email: "", country: "", custom: ""]
+  defstruct [:identifier, country: "", email: "", custom: ""]
 
   def new(identifier, other_props \\ []) do
     %__MODULE__{identifier: identifier}
@@ -12,8 +12,8 @@ defmodule ConfigCat.User do
   end
 
   defp do_get_attribute(user, "identifier"), do: user.identifier
-  defp do_get_attribute(user, "email"), do: user.email
   defp do_get_attribute(user, "country"), do: user.country
+  defp do_get_attribute(user, "email"), do: user.email
   defp do_get_attribute(user, attribute), do: custom_attribute(user.custom, attribute)
 
   defp custom_attribute(nil, _attribute), do: ""
