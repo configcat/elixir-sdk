@@ -8,7 +8,7 @@ defmodule ConfigCat.UserTest do
       identifier = "IDENTIFIER"
       user = User.new(identifier)
 
-      assert %User{identifier: ^identifier, email: nil, country: nil, custom: nil} = user
+      assert %User{identifier: ^identifier, email: "", country: "", custom: %{}} = user
     end
 
     test "creates a user with additional properties" do
@@ -17,7 +17,7 @@ defmodule ConfigCat.UserTest do
       country = "COUNTRY"
       user = User.new(identifier, email: email, country: country)
 
-      assert %User{identifier: ^identifier, email: ^email, country: ^country, custom: nil} = user
+      assert %User{identifier: ^identifier, email: ^email, country: ^country, custom: %{}} = user
     end
 
     test "creates a user with custom properties" do
@@ -27,8 +27,8 @@ defmodule ConfigCat.UserTest do
 
       assert %User{
                identifier: ^identifier,
-               email: nil,
-               country: nil,
+               email: "",
+               country: "",
                custom: %{custom_property: ^custom_property}
              } = user
     end
@@ -83,9 +83,9 @@ defmodule ConfigCat.UserTest do
     test "returns nil for null attributes" do
       user = User.new("IDENTIFIER")
 
-      assert User.get_attribute(user, "Email") == nil
-      assert User.get_attribute(user, "Country") == nil
-      assert User.get_attribute(user, "AnyCustom") == nil
+      assert User.get_attribute(user, "Email") == ""
+      assert User.get_attribute(user, "Country") == ""
+      assert User.get_attribute(user, "AnyCustom") == ""
     end
   end
 end
