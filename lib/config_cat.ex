@@ -96,7 +96,8 @@ defmodule ConfigCat do
     Logger.info("Fetching configuration from ConfigCat")
 
     with api <- Keyword.get(options, :api),
-         {:ok, response} <- api.get(url(state), headers(etag)) do
+         fetch_policy <- Keyword.get(options, :fetch_policy),
+         {:ok, response} <- api.get(url(state), headers(fetch_policy, etag)) do
       response
       |> log_response()
       |> handle_response(state)
@@ -122,8 +123,21 @@ defmodule ConfigCat do
     {:error, response}
   end
 
-  defp headers(nil), do: []
-  defp headers(etag), do: [{"If-None-Match", etag}]
+  defp headers(fetch_policy, etag), do: base_headers(fetch_policy) ++ cache_headers(etag)
+
+  defp base_headers(fetch_policy) do
+    version = Application.spec(:config_cat, :vsn) |> to_string()
+    mode = FetchPolicy.mode(fetch_policy)
+    user_agent = "ConfigCat-Elixir/#{mode}-#{version}"
+
+    [
+      {"User-Agent", user_agent},
+      {"X-ConfigCat-UserAgent", user_agent}
+    ]
+  end
+
+  defp cache_headers(nil), do: []
+  defp cache_headers(etag), do: [{"If-None-Match", etag}]
 
   defp extract_etag(headers) do
     headers |> Enum.into(%{}) |> Map.get("ETag")
