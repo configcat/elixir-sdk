@@ -247,6 +247,21 @@ defmodule ConfigCatTest do
     end
   end
 
+  describe "all keys" do
+    test "returns all known keys from the cached config", %{config: config, feature: feature} do
+      {:ok, client} =
+        start_config_cat("SDK_KEY", initial_config: config, fetch_policy: FetchPolicy.manual())
+
+      assert ConfigCat.get_all_keys(client: client) == [feature]
+    end
+
+    test "returns an empty list of keys when config hasn't been fetched" do
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
+
+      assert ConfigCat.get_all_keys(client: client) == []
+    end
+  end
+
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
     ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options))

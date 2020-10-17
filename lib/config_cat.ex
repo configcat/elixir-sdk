@@ -31,6 +31,11 @@ defmodule ConfigCat do
 
   defp default_options, do: [api: ConfigCat.API, fetch_policy: FetchPolicy.auto()]
 
+  def get_all_keys(options \\ []) do
+    client = Keyword.get(options, :client, __MODULE__)
+    GenServer.call(client, :get_all_keys)
+  end
+
   def get_value(key, default_value, user_or_options \\ []) do
     if Keyword.keyword?(user_or_options) do
       get_value(key, default_value, nil, user_or_options)
@@ -51,6 +56,14 @@ defmodule ConfigCat do
   @impl GenServer
   def init(state) do
     {:ok, state, {:continue, :maybe_init_fetch}}
+  end
+
+  @impl GenServer
+  def handle_call(:get_all_keys, _from, state) do
+    with {:ok, new_state} <- maybe_refresh(state) do
+      keys = Map.keys(new_state.config || %{})
+      {:reply, keys, new_state}
+    end
   end
 
   @impl GenServer
