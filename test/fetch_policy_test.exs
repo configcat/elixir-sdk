@@ -98,4 +98,21 @@ defmodule ConfigCat.FetchPolicyTest do
       refute_receive :refresh
     end
   end
+
+  describe "fetch mode" do
+    test "is m for manual" do
+      mode = FetchPolicy.manual() |> FetchPolicy.mode()
+      assert mode == "m"
+    end
+
+    test "is a for auto" do
+      mode = FetchPolicy.auto() |> FetchPolicy.mode()
+      assert mode == "a"
+    end
+
+    test "is l for lazy" do
+      mode = FetchPolicy.lazy(cache_expiry_seconds: 60) |> FetchPolicy.mode()
+      assert mode == "l"
+    end
+  end
 end

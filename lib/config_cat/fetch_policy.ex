@@ -22,6 +22,10 @@ defmodule ConfigCat.FetchPolicy do
     }
   end
 
+  def mode(%__MODULE__{type: :auto}), do: "a"
+  def mode(%__MODULE__{type: :lazy}), do: "l"
+  def mode(%__MODULE__{type: :manual}), do: "m"
+
   def needs_fetch?(%__MODULE__{type: :lazy}, nil), do: true
 
   def needs_fetch?(

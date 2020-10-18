@@ -44,6 +44,21 @@ defmodule ConfigCatTest do
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
 
+    test "sends proper user agent header" do
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
+
+      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+
+      APIMock
+      |> stub(:get, fn _url, headers ->
+        assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/m-")
+
+        {:ok, response}
+      end)
+
+      assert :ok = ConfigCat.force_refresh(client)
+    end
+
     test "sends proper cache control header on later requests" do
       etag = "ETAG"
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
@@ -55,7 +70,10 @@ defmodule ConfigCatTest do
       }
 
       APIMock
-      |> stub(:get, fn _url, [] -> {:ok, initial_response} end)
+      |> stub(:get, fn _url, headers ->
+        assert List.keyfind(headers, "ETag", 0) == nil
+        {:ok, initial_response}
+      end)
 
       :ok = ConfigCat.force_refresh(client)
 
@@ -65,7 +83,10 @@ defmodule ConfigCatTest do
       }
 
       APIMock
-      |> expect(:get, fn _url, [{"If-None-Match", ^etag}] -> {:ok, not_modified_response} end)
+      |> expect(:get, fn _url, headers ->
+        assert {"If-None-Match", ^etag} = List.keyfind(headers, "If-None-Match", 0)
+        {:ok, not_modified_response}
+      end)
 
       assert :ok = ConfigCat.force_refresh(client)
     end
@@ -142,10 +163,24 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
       end)
 
-      fetch_policy = FetchPolicy.auto()
-      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: fetch_policy)
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
+    end
+
+    test "sends proper user agent header" do
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
+
+      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+
+      APIMock
+      |> stub(:get, fn _url, headers ->
+        assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/a-")
+
+        {:ok, response}
+      end)
+
+      assert :ok = ConfigCat.force_refresh(client)
     end
 
     test "retains previous configuration if state cannot be refreshed", %{
@@ -158,10 +193,8 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 500}}
       end)
 
-      fetch_policy = FetchPolicy.auto()
-
       {:ok, client} =
-        start_config_cat("SDK_KEY", fetch_policy: fetch_policy, initial_config: config)
+        start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto(), initial_config: config)
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
@@ -185,6 +218,25 @@ defmodule ConfigCatTest do
       end)
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
+    end
+
+    test "sends proper user agent header" do
+      {:ok, client} =
+        start_config_cat(
+          "SDK_KEY",
+          fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300)
+        )
+
+      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+
+      APIMock
+      |> stub(:get, fn _url, headers ->
+        assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/l-")
+
+        {:ok, response}
+      end)
+
+      assert :ok = ConfigCat.force_refresh(client)
     end
 
     test "does not reload configuration if cache has not expired", %{
@@ -250,5 +302,12 @@ defmodule ConfigCatTest do
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
     ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options))
+  end
+
+  defp assert_user_agent_matches(headers, expected) do
+    {_key, user_agent} = List.keyfind(headers, "User-Agent", 0)
+    {_key, x_user_agent} = List.keyfind(headers, "X-ConfigCat-UserAgent", 0)
+    assert user_agent =~ expected
+    assert x_user_agent =~ expected
   end
 end
