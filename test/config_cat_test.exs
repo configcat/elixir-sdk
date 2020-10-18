@@ -37,7 +37,7 @@ defmodule ConfigCatTest do
 
       APIMock
       |> stub(:get, fn ^url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
+        {:ok, %Response{status_code: 200, body: config}}
       end)
 
       :ok = ConfigCat.force_refresh(client)
@@ -47,7 +47,7 @@ defmodule ConfigCatTest do
     test "sends proper user agent header" do
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
 
-      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+      response = %Response{status_code: 200, body: %{}}
 
       APIMock
       |> stub(:get, fn _url, headers ->
@@ -65,7 +65,7 @@ defmodule ConfigCatTest do
 
       initial_response = %Response{
         status_code: 200,
-        body: Jason.encode!(%{}),
+        body: %{},
         headers: [{"ETag", etag}]
       }
 
@@ -145,7 +145,7 @@ defmodule ConfigCatTest do
 
       APIMock
       |> expect(:get, fn ^url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(%{})}}
+        {:ok, %Response{status_code: 200, body: %{}}}
       end)
 
       :ok = ConfigCat.force_refresh(client)
@@ -160,7 +160,7 @@ defmodule ConfigCatTest do
     } do
       APIMock
       |> stub(:get, fn _url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
+        {:ok, %Response{status_code: 200, body: config}}
       end)
 
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
@@ -171,7 +171,7 @@ defmodule ConfigCatTest do
     test "sends proper user agent header" do
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
 
-      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+      response = %Response{status_code: 200, body: %{}}
 
       APIMock
       |> stub(:get, fn _url, headers ->
@@ -214,7 +214,7 @@ defmodule ConfigCatTest do
 
       APIMock
       |> stub(:get, fn _url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
+        {:ok, %Response{status_code: 200, body: config}}
       end)
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
@@ -227,7 +227,7 @@ defmodule ConfigCatTest do
           fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300)
         )
 
-      response = %Response{status_code: 200, body: Jason.encode!(%{})}
+      response = %Response{status_code: 200, body: %{}}
 
       APIMock
       |> stub(:get, fn _url, headers ->
@@ -252,7 +252,7 @@ defmodule ConfigCatTest do
 
       APIMock
       |> expect(:get, 1, fn _url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
+        {:ok, %Response{status_code: 200, body: config}}
       end)
 
       ConfigCat.get_value(feature, "default", client: client)
@@ -272,7 +272,7 @@ defmodule ConfigCatTest do
 
       APIMock
       |> expect(:get, 2, fn _url, _headers ->
-        {:ok, %Response{status_code: 200, body: Jason.encode!(config)}}
+        {:ok, %Response{status_code: 200, body: config}}
       end)
 
       ConfigCat.get_value(feature, "default", client: client)

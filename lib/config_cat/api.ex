@@ -2,6 +2,16 @@ defmodule ConfigCat.API do
   use HTTPoison.Base
 
   def process_request_headers(headers) do
-    [{"Content-Type", "application/json"} | headers]
+    [{"Accept", "application/json"} | headers]
+  end
+
+  def process_response_body(""), do: ""
+
+  def process_response_body(body) do
+    with {:ok, parsed} <- Jason.decode(body) do
+      parsed
+    else
+      _ -> body
+    end
   end
 end
