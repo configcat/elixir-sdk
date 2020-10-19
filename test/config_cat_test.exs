@@ -36,7 +36,8 @@ defmodule ConfigCatTest do
       {:ok, client} = start_config_cat(sdk_key, fetch_policy: FetchPolicy.manual())
 
       APIMock
-      |> stub(:get, fn ^url, _headers ->
+      |> stub(:get, fn ^url, _headers, options ->
+        assert options == []
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
@@ -50,7 +51,7 @@ defmodule ConfigCatTest do
       response = %Response{status_code: 200, body: %{}}
 
       APIMock
-      |> stub(:get, fn _url, headers ->
+      |> stub(:get, fn _url, headers, _options ->
         assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/m-")
 
         {:ok, response}
@@ -70,7 +71,7 @@ defmodule ConfigCatTest do
       }
 
       APIMock
-      |> stub(:get, fn _url, headers ->
+      |> stub(:get, fn _url, headers, _options ->
         assert List.keyfind(headers, "ETag", 0) == nil
         {:ok, initial_response}
       end)
@@ -83,7 +84,7 @@ defmodule ConfigCatTest do
       }
 
       APIMock
-      |> expect(:get, fn _url, headers ->
+      |> expect(:get, fn _url, headers, _options ->
         assert {"If-None-Match", ^etag} = List.keyfind(headers, "If-None-Match", 0)
         {:ok, not_modified_response}
       end)
@@ -105,7 +106,7 @@ defmodule ConfigCatTest do
       }
 
       APIMock
-      |> stub(:get, fn _url, _headers -> {:ok, response} end)
+      |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
       :ok = ConfigCat.force_refresh(client)
 
@@ -118,7 +119,7 @@ defmodule ConfigCatTest do
       response = %Response{status_code: 503}
 
       APIMock
-      |> stub(:get, fn _url, _headers -> {:ok, response} end)
+      |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
       assert {:error, response} == ConfigCat.force_refresh(client)
     end
@@ -130,7 +131,7 @@ defmodule ConfigCatTest do
       error = %HTTPoison.Error{reason: "failed"}
 
       APIMock
-      |> stub(:get, fn _url, _headers -> {:error, error} end)
+      |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
       assert {:error, error} == ConfigCat.force_refresh(client)
     end
@@ -144,11 +145,26 @@ defmodule ConfigCatTest do
         start_config_cat(sdk_key, base_url: base_url, fetch_policy: FetchPolicy.manual())
 
       APIMock
-      |> expect(:get, fn ^url, _headers ->
+      |> expect(:get, fn ^url, _headers, _options ->
         {:ok, %Response{status_code: 200, body: %{}}}
       end)
 
       :ok = ConfigCat.force_refresh(client)
+    end
+
+    test "sends proper http proxy options" do
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual(), http_proxy: "https://myproxy.com")
+
+      response = %Response{status_code: 200, body: %{}}
+
+      APIMock
+      |> stub(:get, fn _url, _headers, options ->
+        assert options == [proxy: "https://myproxy.com"]
+
+        {:ok, response}
+      end)
+
+      assert :ok = ConfigCat.force_refresh(client)
     end
   end
 
@@ -159,7 +175,7 @@ defmodule ConfigCatTest do
       value: value
     } do
       APIMock
-      |> stub(:get, fn _url, _headers ->
+      |> stub(:get, fn _url, _headers, _options ->
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
@@ -174,7 +190,7 @@ defmodule ConfigCatTest do
       response = %Response{status_code: 200, body: %{}}
 
       APIMock
-      |> stub(:get, fn _url, headers ->
+      |> stub(:get, fn _url, headers, _options ->
         assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/a-")
 
         {:ok, response}
@@ -189,7 +205,7 @@ defmodule ConfigCatTest do
       value: value
     } do
       APIMock
-      |> stub(:get, fn _url, _headers ->
+      |> stub(:get, fn _url, _headers, _options ->
         {:ok, %Response{status_code: 500}}
       end)
 
@@ -213,7 +229,7 @@ defmodule ConfigCatTest do
         )
 
       APIMock
-      |> stub(:get, fn _url, _headers ->
+      |> stub(:get, fn _url, _headers, _options ->
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
@@ -230,7 +246,7 @@ defmodule ConfigCatTest do
       response = %Response{status_code: 200, body: %{}}
 
       APIMock
-      |> stub(:get, fn _url, headers ->
+      |> stub(:get, fn _url, headers, _options ->
         assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/l-")
 
         {:ok, response}

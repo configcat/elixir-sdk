@@ -17,6 +17,7 @@ defmodule ConfigCat do
   def start_link(sdk_key, options) do
     with {name, options} <- Keyword.pop(options, :name, __MODULE__),
          {initial_config, options} <- Keyword.pop(options, :initial_config) do
+
       initial_state = %{
         config: initial_config,
         etag: nil,
@@ -110,7 +111,8 @@ defmodule ConfigCat do
 
     with api <- Keyword.get(options, :api),
          fetch_policy <- Keyword.get(options, :fetch_policy),
-         {:ok, response} <- api.get(url(state), headers(fetch_policy, etag)) do
+         {:ok, response} <- api.get(url(state), headers(fetch_policy, etag), http_options(options)) do
+
       response
       |> log_response()
       |> handle_response(state)
@@ -120,11 +122,22 @@ defmodule ConfigCat do
     end
   end
 
-  defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
-       when code >= 200 and code < 300 do
-    with etag <- extract_etag(headers) do
-      {:ok, %{state | config: config, etag: etag, last_update: now()}}
+  defp http_options(options) do
+    opts = []
+    http_proxy = Keyword.get(options, :http_proxy)
+
+    if http_proxy != nil do
+      opts ++ [proxy: http_proxy]
+    else
+      opts
     end
+  end
+
+  defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
+    when code >= 200 and code < 300 do
+      with etag <- extract_etag(headers) do
+        {:ok, %{state | config: config, etag: etag, last_update: now()}}
+      end
   end
 
   defp handle_response(%Response{status_code: 304}, state) do
