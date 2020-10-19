@@ -17,6 +17,10 @@ defmodule ConfigCat.RolloutTest do
     test_matrix("testmatrix_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w")
   end
 
+  test "semantic version comparisons #2" do
+    test_matrix("testmatrix_input_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w")
+  end
+
   test "numeric comparisons" do
     test_matrix("testmatrix_number.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw")
   end
