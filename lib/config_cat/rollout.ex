@@ -121,7 +121,7 @@ defmodule ConfigCat.Rollout do
   defp increment_bucket(bucket, rule), do: bucket + Map.get(rule, @percentage, 0)
 
   defp hash_user(user, key) do
-    user_key = User.get_attribute(user, "identifier")
+    user_key = User.get_attribute(user, "Identifier")
     hash_candidate = "#{key}#{user_key}"
 
     {hash_value, _} =
