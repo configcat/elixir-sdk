@@ -120,10 +120,9 @@ defmodule ConfigCat do
     end
   end
 
-  defp handle_response(%Response{status_code: code, body: body, headers: headers}, state)
+  defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
        when code >= 200 and code < 300 do
-    with {:ok, config} = Jason.decode(body),
-         etag <- extract_etag(headers) do
+    with etag <- extract_etag(headers) do
       {:ok, %{state | config: config, etag: etag, last_update: now()}}
     end
   end
