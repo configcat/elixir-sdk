@@ -266,13 +266,18 @@ defmodule ConfigCatTest do
           fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300)
         )
 
+      call_times = 10
+
       APIMock
-      |> expect(:get, 1, fn _url, _headers ->
+      |> expect(:get, 1, fn _url, _headers, _options ->
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      ConfigCat.get_value(feature, "default", client: client)
-      assert ConfigCat.get_value(feature, "default", client: client) == value
+      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
+        ConfigCat.get_value(feature, "default", client: client)
+      end
+
+      assert result == value
     end
 
     test "refetches configuration if cache has expired", %{
@@ -286,13 +291,18 @@ defmodule ConfigCatTest do
           fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 0)
         )
 
+      call_times = 2
+
       APIMock
-      |> expect(:get, 2, fn _url, _headers ->
+      |> expect(:get, call_times, fn _url, _headers, _options ->
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      ConfigCat.get_value(feature, "default", client: client)
-      assert ConfigCat.get_value(feature, "default", client: client) == value
+      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
+        ConfigCat.get_value(feature, "default", client: client)
+      end
+
+      assert result == value
     end
   end
 
