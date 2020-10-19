@@ -1,6 +1,6 @@
 defmodule ConfigCat.User do
   @enforce_keys :identifier
-  defstruct [:identifier, country: "", email: "", custom: %{}]
+  defstruct [:identifier, country: nil, email: nil, custom: nil]
 
   def new(identifier, other_props \\ []) do
     %__MODULE__{identifier: identifier}
