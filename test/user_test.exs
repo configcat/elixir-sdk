@@ -41,6 +41,7 @@ defmodule ConfigCat.UserTest do
           email: "EMAIL",
           country: "COUNTRY",
           custom: %{
+            :atom_property => "ATOM_VALUE",
             "string_property" => "STRING_VALUE",
             "UpperStringProperty" => "UPPER_STRING_VALUE"
           }
@@ -62,6 +63,11 @@ defmodule ConfigCat.UserTest do
     test "looks up country", %{user: user} do
       value = User.get_attribute(user, "Country")
       assert value == user.country
+    end
+
+    test "looks up a custom property with an atom key", %{user: user} do
+      value = User.get_attribute(user, "atom_property")
+      assert value == user.custom[:atom_property]
     end
 
     test "looks up a custom property with a string key", %{user: user} do
