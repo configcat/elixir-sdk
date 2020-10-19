@@ -66,18 +66,13 @@ defmodule ConfigCat.UserTest do
     end
 
     test "looks up a custom property with an atom key", %{user: user} do
-      value = User.get_attribute(user, "ATOM_PROPERTY")
+      value = User.get_attribute(user, "atom_property")
       assert value == user.custom[:atom_property]
     end
 
     test "looks up a custom property with a string key", %{user: user} do
-      value = User.get_attribute(user, "STRING_PROPERTY")
+      value = User.get_attribute(user, "string_property")
       assert value == user.custom["string_property"]
-    end
-
-    test "looks up a custom property with a string key with uppercase letters", %{user: user} do
-      value = User.get_attribute(user, "upperstringproperty")
-      assert value == user.custom["UpperStringProperty"]
     end
 
     test "returns nil for null attributes" do
