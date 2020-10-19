@@ -8,7 +8,7 @@ defmodule ConfigCat.User do
   end
 
   def get_attribute(user, attribute) do
-    do_get_attribute(user, normalize(attribute))
+    do_get_attribute(user, attribute)
   end
 
   defp do_get_attribute(user, "Identifier"), do: user.identifier
@@ -20,15 +20,10 @@ defmodule ConfigCat.User do
 
   defp custom_attribute(custom, attribute) do
     case Enum.find(custom, fn {key, _value} ->
-           normalize(key) == attribute
+           key == attribute
          end) do
       {_key, value} -> value
       _ -> nil
     end
-  end
-
-  defp normalize(attribute) do
-    attribute
-    |> to_string()
   end
 end
