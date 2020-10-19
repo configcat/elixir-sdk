@@ -36,8 +36,7 @@ defmodule ConfigCatTest do
       {:ok, client} = start_config_cat(sdk_key, fetch_policy: FetchPolicy.manual())
 
       APIMock
-      |> stub(:get, fn ^url, _headers, options ->
-        assert options == []
+      |> stub(:get, fn ^url, _headers, [] ->
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
@@ -158,9 +157,7 @@ defmodule ConfigCatTest do
       response = %Response{status_code: 200, body: %{}}
 
       APIMock
-      |> stub(:get, fn _url, _headers, options ->
-        assert options == [proxy: "https://myproxy.com"]
-
+      |> stub(:get, fn _url, _headers, [proxy: "https://myproxy.com"] ->
         {:ok, response}
       end)
 
