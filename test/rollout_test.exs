@@ -79,16 +79,16 @@ defmodule ConfigCat.RolloutTest do
   end
 
   defp build_user(test_line, custom_key) do
-    [id, email, country, custom_value] =
+    test_line =
       test_line
       |> String.split(";")
       |> Enum.take(4)
-      |> Enum.map(&normalize/1)
 
-    if id do
-      User.new(id, email: email, country: country, custom: build_custom(custom_key, custom_value))
-    else
-      nil
+    case Enum.fetch(test_line, 0) do
+      {:ok, "##null##"} -> nil
+      _ ->
+        [id, email, country, custom_value] = Enum.map(test_line, &normalize/1)
+        User.new(id, email: email, country: country, custom: build_custom(custom_key, custom_value))
     end
   end
 
