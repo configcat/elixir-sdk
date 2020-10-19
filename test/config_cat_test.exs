@@ -263,7 +263,7 @@ defmodule ConfigCatTest do
           fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300)
         )
 
-      call_times = 10
+      call_times = 2
 
       APIMock
       |> expect(:get, 1, fn _url, _headers, _options ->
