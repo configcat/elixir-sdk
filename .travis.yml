@@ -1,0 +1,9 @@
+language: elixir
+elixir:
+  - '1.10'
+otp_release: '23.0'
+
+# jobs:
+#   include:
+#     - elixir: '1.9'
+#       otp_release: '20.0'
