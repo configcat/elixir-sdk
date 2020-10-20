@@ -12,30 +12,35 @@ defmodule ConfigCat.Rollout do
   @percentage_rules "p"
   @percentage "p"
   @value "v"
+  @variation "i"
 
-  def evaluate(_key, _user, default_value, nil), do: default_value
+  def evaluate(_key, _user, default_value, default_variation_id, nil), do: {default_value, default_variation_id}
 
-  def evaluate(key, user, default_value, config) do
+  def evaluate(key, user, default_value, default_variation_id, config) do
     log_evaluating(key)
 
     with {:ok, valid_user} <- validate_user(user),
          {:ok, setting_descriptor} <- Map.fetch(config, key),
+         setting_variation <- Map.get(setting_descriptor, @variation, default_variation_id),
          rollout_rules <- Map.get(setting_descriptor, @rollout_rules, []),
          percentage_rules <- Map.get(setting_descriptor, @percentage_rules, []),
-         result <- evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
-      if result == :none do
-        base_value(setting_descriptor, default_value)
+         {value, variation} <- evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
+
+      variation = variation || setting_variation
+
+      if value == :none do
+        {base_value(setting_descriptor, default_value), variation}
       else
-        result
+        {value, variation}
       end
     else
       {:error, :invalid_user} ->
         log_invalid_user(key)
-        evaluate(key, nil, default_value, config)
+        evaluate(key, nil, default_value, default_variation_id, config)
 
       :error ->
         log_no_value_found(key, default_value)
-        default_value
+        {default_value, default_variation_id}
     end
   end
 
@@ -43,33 +48,35 @@ defmodule ConfigCat.Rollout do
   defp validate_user(%User{} = user), do: {:ok, user}
   defp validate_user(_), do: {:error, :invalid_user}
 
-  defp evaluate_rules([], [], _user, _key), do: :none
+  defp evaluate_rules([], [], _user, _key), do: {:none, nil}
 
   defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key) do
     log_nil_user(key)
-    :none
+    {:none, nil}
   end
 
   defp evaluate_rules(rollout_rules, percentage_rules, user, key) do
     log_valid_user(user)
-    result = evaluate_rollout_rules(rollout_rules, user, key)
+    {value, variation} = evaluate_rollout_rules(rollout_rules, user, key)
 
-    if result == :none do
+    if value == :none do
       evaluate_percentage_rules(percentage_rules, user, key)
     else
-      result
+      {value, variation}
     end
   end
 
   defp evaluate_rollout_rules(rules, user, _key) do
-    Enum.reduce_while(rules, :none, &evaluate_rollout_rule(&1, &2, user))
+    Enum.reduce_while(rules, {:none, nil}, &evaluate_rollout_rule(&1, &2, user))
   end
 
   defp evaluate_rollout_rule(rule, default, user) do
     with comparison_attribute <- Map.get(rule, @comparison_attribute),
          comparison_value <- Map.get(rule, @comparison_value),
          comparator <- Map.get(rule, @comparator),
-         value <- Map.get(rule, @value) do
+         value <- Map.get(rule, @value),
+         variation <- Map.get(rule, @variation) do
+
       case User.get_attribute(user, comparison_attribute) do
         nil ->
           log_no_match(comparison_attribute, nil, comparator, comparison_value)
@@ -79,7 +86,7 @@ defmodule ConfigCat.Rollout do
           case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
             {:ok, true} ->
               log_match(comparison_attribute, user_value, comparator, comparison_value, value)
-              {:halt, value}
+              {:halt, {value, variation}}
 
             {:ok, false} ->
               {:cont, default}
@@ -99,22 +106,25 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  def evaluate_percentage_rules(_percentage_rules = [], _user, _key), do: :none
+  def evaluate_percentage_rules(_percentage_rules = [], _user, _key), do: {:none, nil}
 
   def evaluate_percentage_rules(percentage_rules, user, key) do
     hash_val = hash_user(user, key)
 
-    Enum.reduce_while(percentage_rules, 0, &evaluate_percentage_rule(&1, &2, hash_val))
+    Enum.reduce_while(percentage_rules, {0, nil}, &evaluate_percentage_rule(&1, &2, hash_val))
   end
 
-  def evaluate_percentage_rule(rule, bucket, hash_val) do
+  def evaluate_percentage_rule(rule, increment, hash_val) do
+    { bucket, _v } = increment
     bucket = increment_bucket(bucket, rule)
 
     if hash_val < bucket do
-      percentage_value = Map.get(rule, @value, nil)
-      {:halt, percentage_value}
+      percentage_value = Map.get(rule, @value)
+      variation_value = Map.get(rule, @variation)
+
+      {:halt, {percentage_value, variation_value}}
     else
-      {:cont, bucket}
+      {:cont, {bucket,  nil}}
     end
   end
 

@@ -335,6 +335,13 @@ defmodule ConfigCatTest do
     end
   end
 
+  describe "get_variation_id" do
+    test "" do
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
+      assert ConfigCat.get_variation_id("any_feature", "default", client: client) == "default"
+    end
+  end
+
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
     ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options))

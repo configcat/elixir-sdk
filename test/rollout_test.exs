@@ -5,28 +5,35 @@ defmodule ConfigCat.RolloutTest do
 
   @moduletag capture_log: true
 
+  @value_test_type "value_test"
+  @variation_test_type "variation_test"
+
   test "basic rule evaluation" do
-    test_matrix("testmatrix.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A")
+    test_matrix("testmatrix.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A", @value_test_type)
   end
 
   test "semantic version matching" do
-    test_matrix("testmatrix_semantic.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA")
+    test_matrix("testmatrix_semantic.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA", @value_test_type)
   end
 
   test "semantic version comparisons" do
-    test_matrix("testmatrix_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w")
+    test_matrix("testmatrix_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w", @value_test_type)
   end
 
   test "semantic version comparisons #2" do
-    test_matrix("testmatrix_input_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w")
+    test_matrix("testmatrix_input_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w", @value_test_type)
   end
 
   test "numeric comparisons" do
-    test_matrix("testmatrix_number.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw")
+    test_matrix("testmatrix_number.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw", @value_test_type)
   end
 
   test "sensitive information comparisons" do
-    test_matrix("testmatrix_sensitive.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA")
+    test_matrix("testmatrix_sensitive.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA", @value_test_type)
+  end
+
+  test "variation id" do
+    test_matrix("testmatrix_variationId.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA", @variation_test_type)
   end
 
   test "invalid user object" do
@@ -37,13 +44,13 @@ defmodule ConfigCat.RolloutTest do
     assert actual == "Cat"
   end
 
-  defp test_matrix(filename, sdk_key) do
+  defp test_matrix(filename, sdk_key, type) do
     [header | test_lines] = read_test_matrix(filename)
     {custom_key, settings_keys} = parse_header(header)
 
     {:ok, client} = start_config_cat(sdk_key)
 
-    errors = Enum.flat_map(test_lines, &run_tests(&1, client, custom_key, settings_keys))
+    errors = Enum.flat_map(test_lines, &run_tests(&1, client, custom_key, settings_keys, type))
 
     assert errors == []
   end
@@ -65,7 +72,7 @@ defmodule ConfigCat.RolloutTest do
     {custom_key, settings_keys}
   end
 
-  defp run_tests(test_line, client, custom_key, settings_keys) do
+  defp run_tests(test_line, client, custom_key, settings_keys, type) do
     user = build_user(test_line, custom_key)
 
     expected_values =
@@ -74,7 +81,7 @@ defmodule ConfigCat.RolloutTest do
       |> Enum.drop(4)
 
     Enum.zip(settings_keys, expected_values)
-    |> Enum.map(fn {setting_key, expected} -> run_test(setting_key, expected, user, client) end)
+    |> Enum.map(fn {setting_key, expected} -> run_test(setting_key, expected, user, client, type) end)
     |> Enum.reject(&is_nil/1)
   end
 
@@ -92,8 +99,11 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
-  defp run_test(setting_key, expected, user, client) do
-    actual = ConfigCat.get_value(setting_key, nil, user, client: client)
+  defp run_test(setting_key, expected, user, client, type) do
+    actual = case type do
+      @value_test_type -> ConfigCat.get_value(setting_key, nil, user, client: client)
+      @variation_test_type -> ConfigCat.get_variation_id(setting_key, nil, user, client: client)
+    end
 
     if to_string(actual) !== to_string(expected) do
       %{

@@ -50,6 +50,19 @@ defmodule ConfigCat do
     GenServer.call(client, {:get_value, key, default_value, user})
   end
 
+  def get_variation_id(key, default_variation_id, user_or_options \\ []) do
+    if Keyword.keyword?(user_or_options) do
+      get_variation_id(key, default_variation_id, nil, user_or_options)
+    else
+      get_variation_id(key, default_variation_id, user_or_options, [])
+    end
+  end
+
+  def get_variation_id(key, default_variation_id, user, options) do
+    client = Keyword.get(options, :client, __MODULE__)
+    GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
+  end
+
   def force_refresh(client \\ __MODULE__) do
     GenServer.call(client, :force_refresh)
   end
@@ -70,8 +83,17 @@ defmodule ConfigCat do
   @impl GenServer
   def handle_call({:get_value, key, default_value, user}, _from, state) do
     with {:ok, new_state} <- maybe_refresh(state),
-         value <- Rollout.evaluate(key, user, default_value, new_state.config) do
+         { value, _variation } <- Rollout.evaluate(key, user, default_value, nil, new_state.config) do
       {:reply, value, new_state}
+    else
+      error -> {:reply, error, state}
+    end
+  end
+
+  def handle_call({:get_variation_id, key, default_variation_id, user}, _from, state) do
+    with {:ok, new_state} <- maybe_refresh(state),
+         { _value, variation } <- Rollout.evaluate(key, user, nil, default_variation_id, new_state.config) do
+      {:reply, variation, new_state}
     else
       error -> {:reply, error, state}
     end
