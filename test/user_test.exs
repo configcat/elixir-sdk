@@ -11,6 +11,12 @@ defmodule ConfigCat.UserTest do
       assert %User{identifier: ^identifier, email: nil, country: nil, custom: nil} = user
     end
 
+    test "creates a user without any properties" do
+      user = User.new(nil)
+
+      assert %User{identifier: nil, email: nil, country: nil, custom: nil} = user
+    end
+
     test "creates a user with additional properties" do
       identifier = "IDENTIFIER"
       email = "me@example.com"

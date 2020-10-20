@@ -28,7 +28,6 @@ defmodule ConfigCat.User do
   end
 
   defp normalize(attribute) do
-    attribute
-    |> to_string()
+    to_string(attribute)
   end
 end
