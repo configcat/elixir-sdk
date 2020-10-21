@@ -125,7 +125,7 @@ defmodule ConfigCatTest do
 
     @tag capture_log: true
     test "handles error response from ConfigCat" do
-      {:ok, client} = start_config_cat("SDK_KEY")
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual())
 
       error = %HTTPoison.Error{reason: "failed"}
 
@@ -182,16 +182,14 @@ defmodule ConfigCatTest do
     end
 
     test "sends proper user agent header" do
-      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
-
-      response = %Response{status_code: 200, body: %{}}
-
       APIMock
       |> stub(:get, fn _url, headers, _options ->
         assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/a-")
 
-        {:ok, response}
+        {:ok, %Response{status_code: 200, body: %{}}}
       end)
+
+      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
 
       assert :ok = ConfigCat.force_refresh(client)
     end
