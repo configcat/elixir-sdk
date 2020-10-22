@@ -3,6 +3,14 @@ elixir:
   - '1.10'
 otp_release: '23.0'
 
+script:
+  - mix dialyzer
+  - mix test
+
+cache:
+  directories:
+    - priv/plts
+
 # jobs:
 #   include:
 #     - elixir: '1.9'
