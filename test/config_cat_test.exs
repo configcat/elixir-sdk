@@ -13,7 +13,7 @@ defmodule ConfigCatTest do
   setup do
     feature = "FEATURE"
     value = "VALUE"
-    config = %{feature => %{"v" => value}}
+    config = %{"f" => %{feature => %{"v" => value}}}
 
     {:ok, config: config, feature: feature, value: value}
   end
@@ -31,7 +31,7 @@ defmodule ConfigCatTest do
       value: value
     } do
       sdk_key = "SDK_KEY"
-      url = "https://cdn.configcat.com/configuration-files/#{sdk_key}/config_v4.json"
+      url = "https://cdn.configcat.com/configuration-files/#{sdk_key}/config_v5.json"
 
       {:ok, client} = start_config_cat(sdk_key, fetch_policy: FetchPolicy.manual())
 
@@ -138,7 +138,7 @@ defmodule ConfigCatTest do
     test "allows base URL to be configured" do
       base_url = "https://BASE_URL/"
       sdk_key = "SDK_KEY"
-      url = "https://BASE_URL/configuration-files/#{sdk_key}/config_v4.json"
+      url = "https://BASE_URL/configuration-files/#{sdk_key}/config_v5.json"
 
       {:ok, client} =
         start_config_cat(sdk_key, base_url: base_url, fetch_policy: FetchPolicy.manual())
