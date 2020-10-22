@@ -7,10 +7,6 @@ defmodule ConfigCat do
   alias ConfigCat.{FetchPolicy, Rollout, Constants}
   alias HTTPoison.Response
 
-  @base_url "https://cdn.configcat.com"
-  @base_path "configuration-files"
-  @config_filename "config_v5.json"
-
   def start_link(sdk_key, options \\ [])
 
   def start_link(nil, _options), do: {:error, :missing_sdk_key}
@@ -194,11 +190,11 @@ defmodule ConfigCat do
   end
 
   defp url(%{options: options, sdk_key: sdk_key}) do
-    base_url = Keyword.get(options, :base_url, @base_url)
+    base_url = Keyword.get(options, :base_url, Constants.base_url)
 
     base_url
     |> URI.parse()
-    |> URI.merge("#{@base_path}/#{sdk_key}/#{@config_filename}")
+    |> URI.merge("#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}")
     |> URI.to_string()
   end
 
