@@ -1,14 +1,11 @@
 defmodule ConfigCat do
-  use GenServer
-
-  alias ConfigCat.{FetchPolicy, Rollout}
-  alias HTTPoison.Response
-
+  require ConfigCat.Constants
   require Logger
 
-  @base_url "https://cdn.configcat.com"
-  @base_path "configuration-files"
-  @config_filename "config_v4.json"
+  use GenServer
+
+  alias ConfigCat.{FetchPolicy, Rollout, Constants}
+  alias HTTPoison.Response
 
   def start_link(sdk_key, options \\ [])
 
@@ -75,7 +72,9 @@ defmodule ConfigCat do
   @impl GenServer
   def handle_call(:get_all_keys, _from, state) do
     with {:ok, new_state} <- maybe_refresh(state) do
-      keys = Map.keys(new_state.config || %{})
+
+      feature_flags = Map.get(new_state.config || %{}, Constants.feature_flags, %{})
+      keys = Map.keys(feature_flags)
       {:reply, keys, new_state}
     end
   end
@@ -191,11 +190,11 @@ defmodule ConfigCat do
   end
 
   defp url(%{options: options, sdk_key: sdk_key}) do
-    base_url = Keyword.get(options, :base_url, @base_url)
+    base_url = Keyword.get(options, :base_url, Constants.base_url)
 
     base_url
     |> URI.parse()
-    |> URI.merge("#{@base_path}/#{sdk_key}/#{@config_filename}")
+    |> URI.merge("#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}")
     |> URI.to_string()
   end
 
