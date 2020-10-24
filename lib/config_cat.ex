@@ -1,14 +1,68 @@
 defmodule ConfigCat do
+  use Supervisor
+
   alias ConfigCat.Client
 
-  def start_link(sdk_key, options \\ []) do
-    Client.start_link(sdk_key, options)
+  def start_link(sdk_key, options \\ [])
+
+  def start_link(nil, _options), do: {:error, :missing_sdk_key}
+
+  def start_link(sdk_key, options) do
+    name = Keyword.get(options, :name, __MODULE__)
+    Supervisor.start_link(__MODULE__, [{:sdk_key, sdk_key} | options], name: name)
   end
 
-  defdelegate get_all_keys(options \\ []), to: Client
-  defdelegate get_value(key, default_value, user_or_options \\ []), to: Client
-  defdelegate get_value(key, default_value, user, options), to: Client
-  defdelegate get_variation_id(key, default_variation_id, user_or_options \\ []), to: Client
-  defdelegate get_variation_id(key, default_variation_id, user, options), to: Client
-  defdelegate force_refresh(client \\ __MODULE__), to: Client
+  @impl Supervisor
+  def init(options) do
+    name = options[:name]
+
+    children = [
+      {Client, Keyword.merge(options, name: client_name(name))}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def get_all_keys(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_all_keys(Keyword.merge(options, client: client_name(name)))
+  end
+
+  def get_value(key, default_value, user_or_options \\ []) do
+    if Keyword.keyword?(user_or_options) do
+      get_value(key, default_value, nil, user_or_options)
+    else
+      get_value(key, default_value, user_or_options, [])
+    end
+  end
+
+  def get_value(key, default_value, user, options) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_value(key, default_value, user, Keyword.merge(options, client: client_name(name)))
+  end
+
+  def get_variation_id(key, default_variation_id, user_or_options \\ []) do
+    if Keyword.keyword?(user_or_options) do
+      get_variation_id(key, default_variation_id, nil, user_or_options)
+    else
+      get_variation_id(key, default_variation_id, user_or_options, [])
+    end
+  end
+
+  def get_variation_id(key, default_variation_id, user, options) do
+    name = Keyword.get(options, :client, __MODULE__)
+
+    Client.get_variation_id(
+      key,
+      default_variation_id,
+      user,
+      Keyword.merge(options, client: client_name(name))
+    )
+  end
+
+  def force_refresh(name \\ __MODULE__) do
+    Client.force_refresh(client_name(name))
+  end
+
+  defp client_name(name), do: :"#{name}.Client"
 end

@@ -7,12 +7,9 @@ defmodule ConfigCat.Client do
   alias ConfigCat.{FetchPolicy, Rollout, Constants}
   alias HTTPoison.Response
 
-  def start_link(sdk_key, options \\ [])
-
-  def start_link(nil, _options), do: {:error, :missing_sdk_key}
-
-  def start_link(sdk_key, options) do
-    with {name, options} <- Keyword.pop(options, :name, __MODULE__),
+  def start_link(options) do
+    with {name, options} <- Keyword.pop!(options, :name),
+         {sdk_key, options} <- Keyword.pop!(options, :sdk_key),
          {initial_config, options} <- Keyword.pop(options, :initial_config) do
       initial_state = %{
         config: initial_config,
@@ -33,25 +30,9 @@ defmodule ConfigCat.Client do
     GenServer.call(client, :get_all_keys)
   end
 
-  def get_value(key, default_value, user_or_options \\ []) do
-    if Keyword.keyword?(user_or_options) do
-      get_value(key, default_value, nil, user_or_options)
-    else
-      get_value(key, default_value, user_or_options, [])
-    end
-  end
-
   def get_value(key, default_value, user, options) do
     client = Keyword.get(options, :client, __MODULE__)
     GenServer.call(client, {:get_value, key, default_value, user})
-  end
-
-  def get_variation_id(key, default_variation_id, user_or_options \\ []) do
-    if Keyword.keyword?(user_or_options) do
-      get_variation_id(key, default_variation_id, nil, user_or_options)
-    else
-      get_variation_id(key, default_variation_id, user_or_options, [])
-    end
   end
 
   def get_variation_id(key, default_variation_id, user, options) do
