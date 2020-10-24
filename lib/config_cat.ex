@@ -9,7 +9,7 @@ defmodule ConfigCat do
 
   def start_link(sdk_key, options) do
     name = Keyword.get(options, :name, __MODULE__)
-    Supervisor.start_link(__MODULE__, [{:sdk_key, sdk_key} | options], name: name)
+    Supervisor.start_link(__MODULE__, Keyword.put(options, :sdk_key, sdk_key), name: name)
   end
 
   @impl Supervisor
@@ -17,7 +17,7 @@ defmodule ConfigCat do
     name = options[:name]
 
     children = [
-      {Client, Keyword.merge(options, name: client_name(name))}
+      {Client, Keyword.put(options, :name, client_name(name))}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
