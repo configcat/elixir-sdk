@@ -37,8 +37,8 @@ defmodule ConfigCat do
   end
 
   def get_value(key, default_value, user, options) do
-    {name, options} = Keyword.pop(options, :client, __MODULE__)
-    Client.get_value(client_name(name), key, default_value, user, options)
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_value(client_name(name), key, default_value, user)
   end
 
   def get_variation_id(key, default_variation_id, user_or_options \\ []) do
@@ -50,9 +50,8 @@ defmodule ConfigCat do
   end
 
   def get_variation_id(key, default_variation_id, user, options) do
-    {name, options} = Keyword.pop(options, :client, __MODULE__)
-
-    Client.get_variation_id(client_name(name), key, default_variation_id, user, options)
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_variation_id(client_name(name), key, default_variation_id, user)
   end
 
   def force_refresh(name \\ __MODULE__) do
