@@ -15,7 +15,7 @@ defmodule ConfigCatTest do
   setup do
     feature = "FEATURE"
     value = "VALUE"
-    config = %{Constants.feature_flags => %{feature => %{Constants.value => value}}}
+    config = %{Constants.feature_flags() => %{feature => %{Constants.value() => value}}}
 
     {:ok, config: config, feature: feature, value: value}
   end
@@ -33,7 +33,11 @@ defmodule ConfigCatTest do
       value: value
     } do
       sdk_key = "SDK_KEY"
-      url = "https://cdn.configcat.com/#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}"
+
+      url =
+        "https://cdn.configcat.com/#{Constants.base_path()}/#{sdk_key}/#{
+          Constants.config_filename()
+        }"
 
       {:ok, client} = start_config_cat(sdk_key, fetch_policy: FetchPolicy.manual())
 
@@ -140,7 +144,7 @@ defmodule ConfigCatTest do
     test "allows base URL to be configured" do
       base_url = "https://BASE_URL/"
       sdk_key = "SDK_KEY"
-      url = "https://BASE_URL/#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}"
+      url = "https://BASE_URL/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
 
       {:ok, client} =
         start_config_cat(sdk_key, base_url: base_url, fetch_policy: FetchPolicy.manual())
@@ -154,7 +158,11 @@ defmodule ConfigCatTest do
     end
 
     test "sends proper http proxy options" do
-      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual(), http_proxy: "https://myproxy.com")
+      {:ok, client} =
+        start_config_cat("SDK_KEY",
+          fetch_policy: FetchPolicy.manual(),
+          http_proxy: "https://myproxy.com"
+        )
 
       response = %Response{status_code: 200, body: %{}}
 
@@ -270,9 +278,10 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
-        ConfigCat.get_value(feature, "default", client: client)
-      end
+      result =
+        Enum.reduce(1..call_times, 0, fn _n, _a ->
+          ConfigCat.get_value(feature, "default", client: client)
+        end)
 
       assert result == value
     end
@@ -295,9 +304,10 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
-        ConfigCat.get_value(feature, "default", client: client)
-      end
+      result =
+        Enum.reduce(1..call_times, 0, fn _n, _a ->
+          ConfigCat.get_value(feature, "default", client: client)
+        end)
 
       assert result == value
     end
@@ -346,7 +356,13 @@ defmodule ConfigCatTest do
 
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
-    ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options))
+
+    with {:ok, _pid} <-
+           ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options)) do
+      {:ok, name}
+    else
+      error -> error
+    end
   end
 
   defp assert_user_agent_matches(headers, expected) do

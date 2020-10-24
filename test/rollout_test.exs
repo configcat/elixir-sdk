@@ -9,31 +9,59 @@ defmodule ConfigCat.RolloutTest do
   @variation_test_type "variation_test"
 
   test "basic rule evaluation" do
-    test_matrix("testmatrix.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A", @value_test_type)
+    test_matrix(
+      "testmatrix.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A",
+      @value_test_type
+    )
   end
 
   test "semantic version matching" do
-    test_matrix("testmatrix_semantic.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA", @value_test_type)
+    test_matrix(
+      "testmatrix_semantic.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/BAr3KgLTP0ObzKnBTo5nhA",
+      @value_test_type
+    )
   end
 
   test "semantic version comparisons" do
-    test_matrix("testmatrix_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w", @value_test_type)
+    test_matrix(
+      "testmatrix_semantic_2.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w",
+      @value_test_type
+    )
   end
 
   test "semantic version comparisons #2" do
-    test_matrix("testmatrix_input_semantic_2.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w", @value_test_type)
+    test_matrix(
+      "testmatrix_input_semantic_2.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/q6jMCFIp-EmuAfnmZhPY7w",
+      @value_test_type
+    )
   end
 
   test "numeric comparisons" do
-    test_matrix("testmatrix_number.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw", @value_test_type)
+    test_matrix(
+      "testmatrix_number.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/uGyK3q9_ckmdxRyI7vjwCw",
+      @value_test_type
+    )
   end
 
   test "sensitive information comparisons" do
-    test_matrix("testmatrix_sensitive.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA", @value_test_type)
+    test_matrix(
+      "testmatrix_sensitive.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/qX3TP2dTj06ZpCCT1h_SPA",
+      @value_test_type
+    )
   end
 
   test "variation id" do
-    test_matrix("testmatrix_variationId.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA", @variation_test_type)
+    test_matrix(
+      "testmatrix_variationId.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA",
+      @variation_test_type
+    )
   end
 
   test "invalid user object" do
@@ -81,7 +109,9 @@ defmodule ConfigCat.RolloutTest do
       |> Enum.drop(4)
 
     Enum.zip(settings_keys, expected_values)
-    |> Enum.map(fn {setting_key, expected} -> run_test(setting_key, expected, user, client, type) end)
+    |> Enum.map(fn {setting_key, expected} ->
+      run_test(setting_key, expected, user, client, type)
+    end)
     |> Enum.reject(&is_nil/1)
   end
 
@@ -92,18 +122,26 @@ defmodule ConfigCat.RolloutTest do
       |> Enum.take(4)
 
     case Enum.fetch(test_line, 0) do
-      {:ok, "##null##"} -> nil
+      {:ok, "##null##"} ->
+        nil
+
       _ ->
         [id, email, country, custom_value] = Enum.map(test_line, &normalize/1)
-        User.new(id, email: email, country: country, custom: build_custom(custom_key, custom_value))
+
+        User.new(id,
+          email: email,
+          country: country,
+          custom: build_custom(custom_key, custom_value)
+        )
     end
   end
 
   defp run_test(setting_key, expected, user, client, type) do
-    actual = case type do
-      @value_test_type -> ConfigCat.get_value(setting_key, nil, user, client: client)
-      @variation_test_type -> ConfigCat.get_variation_id(setting_key, nil, user, client: client)
-    end
+    actual =
+      case type do
+        @value_test_type -> ConfigCat.get_value(setting_key, nil, user, client: client)
+        @variation_test_type -> ConfigCat.get_variation_id(setting_key, nil, user, client: client)
+      end
 
     if to_string(actual) !== to_string(expected) do
       %{
@@ -126,9 +164,14 @@ defmodule ConfigCat.RolloutTest do
   defp start_config_cat(sdk_key) do
     name = UUID.uuid4() |> String.to_atom()
 
-    ConfigCat.start_link(sdk_key,
-      fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300),
-      name: name
-    )
+    with {:ok, _pid} <-
+           ConfigCat.start_link(sdk_key,
+             fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300),
+             name: name
+           ) do
+      {:ok, name}
+    else
+      error -> error
+    end
   end
 end

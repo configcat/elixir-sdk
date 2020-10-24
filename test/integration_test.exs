@@ -61,6 +61,12 @@ defmodule ConfigCat.IntegrationTest do
 
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
-    ConfigCat.start_link(sdk_key, Keyword.merge([name: name], options))
+
+    with {:ok, _pid} <-
+           ConfigCat.start_link(sdk_key, Keyword.merge([name: name], options)) do
+      {:ok, name}
+    else
+      error -> error
+    end
   end
 end
