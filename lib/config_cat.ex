@@ -5,7 +5,7 @@ defmodule ConfigCat do
 
   def start_link(sdk_key, options \\ [])
 
-  def start_link(nil, _options), do: {:error, :missing_sdk_key}
+  def start_link(nil, _options), do: raise(ArgumentError, "SDK Key is required")
 
   def start_link(sdk_key, options) do
     name = Keyword.get(options, :name, __MODULE__)

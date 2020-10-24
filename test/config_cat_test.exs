@@ -22,7 +22,7 @@ defmodule ConfigCatTest do
 
   describe "starting the GenServer" do
     test "requires SDK key" do
-      assert {:error, :missing_sdk_key} == start_config_cat(nil)
+      assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat(nil) end
     end
   end
 
