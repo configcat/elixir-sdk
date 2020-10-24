@@ -1,23 +1,36 @@
 defmodule ConfigCat do
   use Supervisor
 
-  alias ConfigCat.Client
+  alias ConfigCat.{Client, CacheControlConfigFetcher, FetchPolicy}
 
   def start_link(sdk_key, options \\ [])
 
   def start_link(nil, _options), do: raise(ArgumentError, "SDK Key is required")
 
   def start_link(sdk_key, options) do
+    options =
+      default_options()
+      |> Keyword.merge(options)
+      |> Keyword.put(:sdk_key, sdk_key)
+
     name = Keyword.get(options, :name, __MODULE__)
-    Supervisor.start_link(__MODULE__, Keyword.put(options, :sdk_key, sdk_key), name: name)
+    Supervisor.start_link(__MODULE__, options, name: name)
   end
+
+  defp default_options, do: [api: ConfigCat.API, fetch_policy: FetchPolicy.auto()]
 
   @impl Supervisor
   def init(options) do
-    name = options[:name]
+    fetcher_options = fetcher_options(options)
+
+    client_options =
+      options
+      |> Keyword.put(:fetcher_id, fetcher_options[:name])
+      |> client_options()
 
     children = [
-      {Client, Keyword.put(options, :name, client_name(name))}
+      {CacheControlConfigFetcher, fetcher_options},
+      {Client, client_options}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -60,4 +73,18 @@ defmodule ConfigCat do
   end
 
   defp client_name(name), do: :"#{name}.Client"
+  defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
+
+  defp client_options(options) do
+    options
+    |> Keyword.update!(:name, &client_name/1)
+    |> Keyword.take([:fetcher_id, :fetch_policy, :name])
+  end
+
+  defp fetcher_options(options) do
+    options
+    |> Keyword.update!(:name, &fetcher_name/1)
+    |> Keyword.put(:mode, FetchPolicy.mode(options[:fetch_policy]))
+    |> Keyword.take([:api, :base_url, :http_proxy, :mode, :name, :sdk_key])
+  end
 end

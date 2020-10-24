@@ -5,35 +5,31 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.{FetchPolicy, Rollout, Constants}
-  alias HTTPoison.Response
 
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name),
-         {sdk_key, options} <- Keyword.pop!(options, :sdk_key),
          {initial_config, options} <- Keyword.pop(options, :initial_config) do
       initial_state = %{
         config: initial_config,
-        etag: nil,
         last_update: nil,
-        options: Keyword.merge(default_options(), options),
-        sdk_key: sdk_key
+        options: Keyword.merge(default_options(), options)
       }
 
       GenServer.start_link(__MODULE__, initial_state, name: name)
     end
   end
 
-  defp default_options, do: [api: ConfigCat.API, fetch_policy: FetchPolicy.auto()]
+  defp default_options, do: [fetcher_api: ConfigCat.CacheControlConfigFetcher]
 
   def get_all_keys(client) do
     GenServer.call(client, :get_all_keys)
   end
 
-  def get_value(client, key, default_value, user) do
+  def get_value(client, key, default_value, user \\ nil) do
     GenServer.call(client, {:get_value, key, default_value, user})
   end
 
-  def get_variation_id(client, key, default_variation_id, user) do
+  def get_variation_id(client, key, default_variation_id, user \\ nil) do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 
@@ -104,93 +100,20 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp refresh(%{options: options, etag: etag} = state) do
+  defp refresh(%{options: options} = state) do
     Logger.info("Fetching configuration from ConfigCat")
 
-    with api <- Keyword.get(options, :api),
-         fetch_policy <- Keyword.get(options, :fetch_policy),
-         {:ok, response} <-
-           api.get(url(state), headers(fetch_policy, etag), http_options(options)) do
-      response
-      |> log_response()
-      |> handle_response(state)
-    else
-      error ->
-        log_error(error)
+    api = Keyword.get(options, :fetcher_api)
+    fetcher_id = Keyword.get(options, :fetcher_id)
+
+    case api.fetch(fetcher_id) do
+      {:ok, :unchanged} -> {:ok, %{state | last_update: now()}}
+      {:ok, config} -> {:ok, %{state | config: config, last_update: now()}}
+      error -> error
     end
-  end
-
-  defp http_options(options) do
-    opts = []
-    http_proxy = Keyword.get(options, :http_proxy)
-
-    if http_proxy != nil do
-      opts ++ [proxy: http_proxy]
-    else
-      opts
-    end
-  end
-
-  defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
-       when code >= 200 and code < 300 do
-    with etag <- extract_etag(headers) do
-      {:ok, %{state | config: config, etag: etag, last_update: now()}}
-    end
-  end
-
-  defp handle_response(%Response{status_code: 304}, state) do
-    {:ok, %{state | last_update: now()}}
-  end
-
-  defp handle_response(response, _state) do
-    {:error, response}
-  end
-
-  defp headers(fetch_policy, etag), do: base_headers(fetch_policy) ++ cache_headers(etag)
-
-  defp base_headers(fetch_policy) do
-    version = Application.spec(:config_cat, :vsn) |> to_string()
-    mode = FetchPolicy.mode(fetch_policy)
-    user_agent = "ConfigCat-Elixir/#{mode}-#{version}"
-
-    [
-      {"User-Agent", user_agent},
-      {"X-ConfigCat-UserAgent", user_agent}
-    ]
-  end
-
-  defp cache_headers(nil), do: []
-  defp cache_headers(etag), do: [{"If-None-Match", etag}]
-
-  defp extract_etag(headers) do
-    headers |> Enum.into(%{}) |> Map.get("ETag")
-  end
-
-  defp url(%{options: options, sdk_key: sdk_key}) do
-    base_url = Keyword.get(options, :base_url, Constants.base_url())
-
-    base_url
-    |> URI.parse()
-    |> URI.merge("#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
-    |> URI.to_string()
   end
 
   defp now, do: DateTime.utc_now()
-
-  defp log_response(%Response{headers: headers, status_code: status_code} = response) do
-    Logger.info(
-      "ConfigCat configuration json fetch response code: #{status_code} Cached: #{
-        extract_etag(headers)
-      }"
-    )
-
-    response
-  end
-
-  defp log_error(error) do
-    Logger.warn("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
-    error
-  end
 
   defp schedule_and_refresh(%{options: options} = state) do
     options
@@ -202,11 +125,6 @@ defmodule ConfigCat.Client do
       _error -> state
     end
   end
-
-  @impl GenServer
-  # Work around leaking messages from hackney (see https://github.com/benoitc/hackney/issues/464#issuecomment-495731612)
-  # Seems to be an issue in OTP 21 and later.
-  def handle_info({:ssl_closed, _msg}, state), do: {:noreply, state}
 
   @impl GenServer
   def handle_info(:refresh, state) do
