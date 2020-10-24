@@ -8,7 +8,7 @@ defmodule ConfigCat.IntegrationTest do
   test "fetches config" do
     {:ok, client} = start_config_cat(@sdk_key)
 
-    :ok = ConfigCat.force_refresh(client)
+    :ok = ConfigCat.force_refresh(client: client)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
              "This text came from ConfigCat"
@@ -17,7 +17,7 @@ defmodule ConfigCat.IntegrationTest do
   test "fetches variation_id" do
     {:ok, client} = start_config_cat(@sdk_key)
 
-    :ok = ConfigCat.force_refresh(client)
+    :ok = ConfigCat.force_refresh(client: client)
 
     assert ConfigCat.get_variation_id("keySampleText", "default", client: client) ==
              "eda16475"
@@ -26,8 +26,8 @@ defmodule ConfigCat.IntegrationTest do
   test "maintains previous configuration when config has not changed between refreshes" do
     {:ok, client} = start_config_cat(@sdk_key)
 
-    :ok = ConfigCat.force_refresh(client)
-    :ok = ConfigCat.force_refresh(client)
+    :ok = ConfigCat.force_refresh(client: client)
+    :ok = ConfigCat.force_refresh(client: client)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
              "This text came from ConfigCat"
@@ -48,7 +48,7 @@ defmodule ConfigCat.IntegrationTest do
   test "handles errors from ConfigCat server" do
     {:ok, client} = start_config_cat("invalid_sdk_key")
 
-    {:error, response} = ConfigCat.force_refresh(client)
+    {:error, response} = ConfigCat.force_refresh(client: client)
     assert response.status_code == 404
   end
 
@@ -56,11 +56,17 @@ defmodule ConfigCat.IntegrationTest do
   test "handles invalid base_url" do
     {:ok, client} = start_config_cat(@sdk_key, base_url: "https://invalidcdn.configcat.com")
 
-    assert {:error, %HTTPoison.Error{}} = ConfigCat.force_refresh(client)
+    assert {:error, %HTTPoison.Error{}} = ConfigCat.force_refresh(client: client)
   end
 
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
-    ConfigCat.start_link(sdk_key, Keyword.merge([name: name], options))
+
+    with {:ok, _pid} <-
+           ConfigCat.start_link(sdk_key, Keyword.merge([name: name], options)) do
+      {:ok, name}
+    else
+      error -> error
+    end
   end
 end

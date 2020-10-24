@@ -15,14 +15,14 @@ defmodule ConfigCatTest do
   setup do
     feature = "FEATURE"
     value = "VALUE"
-    config = %{Constants.feature_flags => %{feature => %{Constants.value => value}}}
+    config = %{Constants.feature_flags() => %{feature => %{Constants.value() => value}}}
 
     {:ok, config: config, feature: feature, value: value}
   end
 
   describe "starting the GenServer" do
     test "requires SDK key" do
-      assert {:error, :missing_sdk_key} == start_config_cat(nil)
+      assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat(nil) end
     end
   end
 
@@ -33,7 +33,11 @@ defmodule ConfigCatTest do
       value: value
     } do
       sdk_key = "SDK_KEY"
-      url = "https://cdn.configcat.com/#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}"
+
+      url =
+        "https://cdn.configcat.com/#{Constants.base_path()}/#{sdk_key}/#{
+          Constants.config_filename()
+        }"
 
       {:ok, client} = start_config_cat(sdk_key, fetch_policy: FetchPolicy.manual())
 
@@ -42,7 +46,7 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
 
@@ -58,7 +62,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "sends proper cache control header on later requests" do
@@ -77,7 +81,7 @@ defmodule ConfigCatTest do
         {:ok, initial_response}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
 
       not_modified_response = %Response{
         status_code: 304,
@@ -90,7 +94,7 @@ defmodule ConfigCatTest do
         {:ok, not_modified_response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "retains previous config when server responds that the config hasn't changed", %{
@@ -109,7 +113,7 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
@@ -122,7 +126,7 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-      assert {:error, response} == ConfigCat.force_refresh(client)
+      assert {:error, response} == ConfigCat.force_refresh(client: client)
     end
 
     @tag capture_log: true
@@ -134,13 +138,13 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
-      assert {:error, error} == ConfigCat.force_refresh(client)
+      assert {:error, error} == ConfigCat.force_refresh(client: client)
     end
 
     test "allows base URL to be configured" do
       base_url = "https://BASE_URL/"
       sdk_key = "SDK_KEY"
-      url = "https://BASE_URL/#{Constants.base_path}/#{sdk_key}/#{Constants.config_filename}"
+      url = "https://BASE_URL/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
 
       {:ok, client} =
         start_config_cat(sdk_key, base_url: base_url, fetch_policy: FetchPolicy.manual())
@@ -150,11 +154,15 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: %{}}}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "sends proper http proxy options" do
-      {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.manual(), http_proxy: "https://myproxy.com")
+      {:ok, client} =
+        start_config_cat("SDK_KEY",
+          fetch_policy: FetchPolicy.manual(),
+          http_proxy: "https://myproxy.com"
+        )
 
       response = %Response{status_code: 200, body: %{}}
 
@@ -163,7 +171,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
   end
 
@@ -193,7 +201,7 @@ defmodule ConfigCatTest do
 
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "retains previous configuration if state cannot be refreshed", %{
@@ -249,7 +257,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "does not reload configuration if cache has not expired", %{
@@ -270,9 +278,10 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
-        ConfigCat.get_value(feature, "default", client: client)
-      end
+      result =
+        Enum.reduce(1..call_times, 0, fn _n, _a ->
+          ConfigCat.get_value(feature, "default", client: client)
+        end)
 
       assert result == value
     end
@@ -295,9 +304,10 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      result = Enum.reduce 1..call_times, 0, fn _n, _a ->
-        ConfigCat.get_value(feature, "default", client: client)
-      end
+      result =
+        Enum.reduce(1..call_times, 0, fn _n, _a ->
+          ConfigCat.get_value(feature, "default", client: client)
+        end)
 
       assert result == value
     end
@@ -346,7 +356,13 @@ defmodule ConfigCatTest do
 
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
-    ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options))
+
+    with {:ok, _pid} <-
+           ConfigCat.start_link(sdk_key, Keyword.merge([api: APIMock, name: name], options)) do
+      {:ok, name}
+    else
+      error -> error
+    end
   end
 
   defp assert_user_agent_matches(headers, expected) do
