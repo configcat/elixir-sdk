@@ -46,7 +46,7 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: config}}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
 
@@ -62,7 +62,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "sends proper cache control header on later requests" do
@@ -81,7 +81,7 @@ defmodule ConfigCatTest do
         {:ok, initial_response}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
 
       not_modified_response = %Response{
         status_code: 304,
@@ -94,7 +94,7 @@ defmodule ConfigCatTest do
         {:ok, not_modified_response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "retains previous config when server responds that the config hasn't changed", %{
@@ -113,7 +113,7 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
 
       assert ConfigCat.get_value(feature, "default", client: client) == value
     end
@@ -126,7 +126,7 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-      assert {:error, response} == ConfigCat.force_refresh(client)
+      assert {:error, response} == ConfigCat.force_refresh(client: client)
     end
 
     @tag capture_log: true
@@ -138,7 +138,7 @@ defmodule ConfigCatTest do
       APIMock
       |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
-      assert {:error, error} == ConfigCat.force_refresh(client)
+      assert {:error, error} == ConfigCat.force_refresh(client: client)
     end
 
     test "allows base URL to be configured" do
@@ -154,7 +154,7 @@ defmodule ConfigCatTest do
         {:ok, %Response{status_code: 200, body: %{}}}
       end)
 
-      :ok = ConfigCat.force_refresh(client)
+      :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "sends proper http proxy options" do
@@ -171,7 +171,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
   end
 
@@ -201,7 +201,7 @@ defmodule ConfigCatTest do
 
       {:ok, client} = start_config_cat("SDK_KEY", fetch_policy: FetchPolicy.auto())
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "retains previous configuration if state cannot be refreshed", %{
@@ -257,7 +257,7 @@ defmodule ConfigCatTest do
         {:ok, response}
       end)
 
-      assert :ok = ConfigCat.force_refresh(client)
+      assert :ok = ConfigCat.force_refresh(client: client)
     end
 
     test "does not reload configuration if cache has not expired", %{

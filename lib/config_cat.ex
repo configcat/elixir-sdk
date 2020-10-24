@@ -54,7 +54,8 @@ defmodule ConfigCat do
     Client.get_variation_id(client_name(name), key, default_variation_id, user)
   end
 
-  def force_refresh(name \\ __MODULE__) do
+  def force_refresh(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
     Client.force_refresh(client_name(name))
   end
 
