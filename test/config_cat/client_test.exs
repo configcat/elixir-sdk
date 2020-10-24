@@ -8,7 +8,7 @@ defmodule ConfigCat.ClientTest do
   alias ConfigCat.{Client, Constants, FetchPolicy}
   alias HTTPoison.Response
 
-  @fetcher :fetcher_id
+  @fetcher_id :fetcher_id
 
   setup [:set_mox_global, :verify_on_exit!]
 
@@ -31,7 +31,7 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher -> {:ok, config} end)
+      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
 
       :ok = Client.force_refresh(client)
       assert Client.get_value(client, feature, "default") == value
@@ -45,7 +45,7 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(initial_config: config, fetch_policy: FetchPolicy.manual())
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher -> {:ok, :unchanged} end)
+      |> stub(:fetch, fn @fetcher_id -> {:ok, :unchanged} end)
 
       :ok = Client.force_refresh(client)
 
@@ -58,7 +58,7 @@ defmodule ConfigCat.ClientTest do
       response = %Response{status_code: 503}
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher -> {:error, response} end)
+      |> stub(:fetch, fn @fetcher_id -> {:error, response} end)
 
       assert {:error, ^response} = Client.force_refresh(client)
     end
@@ -71,7 +71,7 @@ defmodule ConfigCat.ClientTest do
       value: value
     } do
       MockFetcher
-      |> stub(:fetch, fn @fetcher ->
+      |> stub(:fetch, fn @fetcher_id ->
         {:ok, config}
       end)
 
@@ -86,7 +86,7 @@ defmodule ConfigCat.ClientTest do
       value: value
     } do
       MockFetcher
-      |> stub(:fetch, fn @fetcher ->
+      |> stub(:fetch, fn @fetcher_id ->
         {:error, %Response{status_code: 500}}
       end)
 
@@ -105,7 +105,7 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300))
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher ->
+      |> stub(:fetch, fn @fetcher_id ->
         {:ok, config}
       end)
 
@@ -116,12 +116,12 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300))
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher -> {:ok, config} end)
+      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
 
       Client.force_refresh(client)
 
       MockFetcher
-      |> expect(:fetch, 0, fn @fetcher -> {:ok, :unchanged} end)
+      |> expect(:fetch, 0, fn @fetcher_id -> {:ok, :unchanged} end)
 
       Client.get_all_keys(client)
     end
@@ -130,12 +130,12 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 0))
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher -> {:ok, config} end)
+      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
 
       Client.force_refresh(client)
 
       MockFetcher
-      |> expect(:fetch, 1, fn @fetcher -> {:ok, :unchanged} end)
+      |> expect(:fetch, 1, fn @fetcher_id -> {:ok, :unchanged} end)
 
       Client.get_all_keys(client)
     end
@@ -182,7 +182,10 @@ defmodule ConfigCat.ClientTest do
 
   defp start_client(options) do
     name = UUID.uuid4() |> String.to_atom()
-    options = Keyword.merge([fetcher_api: MockFetcher, fetcher: @fetcher, name: name], options)
+
+    options =
+      Keyword.merge([fetcher_api: MockFetcher, fetcher_id: @fetcher_id, name: name], options)
+
     {:ok, _pid} = Client.start_link(options)
 
     {:ok, name}

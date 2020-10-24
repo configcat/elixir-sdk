@@ -25,7 +25,7 @@ defmodule ConfigCat do
 
     client_options =
       options
-      |> Keyword.put(:fetcher, fetcher_options[:name])
+      |> Keyword.put(:fetcher_id, fetcher_options[:name])
       |> client_options()
 
     children = [
@@ -78,7 +78,7 @@ defmodule ConfigCat do
   defp client_options(options) do
     options
     |> Keyword.update!(:name, &client_name/1)
-    |> Keyword.take([:fetcher, :fetch_policy, :name])
+    |> Keyword.take([:fetcher_id, :fetch_policy, :name])
   end
 
   defp fetcher_options(options) do

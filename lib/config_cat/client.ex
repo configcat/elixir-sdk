@@ -104,9 +104,9 @@ defmodule ConfigCat.Client do
     Logger.info("Fetching configuration from ConfigCat")
 
     api = Keyword.get(options, :fetcher_api)
-    fetcher = Keyword.get(options, :fetcher)
+    fetcher_id = Keyword.get(options, :fetcher_id)
 
-    case api.fetch(fetcher) do
+    case api.fetch(fetcher_id) do
       {:ok, :unchanged} -> {:ok, %{state | last_update: now()}}
       {:ok, config} -> {:ok, %{state | config: config, last_update: now()}}
       error -> error
