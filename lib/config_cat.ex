@@ -78,12 +78,13 @@ defmodule ConfigCat do
   defp client_options(options) do
     options
     |> Keyword.update!(:name, &client_name/1)
+    |> Keyword.take([:fetcher, :fetch_policy, :initial_config, :name])
   end
 
   defp fetcher_options(options) do
     options
     |> Keyword.update!(:name, &fetcher_name/1)
-    |> Keyword.take([:api, :base_url, :http_proxy, :name, :sdk_key])
     |> Keyword.put(:mode, FetchPolicy.mode(options[:fetch_policy]))
+    |> Keyword.take([:api, :base_url, :http_proxy, :mode, :name, :sdk_key])
   end
 end
