@@ -25,18 +25,15 @@ defmodule ConfigCat.Client do
 
   defp default_options, do: [api: ConfigCat.API, fetch_policy: FetchPolicy.auto()]
 
-  def get_all_keys(options \\ []) do
-    client = Keyword.get(options, :client, __MODULE__)
+  def get_all_keys(client, options \\ []) do
     GenServer.call(client, :get_all_keys)
   end
 
-  def get_value(key, default_value, user, options) do
-    client = Keyword.get(options, :client, __MODULE__)
+  def get_value(client, key, default_value, user, options) do
     GenServer.call(client, {:get_value, key, default_value, user})
   end
 
-  def get_variation_id(key, default_variation_id, user, options) do
-    client = Keyword.get(options, :client, __MODULE__)
+  def get_variation_id(client, key, default_variation_id, user, options) do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 

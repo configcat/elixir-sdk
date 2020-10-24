@@ -25,7 +25,7 @@ defmodule ConfigCat do
 
   def get_all_keys(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_keys(Keyword.merge(options, client: client_name(name)))
+    Client.get_all_keys(client_name(name))
   end
 
   def get_value(key, default_value, user_or_options \\ []) do
@@ -37,8 +37,8 @@ defmodule ConfigCat do
   end
 
   def get_value(key, default_value, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_value(key, default_value, user, Keyword.merge(options, client: client_name(name)))
+    {name, options} = Keyword.pop(options, :client, __MODULE__)
+    Client.get_value(client_name(name), key, default_value, user, options)
   end
 
   def get_variation_id(key, default_variation_id, user_or_options \\ []) do
@@ -50,14 +50,9 @@ defmodule ConfigCat do
   end
 
   def get_variation_id(key, default_variation_id, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
+    {name, options} = Keyword.pop(options, :client, __MODULE__)
 
-    Client.get_variation_id(
-      key,
-      default_variation_id,
-      user,
-      Keyword.merge(options, client: client_name(name))
-    )
+    Client.get_variation_id(client_name(name), key, default_variation_id, user, options)
   end
 
   def force_refresh(name \\ __MODULE__) do
