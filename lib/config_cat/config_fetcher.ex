@@ -1,11 +1,19 @@
 defmodule ConfigCat.ConfigFetcher do
+  alias HTTPoison.{Error, Response}
+
+  @callback fetch(atom()) :: {:ok, map()} | {:ok, :unchanged} | {:error, Error.t() | Response.t()}
+end
+
+defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
-  alias ConfigCat.Constants
+  alias ConfigCat.{ConfigFetcher, Constants}
   alias HTTPoison.Response
 
   require ConfigCat.Constants
   require Logger
+
+  @behaviour ConfigFetcher
 
   def start_link(options) do
     {name, options} = Keyword.pop!(options, :name)
@@ -21,7 +29,8 @@ defmodule ConfigCat.ConfigFetcher do
 
   defp default_options, do: [api: ConfigCat.API, base_url: Constants.base_url()]
 
-  def fetch(fetcher \\ __MODULE__) do
+  @impl ConfigFetcher
+  def fetch(fetcher) do
     GenServer.call(fetcher, :fetch)
   end
 

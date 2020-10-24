@@ -4,7 +4,7 @@ defmodule ConfigCat.Client do
 
   use GenServer
 
-  alias ConfigCat.{ConfigFetcher, FetchPolicy, Rollout, Constants}
+  alias ConfigCat.{FetchPolicy, Rollout, Constants}
 
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name),
@@ -12,22 +12,24 @@ defmodule ConfigCat.Client do
       initial_state = %{
         config: initial_config,
         last_update: nil,
-        options: options
+        options: Keyword.merge(default_options(), options)
       }
 
       GenServer.start_link(__MODULE__, initial_state, name: name)
     end
   end
 
+  defp default_options, do: [fetcher_api: ConfigCat.CacheControlConfigFetcher]
+
   def get_all_keys(client) do
     GenServer.call(client, :get_all_keys)
   end
 
-  def get_value(client, key, default_value, user) do
+  def get_value(client, key, default_value, user \\ nil) do
     GenServer.call(client, {:get_value, key, default_value, user})
   end
 
-  def get_variation_id(client, key, default_variation_id, user) do
+  def get_variation_id(client, key, default_variation_id, user \\ nil) do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 
@@ -101,9 +103,10 @@ defmodule ConfigCat.Client do
   defp refresh(%{options: options} = state) do
     Logger.info("Fetching configuration from ConfigCat")
 
+    api = Keyword.get(options, :fetcher_api)
     fetcher = Keyword.get(options, :fetcher)
 
-    case ConfigFetcher.fetch(fetcher) do
+    case api.fetch(fetcher) do
       {:ok, :unchanged} -> {:ok, %{state | last_update: now()}}
       {:ok, config} -> {:ok, %{state | config: config, last_update: now()}}
       error -> error

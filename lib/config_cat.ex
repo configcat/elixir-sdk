@@ -1,7 +1,7 @@
 defmodule ConfigCat do
   use Supervisor
 
-  alias ConfigCat.{Client, ConfigFetcher, FetchPolicy}
+  alias ConfigCat.{Client, CacheControlConfigFetcher, FetchPolicy}
 
   def start_link(sdk_key, options \\ [])
 
@@ -29,7 +29,7 @@ defmodule ConfigCat do
       |> client_options()
 
     children = [
-      {ConfigFetcher, fetcher_options},
+      {CacheControlConfigFetcher, fetcher_options},
       {Client, client_options}
     ]
 
@@ -78,7 +78,7 @@ defmodule ConfigCat do
   defp client_options(options) do
     options
     |> Keyword.update!(:name, &client_name/1)
-    |> Keyword.take([:fetcher, :fetch_policy, :initial_config, :name])
+    |> Keyword.take([:fetcher, :fetch_policy, :name])
   end
 
   defp fetcher_options(options) do

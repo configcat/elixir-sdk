@@ -1,12 +1,13 @@
 defmodule ConfigCat.ConfigFetcherTest do
-  require ConfigCat.Constants
-
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Mox
 
-  alias ConfigCat.{ConfigFetcher, Constants}
+  alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
+  alias ConfigCat.Constants
   alias HTTPoison.Response
+
+  require ConfigCat.Constants
 
   setup :verify_on_exit!
 
