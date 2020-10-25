@@ -24,14 +24,14 @@ defmodule ConfigCat.CachePolicy.Auto do
     initial_state =
       default_options()
       |> Keyword.merge(options)
-      |> Keyword.take([:cache_api, :cache_key, :fetcher_api, :fetcher_id])
+      |> Keyword.take([:cache, :cache_key, :fetcher, :fetcher_id])
       |> Enum.into(%{})
       |> Map.merge(policy_options)
 
     GenServer.start_link(__MODULE__, initial_state, name: name)
   end
 
-  defp default_options, do: [fetcher_api: ConfigCat.CacheControlConfigFetcher]
+  defp default_options, do: [fetcher: ConfigCat.CacheControlConfigFetcher]
 
   @impl GenServer
   def init(state) do
@@ -75,10 +75,10 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   defp cached_config(state) do
-    cache_api = Map.fetch!(state, :cache_api)
+    cache = Map.fetch!(state, :cache)
     cache_key = Map.fetch!(state, :cache_key)
 
-    {:reply, cache_api.get(cache_key), state}
+    {:reply, cache.get(cache_key), state}
   end
 
   defp polled_refresh(%{poll_interval_seconds: seconds} = state) do
@@ -89,15 +89,15 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   defp refresh(state) do
-    api = Map.fetch!(state, :fetcher_api)
+    fetcher = Map.fetch!(state, :fetcher)
     fetcher_id = Map.fetch!(state, :fetcher_id)
 
-    case api.fetch(fetcher_id) do
+    case fetcher.fetch(fetcher_id) do
       {:ok, :unchanged} ->
         :ok
 
       {:ok, config} ->
-        cache = Map.fetch!(state, :cache_api)
+        cache = Map.fetch!(state, :cache)
         cache_key = Map.fetch!(state, :cache_key)
         cache.set(cache_key, config)
 

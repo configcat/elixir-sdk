@@ -116,10 +116,10 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
     {:ok, _pid} =
       CachePolicy.start_link(
-        cache_api: MockCache,
+        cache: MockCache,
         cache_key: @cache_key,
         cache_policy: CachePolicy.lazy(options),
-        fetcher_api: MockFetcher,
+        fetcher: MockFetcher,
         fetcher_id: @fetcher_id,
         name: policy_id
       )

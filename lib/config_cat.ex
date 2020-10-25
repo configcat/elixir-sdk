@@ -2,7 +2,6 @@ defmodule ConfigCat do
   use Supervisor
 
   alias ConfigCat.{
-    API,
     CacheControlConfigFetcher,
     CachePolicy,
     Client,
@@ -31,8 +30,7 @@ defmodule ConfigCat do
 
   defp default_options,
     do: [
-      api: API,
-      cache_api: @default_cache,
+      cache: @default_cache,
       cache_policy: CachePolicy.auto()
     ]
 
@@ -63,7 +61,7 @@ defmodule ConfigCat do
   end
 
   defp add_default_cache(children, options) do
-    case Keyword.get(options, :cache_api) do
+    case Keyword.get(options, :cache) do
       @default_cache -> [{@default_cache, cache_options(options)} | children]
       _ -> children
     end
@@ -111,7 +109,7 @@ defmodule ConfigCat do
 
   defp generate_cache_key(options, sdk_key) do
     prefix =
-      case Keyword.get(options, :cache_api) do
+      case Keyword.get(options, :cache) do
         @default_cache -> options[:name]
         _ -> "elixir_"
       end
@@ -130,7 +128,7 @@ defmodule ConfigCat do
   defp cache_policy_options(options) do
     options
     |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache_api, :cache_key, :cache_policy, :fetcher_id, :name])
+    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name])
   end
 
   defp client_options(options) do
@@ -148,6 +146,6 @@ defmodule ConfigCat do
     options
     |> Keyword.update!(:name, &fetcher_name/1)
     |> Keyword.put(:mode, options[:cache_policy].mode)
-    |> Keyword.take([:api, :base_url, :http_proxy, :mode, :name, :sdk_key])
+    |> Keyword.take([:base_url, :http_proxy, :mode, :name, :sdk_key])
   end
 end
