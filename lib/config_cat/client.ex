@@ -1,16 +1,14 @@
 defmodule ConfigCat.Client do
-  require ConfigCat.Constants
-  require Logger
-
   use GenServer
 
   alias ConfigCat.{FetchPolicy, Rollout, Constants}
 
+  require ConfigCat.Constants
+  require Logger
+
   def start_link(options) do
-    with {name, options} <- Keyword.pop!(options, :name),
-         {initial_config, options} <- Keyword.pop(options, :initial_config) do
+    with {name, options} <- Keyword.pop!(options, :name) do
       initial_state = %{
-        config: initial_config,
         last_update: nil,
         options: Keyword.merge(default_options(), options)
       }
@@ -44,27 +42,31 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:get_all_keys, _from, state) do
-    with {:ok, new_state} <- maybe_refresh(state) do
-      feature_flags = Map.get(new_state.config || %{}, Constants.feature_flags(), %{})
+    with {:ok, new_state} <- maybe_refresh(state),
+         {:ok, config} <- cached_config(new_state) do
+      feature_flags = Map.get(config, Constants.feature_flags(), %{})
       keys = Map.keys(feature_flags)
       {:reply, keys, new_state}
+    else
+      {:error, :not_found} -> {:reply, [], state}
+      error -> {:reply, error, state}
     end
   end
 
   @impl GenServer
   def handle_call({:get_value, key, default_value, user}, _from, state) do
-    with {:ok, new_state} <- maybe_refresh(state),
-         {value, _variation} <- Rollout.evaluate(key, user, default_value, nil, new_state.config) do
+    with {:ok, result, new_state} <- evaluate(key, user, default_value, nil, state),
+         {value, _variation} = result do
       {:reply, value, new_state}
     else
       error -> {:reply, error, state}
     end
   end
 
+  @impl GenServer
   def handle_call({:get_variation_id, key, default_variation_id, user}, _from, state) do
-    with {:ok, new_state} <- maybe_refresh(state),
-         {_value, variation} <-
-           Rollout.evaluate(key, user, nil, default_variation_id, new_state.config) do
+    with {:ok, result, new_state} <- evaluate(key, user, nil, default_variation_id, state),
+         {_value, variation} = result do
       {:reply, variation, new_state}
     else
       error -> {:reply, error, state}
@@ -77,6 +79,23 @@ defmodule ConfigCat.Client do
       {:reply, :ok, new_state}
     else
       error -> {:reply, error, state}
+    end
+  end
+
+  defp cached_config(%{options: options}) do
+    cache_api = Keyword.get(options, :cache_api)
+    cache_key = Keyword.get(options, :cache_key)
+
+    cache_api.get(cache_key)
+  end
+
+  defp evaluate(key, user, default_value, default_variation_id, state) do
+    with {:ok, new_state} <- maybe_refresh(state),
+         {:ok, config} <- cached_config(new_state) do
+      {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config), new_state}
+    else
+      {:error, :not_found} -> {:ok, {default_value, default_variation_id}, state}
+      error -> error
     end
   end
 
@@ -103,13 +122,21 @@ defmodule ConfigCat.Client do
   defp refresh(%{options: options} = state) do
     Logger.info("Fetching configuration from ConfigCat")
 
+    cache = Keyword.get(options, :cache_api)
+    cache_key = Keyword.get(options, :cache_key)
     api = Keyword.get(options, :fetcher_api)
     fetcher_id = Keyword.get(options, :fetcher_id)
 
     case api.fetch(fetcher_id) do
-      {:ok, :unchanged} -> {:ok, %{state | last_update: now()}}
-      {:ok, config} -> {:ok, %{state | config: config, last_update: now()}}
-      error -> error
+      {:ok, :unchanged} ->
+        {:ok, %{state | last_update: now()}}
+
+      {:ok, config} ->
+        :ok = cache.set(cache_key, config)
+        {:ok, %{state | last_update: now()}}
+
+      error ->
+        error
     end
   end
 

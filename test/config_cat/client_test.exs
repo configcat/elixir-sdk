@@ -8,48 +8,54 @@ defmodule ConfigCat.ClientTest do
   alias ConfigCat.{Client, Constants, FetchPolicy}
   alias HTTPoison.Response
 
+  @cache_key "CACHE_KEY"
   @fetcher_id :fetcher_id
 
   setup [:set_mox_global, :verify_on_exit!]
 
+  Mox.defmock(MockCache, for: ConfigCat.ConfigCache)
   Mox.defmock(MockFetcher, for: ConfigCat.ConfigFetcher)
 
   setup do
     feature = "FEATURE"
     value = "VALUE"
-    config = %{Constants.feature_flags() => %{feature => %{Constants.value() => value}}}
+    variation = "VARIATION"
 
-    {:ok, config: config, feature: feature, value: value}
+    config = %{
+      Constants.feature_flags() => %{
+        feature => %{
+          Constants.variation_id() => variation,
+          Constants.value() => value
+        }
+      }
+    }
+
+    {:ok, config: config, feature: feature, value: value, variation: variation}
   end
 
   describe "manually fetching the configuration" do
-    test "fetches configuration when refreshing", %{
-      config: config,
-      feature: feature,
-      value: value
-    } do
+    test "fetches configuration when refreshing", %{config: config} do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
       MockFetcher
       |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
 
+      MockCache
+      |> expect(:set, fn @cache_key, ^config -> :ok end)
+
       :ok = Client.force_refresh(client)
-      assert Client.get_value(client, feature, "default") == value
     end
 
-    test "retains previous config when server responds that the config hasn't changed", %{
-      config: config,
-      feature: feature,
-      value: value
-    } do
-      {:ok, client} = start_client(initial_config: config, fetch_policy: FetchPolicy.manual())
+    test "does not update config when server responds that the config hasn't changed" do
+      {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
       MockFetcher
       |> stub(:fetch, fn @fetcher_id -> {:ok, :unchanged} end)
 
-      :ok = Client.force_refresh(client)
+      MockCache
+      |> expect(:set, 0, fn @cache_key, _config -> :ok end)
 
-      assert Client.get_value(client, feature, "default") == value
+      :ok = Client.force_refresh(client)
     end
 
     @tag capture_log: true
@@ -65,43 +71,49 @@ defmodule ConfigCat.ClientTest do
   end
 
   describe "automatically fetching the configuration" do
-    test "loads configuration after initializing", %{
-      config: config,
-      feature: feature,
-      value: value
-    } do
+    test "loads configuration after initializing", %{config: config} do
+      test_pid = self()
+
       MockFetcher
-      |> stub(:fetch, fn @fetcher_id ->
-        {:ok, config}
+      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
+
+      MockCache
+      |> expect(:set, fn @cache_key, ^config ->
+        send(test_pid, :cached)
+        :ok
       end)
 
-      {:ok, client} = start_client(fetch_policy: FetchPolicy.auto())
+      {:ok, _} = start_client(fetch_policy: FetchPolicy.auto())
 
-      assert Client.get_value(client, feature, "default") == value
+      assert_receive(:cached)
     end
 
-    test "retains previous configuration if state cannot be refreshed", %{
-      feature: feature,
-      config: config,
-      value: value
-    } do
+    test "retains previous configuration if state cannot be refreshed" do
+      test_pid = self()
+
       MockFetcher
       |> stub(:fetch, fn @fetcher_id ->
+        send(test_pid, :fetched)
         {:error, %Response{status_code: 500}}
       end)
 
-      {:ok, client} = start_client(fetch_policy: FetchPolicy.auto(), initial_config: config)
+      MockCache
+      |> expect(:set, 0, fn @cache_key, _config -> :ok end)
 
-      assert Client.get_value(client, feature, "default") == value
+      {:ok, _} = start_client(fetch_policy: FetchPolicy.auto())
+      assert_receive(:fetched)
     end
   end
 
   describe "lazily fetching the configuration" do
-    test "loads configuration when first attempting to get a value", %{
-      config: config,
-      feature: feature,
-      value: value
-    } do
+    setup %{config: config} do
+      MockCache
+      |> stub(:get, fn @cache_key -> config end)
+
+      :ok
+    end
+
+    test "loads configuration when first attempting to get a value", %{config: config} do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300))
 
       MockFetcher
@@ -109,7 +121,10 @@ defmodule ConfigCat.ClientTest do
         {:ok, config}
       end)
 
-      assert Client.get_value(client, feature, "default") == value
+      MockCache
+      |> expect(:set, fn @cache_key, ^config -> :ok end)
+
+      Client.get_all_keys(client)
     end
 
     test "does not reload configuration if cache has not expired", %{config: config} do
@@ -118,10 +133,16 @@ defmodule ConfigCat.ClientTest do
       MockFetcher
       |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
 
+      MockCache
+      |> expect(:set, fn @cache_key, _config -> :ok end)
+
       Client.force_refresh(client)
 
       MockFetcher
       |> expect(:fetch, 0, fn @fetcher_id -> {:ok, :unchanged} end)
+
+      MockCache
+      |> expect(:set, 0, fn @cache_key, _config -> :ok end)
 
       Client.get_all_keys(client)
     end
@@ -130,52 +151,76 @@ defmodule ConfigCat.ClientTest do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 0))
 
       MockFetcher
-      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
+      |> stub(:fetch, fn @fetcher_id -> {:ok, %{"old" => "config"}} end)
+
+      MockCache
+      |> stub(:set, fn @cache_key, _config -> :ok end)
 
       Client.force_refresh(client)
 
       MockFetcher
-      |> expect(:fetch, 1, fn @fetcher_id -> {:ok, :unchanged} end)
+      |> expect(:fetch, 1, fn @fetcher_id -> {:ok, config} end)
+
+      MockCache
+      |> expect(:set, 1, fn @cache_key, ^config -> :ok end)
 
       Client.get_all_keys(client)
     end
   end
 
-  describe "looking up configuration values" do
-    test "looks up the value for a key in the cached config", %{
-      config: config,
-      feature: feature,
-      value: value
-    } do
-      {:ok, client} = start_client(initial_config: config, fetch_policy: FetchPolicy.manual())
-
-      assert Client.get_value(client, feature, "default") == value
-    end
-
-    test "returns default value when config hasn't been fetched" do
+  describe "when the configuration has been fetched" do
+    setup %{config: config} do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
-      assert Client.get_value(client, "any_feature", "default") == "default"
+      MockCache
+      |> stub(:get, fn @cache_key -> {:ok, config} end)
+
+      {:ok, client: client}
     end
-  end
 
-  describe "all keys" do
-    test "returns all known keys from the cached config", %{config: config, feature: feature} do
-      {:ok, client} = start_client(initial_config: config, fetch_policy: FetchPolicy.manual())
-
+    test "get_all_keys/1 returns all known keys", %{
+      client: client,
+      feature: feature
+    } do
       assert Client.get_all_keys(client) == [feature]
     end
 
-    test "returns an empty list of keys when config hasn't been fetched" do
-      {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
+    test "get_value/4 looks up the value for a key", %{
+      client: client,
+      feature: feature,
+      value: value
+    } do
+      assert Client.get_value(client, feature, "default") == value
+    end
 
-      assert Client.get_all_keys(client) == []
+    test "get_variation_id/4 looks up the variation id for a key", %{
+      client: client,
+      feature: feature,
+      variation: variation
+    } do
+      assert Client.get_variation_id(client, feature, "default") == variation
     end
   end
 
-  describe "get_variation_id" do
-    test "" do
+  describe "when the configuration has not been fetched" do
+    setup _context do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
+
+      MockCache
+      |> stub(:get, fn @cache_key -> {:error, :not_found} end)
+
+      {:ok, client: client}
+    end
+
+    test "get_all_keys/1 returns an empty list of keys", %{client: client} do
+      assert Client.get_all_keys(client) == []
+    end
+
+    test "get_value/4 returns default value", %{client: client} do
+      assert Client.get_value(client, "any_feature", "default") == "default"
+    end
+
+    test "get_variation_id/4 returns default variation", %{client: client} do
       assert Client.get_variation_id(client, "any_feature", "default") == "default"
     end
   end
@@ -184,7 +229,16 @@ defmodule ConfigCat.ClientTest do
     name = UUID.uuid4() |> String.to_atom()
 
     options =
-      Keyword.merge([fetcher_api: MockFetcher, fetcher_id: @fetcher_id, name: name], options)
+      Keyword.merge(
+        [
+          cache_api: MockCache,
+          cache_key: @cache_key,
+          fetcher_api: MockFetcher,
+          fetcher_id: @fetcher_id,
+          name: name
+        ],
+        options
+      )
 
     {:ok, _pid} = Client.start_link(options)
 

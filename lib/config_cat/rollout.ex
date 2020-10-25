@@ -4,19 +4,17 @@ defmodule ConfigCat.Rollout do
 
   alias ConfigCat.{Constants, User, Rollout.Comparator}
 
-  def evaluate(_key, _user, default_value, default_variation_id, nil), do: {default_value, default_variation_id}
-
   def evaluate(key, user, default_value, default_variation_id, config) do
     log_evaluating(key)
 
     with {:ok, valid_user} <- validate_user(user),
-         {:ok, feature_flags} = Map.fetch(config, Constants.feature_flags),
+         {:ok, feature_flags} = Map.fetch(config, Constants.feature_flags()),
          {:ok, setting_descriptor} <- Map.fetch(feature_flags, key),
-         setting_variation <- Map.get(setting_descriptor, Constants.variation_id, default_variation_id),
-         rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules, []),
-         percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules, []),
+         setting_variation <-
+           Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
+         rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
+         percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules(), []),
          {value, variation} <- evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
-
       variation = variation || setting_variation
 
       if value == :none do
@@ -62,12 +60,11 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_rollout_rule(rule, default, user) do
-    with comparison_attribute <- Map.get(rule, Constants.comparison_attribute),
-         comparison_value <- Map.get(rule, Constants.comparison_value),
-         comparator <- Map.get(rule, Constants.comparator),
-         value <- Map.get(rule, Constants.value),
-         variation <- Map.get(rule, Constants.variation_id) do
-
+    with comparison_attribute <- Map.get(rule, Constants.comparison_attribute()),
+         comparison_value <- Map.get(rule, Constants.comparison_value()),
+         comparator <- Map.get(rule, Constants.comparator()),
+         value <- Map.get(rule, Constants.value()),
+         variation <- Map.get(rule, Constants.variation_id()) do
       case User.get_attribute(user, comparison_attribute) do
         nil ->
           log_no_match(comparison_attribute, nil, comparator, comparison_value)
@@ -106,20 +103,20 @@ defmodule ConfigCat.Rollout do
   end
 
   def evaluate_percentage_rule(rule, increment, hash_val) do
-    { bucket, _v } = increment
+    {bucket, _v} = increment
     bucket = increment_bucket(bucket, rule)
 
     if hash_val < bucket do
-      percentage_value = Map.get(rule, Constants.value)
-      variation_value = Map.get(rule, Constants.variation_id)
+      percentage_value = Map.get(rule, Constants.value())
+      variation_value = Map.get(rule, Constants.variation_id())
 
       {:halt, {percentage_value, variation_value}}
     else
-      {:cont, {bucket,  nil}}
+      {:cont, {bucket, nil}}
     end
   end
 
-  defp increment_bucket(bucket, rule), do: bucket + Map.get(rule, Constants.percentage, 0)
+  defp increment_bucket(bucket, rule), do: bucket + Map.get(rule, Constants.percentage(), 0)
 
   defp hash_user(user, key) do
     user_key = User.get_attribute(user, "Identifier")
@@ -135,7 +132,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp base_value(setting_descriptor, default_value) do
-    result = Map.get(setting_descriptor, Constants.value, default_value)
+    result = Map.get(setting_descriptor, Constants.value(), default_value)
     Logger.debug("Returning #{result}")
 
     result
