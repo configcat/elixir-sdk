@@ -1,7 +1,11 @@
 defmodule ConfigCat do
   use Supervisor
 
-  alias ConfigCat.{Client, CacheControlConfigFetcher, FetchPolicy}
+  alias ConfigCat.{API, CacheControlConfigFetcher, Client, Constants, FetchPolicy, InMemoryCache}
+
+  require Constants
+
+  @default_cache InMemoryCache
 
   def start_link(sdk_key, options \\ [])
 
@@ -11,13 +15,20 @@ defmodule ConfigCat do
     options =
       default_options()
       |> Keyword.merge(options)
+      |> Keyword.put(:cache_key, generate_cache_key(sdk_key))
       |> Keyword.put(:sdk_key, sdk_key)
 
     name = Keyword.get(options, :name, __MODULE__)
     Supervisor.start_link(__MODULE__, options, name: name)
   end
 
-  defp default_options, do: [api: ConfigCat.API, fetch_policy: FetchPolicy.auto()]
+  defp default_options,
+    do: [api: API, cache_api: @default_cache, fetch_policy: FetchPolicy.auto()]
+
+  defp generate_cache_key(sdk_key) do
+    :crypto.hash(:sha, "elixir_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
+    |> Base.encode16()
+  end
 
   @impl Supervisor
   def init(options) do
@@ -28,12 +39,21 @@ defmodule ConfigCat do
       |> Keyword.put(:fetcher_id, fetcher_options[:name])
       |> client_options()
 
-    children = [
-      {CacheControlConfigFetcher, fetcher_options},
-      {Client, client_options}
-    ]
+    children =
+      [
+        {CacheControlConfigFetcher, fetcher_options},
+        {Client, client_options}
+      ]
+      |> add_default_cache(options)
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp add_default_cache(children, options) do
+    case Keyword.get(options, :cache_api) do
+      @default_cache -> [{@default_cache, cache_options(options)} | children]
+      _ -> children
+    end
   end
 
   def get_all_keys(options \\ []) do
@@ -75,10 +95,14 @@ defmodule ConfigCat do
   defp client_name(name), do: :"#{name}.Client"
   defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
 
+  defp cache_options(options) do
+    Keyword.take(options, [:cache_key])
+  end
+
   defp client_options(options) do
     options
     |> Keyword.update!(:name, &client_name/1)
-    |> Keyword.take([:fetcher_id, :fetch_policy, :name])
+    |> Keyword.take([:cache_api, :cache_key, :fetcher_id, :fetch_policy, :name])
   end
 
   defp fetcher_options(options) do
