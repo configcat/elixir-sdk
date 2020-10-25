@@ -83,10 +83,10 @@ defmodule ConfigCat.Client do
   end
 
   defp cached_config(%{options: options}) do
-    cache_api = Keyword.get(options, :cache_api)
-    cache_key = Keyword.get(options, :cache_key)
+    cache_policy = Keyword.get(options, :cache_policy)
+    cache_policy_id = Keyword.get(options, :cache_policy_id)
 
-    cache_api.get(cache_key)
+    cache_policy.get(cache_policy_id)
   end
 
   defp evaluate(key, user, default_value, default_variation_id, state) do
@@ -122,8 +122,6 @@ defmodule ConfigCat.Client do
   defp refresh(%{options: options} = state) do
     Logger.info("Fetching configuration from ConfigCat")
 
-    cache = Keyword.get(options, :cache_api)
-    cache_key = Keyword.get(options, :cache_key)
     api = Keyword.get(options, :fetcher_api)
     fetcher_id = Keyword.get(options, :fetcher_id)
 
@@ -132,6 +130,8 @@ defmodule ConfigCat.Client do
         {:ok, %{state | last_update: now()}}
 
       {:ok, config} ->
+        cache = Keyword.get(options, :cache_api)
+        cache_key = Keyword.get(options, :cache_key)
         :ok = cache.set(cache_key, config)
         {:ok, %{state | last_update: now()}}
 

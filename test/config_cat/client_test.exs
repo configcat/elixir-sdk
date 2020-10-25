@@ -5,10 +5,11 @@ defmodule ConfigCat.ClientTest do
 
   import Mox
 
-  alias ConfigCat.{Client, Constants, FetchPolicy, MockCache, MockFetcher}
+  alias ConfigCat.{Client, Constants, FetchPolicy, MockCache, MockCachePolicy, MockFetcher}
   alias HTTPoison.Response
 
   @cache_key "CACHE_KEY"
+  @cache_policy_id :cache_policy_id
   @fetcher_id :fetcher_id
 
   setup [:set_mox_global, :verify_on_exit!]
@@ -104,8 +105,8 @@ defmodule ConfigCat.ClientTest do
 
   describe "lazily fetching the configuration" do
     setup %{config: config} do
-      MockCache
-      |> stub(:get, fn @cache_key -> config end)
+      MockCachePolicy
+      |> stub(:get, fn @cache_policy_id -> config end)
 
       :ok
     end
@@ -169,8 +170,8 @@ defmodule ConfigCat.ClientTest do
     setup %{config: config} do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
-      MockCache
-      |> stub(:get, fn @cache_key -> {:ok, config} end)
+      MockCachePolicy
+      |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
 
       {:ok, client: client}
     end
@@ -203,8 +204,8 @@ defmodule ConfigCat.ClientTest do
     setup _context do
       {:ok, client} = start_client(fetch_policy: FetchPolicy.manual())
 
-      MockCache
-      |> stub(:get, fn @cache_key -> {:error, :not_found} end)
+      MockCachePolicy
+      |> stub(:get, fn @cache_policy_id -> {:error, :not_found} end)
 
       {:ok, client: client}
     end
@@ -230,6 +231,8 @@ defmodule ConfigCat.ClientTest do
         [
           cache_api: MockCache,
           cache_key: @cache_key,
+          cache_policy: MockCachePolicy,
+          cache_policy_id: @cache_policy_id,
           fetcher_api: MockFetcher,
           fetcher_id: @fetcher_id,
           name: name
