@@ -58,11 +58,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
   describe "refreshing the config" do
     test "stores new config in the cache", %{config: config, policy_id: policy_id} do
-      MockFetcher
-      |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
-
-      MockCache
-      |> expect(:set, fn @cache_key, ^config -> :ok end)
+      expect_refresh(config)
 
       assert :ok = Manual.force_refresh(policy_id)
     end
@@ -88,5 +84,13 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
       assert {:error, ^response} = Manual.force_refresh(policy_id)
     end
+  end
+
+  defp expect_refresh(config) do
+    MockFetcher
+    |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
+
+    MockCache
+    |> expect(:set, fn @cache_key, ^config -> :ok end)
   end
 end
