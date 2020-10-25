@@ -22,7 +22,7 @@ defmodule ConfigCat do
     options =
       default_options()
       |> Keyword.merge(options)
-      |> Keyword.put(:cache_key, generate_cache_key(sdk_key))
+      |> generate_cache_key(sdk_key)
       |> Keyword.put(:sdk_key, sdk_key)
 
     name = Keyword.get(options, :name, __MODULE__)
@@ -35,11 +35,6 @@ defmodule ConfigCat do
       cache_api: @default_cache,
       cache_policy: CachePolicy.auto()
     ]
-
-  defp generate_cache_key(sdk_key) do
-    :crypto.hash(:sha, "elixir_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
-    |> Base.encode16()
-  end
 
   @impl Supervisor
   def init(options) do
@@ -113,6 +108,20 @@ defmodule ConfigCat do
   defp cache_policy_name(name), do: :"#{name}.CachePolicy"
   defp client_name(name), do: :"#{name}.Client"
   defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
+
+  defp generate_cache_key(options, sdk_key) do
+    prefix =
+      case Keyword.get(options, :cache_api) do
+        @default_cache -> options[:name]
+        _ -> "elixir_"
+      end
+
+    cache_key =
+      :crypto.hash(:sha, "#{prefix}_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
+      |> Base.encode16()
+
+    Keyword.put(options, :cache_key, cache_key)
+  end
 
   defp cache_options(options) do
     Keyword.take(options, [:cache_key])
