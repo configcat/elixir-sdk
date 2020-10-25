@@ -22,7 +22,8 @@ defmodule ConfigCat.CachePolicy.Lazy do
       |> Map.drop([:mode])
 
     initial_state =
-      options
+      default_options()
+      |> Keyword.merge(options)
       |> Keyword.take([:cache_api, :cache_key, :fetcher_api, :fetcher_id])
       |> Enum.into(%{})
       |> Map.merge(policy_options)
@@ -30,6 +31,8 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
     GenServer.start_link(__MODULE__, initial_state, name: name)
   end
+
+  defp default_options, do: [fetcher_api: ConfigCat.CacheControlConfigFetcher]
 
   @impl GenServer
   def init(state) do

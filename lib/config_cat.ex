@@ -47,7 +47,10 @@ defmodule ConfigCat do
   def init(options) do
     fetcher_options = fetcher_options(options)
 
-    policy_options = cache_policy_options(options)
+    policy_options =
+      options
+      |> Keyword.put(:fetcher_id, fetcher_options[:name])
+      |> cache_policy_options()
 
     client_options =
       options
@@ -120,7 +123,7 @@ defmodule ConfigCat do
   defp cache_policy_options(options) do
     options
     |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache_api, :cache_key, :cache_policy, :name])
+    |> Keyword.take([:cache_api, :cache_key, :cache_policy, :fetcher_id, :name])
   end
 
   defp client_options(options) do
