@@ -18,13 +18,19 @@ defmodule ConfigCat.CachePolicy do
     Manual.new()
   end
 
+  def policy_name(%policy{}), do: policy
+
+  def policy_name(options) when is_list(options) do
+    options
+    |> Keyword.fetch!(:cache_policy)
+    |> policy_name()
+  end
+
   def child_spec(options) do
-    %policy{} = Keyword.fetch!(options, :cache_policy)
-    policy.child_spec(options)
+    policy_name(options).child_spec(options)
   end
 
   def start_link(options) do
-    %policy{} = Keyword.fetch!(options, :cache_policy)
-    policy.start_link(options)
+    policy_name(options).start_link(options)
   end
 end
