@@ -120,8 +120,6 @@ defmodule ConfigCat.Client do
   end
 
   defp refresh(%{options: options} = state) do
-    Logger.info("Fetching configuration from ConfigCat")
-
     api = Keyword.get(options, :fetcher_api)
     fetcher_id = Keyword.get(options, :fetcher_id)
 
