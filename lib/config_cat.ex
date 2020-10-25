@@ -7,7 +7,6 @@ defmodule ConfigCat do
     CachePolicy,
     Client,
     Constants,
-    FetchPolicy,
     InMemoryCache
   }
 
@@ -34,8 +33,7 @@ defmodule ConfigCat do
     do: [
       api: API,
       cache_api: @default_cache,
-      cache_policy: CachePolicy.auto(),
-      fetch_policy: FetchPolicy.auto()
+      cache_policy: CachePolicy.auto()
     ]
 
   defp generate_cache_key(sdk_key) do
@@ -131,12 +129,8 @@ defmodule ConfigCat do
     |> Keyword.update!(:name, &client_name/1)
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
-      :cache_api,
-      :cache_key,
       :cache_policy,
       :cache_policy_id,
-      :fetcher_id,
-      :fetch_policy,
       :name
     ])
   end

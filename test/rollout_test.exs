@@ -1,7 +1,7 @@
 defmodule ConfigCat.RolloutTest do
   use ExUnit.Case, async: true
 
-  alias ConfigCat.{FetchPolicy, User}
+  alias ConfigCat.{CachePolicy, User}
 
   @moduletag capture_log: true
 
@@ -166,7 +166,7 @@ defmodule ConfigCat.RolloutTest do
 
     with {:ok, _pid} <-
            ConfigCat.start_link(sdk_key,
-             fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 300),
+             fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 300),
              name: name
            ) do
       {:ok, name}
