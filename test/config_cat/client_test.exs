@@ -5,16 +5,13 @@ defmodule ConfigCat.ClientTest do
 
   import Mox
 
-  alias ConfigCat.{Client, Constants, FetchPolicy}
+  alias ConfigCat.{Client, Constants, FetchPolicy, MockCache, MockFetcher}
   alias HTTPoison.Response
 
   @cache_key "CACHE_KEY"
   @fetcher_id :fetcher_id
 
   setup [:set_mox_global, :verify_on_exit!]
-
-  Mox.defmock(MockCache, for: ConfigCat.ConfigCache)
-  Mox.defmock(MockFetcher, for: ConfigCat.ConfigFetcher)
 
   setup do
     feature = "FEATURE"
