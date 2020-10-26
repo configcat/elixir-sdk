@@ -1,25 +1,14 @@
 defmodule ConfigCat.CachePolicy.AutoTest do
-  use ExUnit.Case
+  use ConfigCat.CachePolicyCase
 
   import Mox
 
-  alias ConfigCat.{CachePolicy, MockCache, MockFetcher}
+  alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Auto
-  alias HTTPoison.Response
 
-  @cache_key "CACHE_KEY"
-  @fetcher_id :fetcher_id
+  @policy CachePolicy.auto()
 
   setup [:set_mox_global, :verify_on_exit!]
-
-  setup do
-    config = %{"some" => "config"}
-
-    MockCache
-    |> stub(:get, fn @cache_key -> {:ok, config} end)
-
-    {:ok, config: config}
-  end
 
   describe "creation" do
     test "returns a struct with the expected polling mode and options" do
@@ -41,21 +30,30 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   end
 
   describe "getting the config" do
-    test "fetches configuration after initializing", %{config: config} do
+    test "refreshes automatically after initializing", %{config: config} do
       expect_refresh(config)
 
-      {:ok, policy_id} = start_fetch_policy()
+      {:ok, policy_id} = start_cache_policy(@policy)
 
-      assert {:ok, config} = Auto.get(policy_id)
+      assert {:ok, ^config} = Auto.get(policy_id)
     end
 
-    test "re-fetches configuration after poll interval", %{config: config} do
+    test "doesn't refresh between poll intervals", %{config: config} do
+      expect_refresh(config)
+      {:ok, policy_id} = start_cache_policy(@policy)
+
+      expect_not_refreshed()
+      Auto.get(policy_id)
+    end
+
+    test "refreshes automatically after poll interval", %{config: config} do
       interval = 1
       old_config = %{"old" => "config"}
 
       expect_refresh(old_config)
 
-      {:ok, policy_id} = start_fetch_policy(poll_interval_seconds: interval)
+      policy = CachePolicy.auto(poll_interval_seconds: interval)
+      {:ok, policy_id} = start_cache_policy(policy)
 
       expect_refresh(config)
 
@@ -70,7 +68,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "stores new config in the cache", %{config: config} do
       expect_refresh(config)
 
-      {:ok, policy_id} = start_fetch_policy()
+      {:ok, policy_id} = start_cache_policy(@policy)
 
       expect_refresh(config)
 
@@ -81,13 +79,9 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       config: config
     } do
       expect_refresh(config)
-      {:ok, policy_id} = start_fetch_policy()
+      {:ok, policy_id} = start_cache_policy(@policy)
 
-      MockFetcher
-      |> stub(:fetch, fn @fetcher_id -> {:ok, :unchanged} end)
-
-      MockCache
-      |> expect(:set, 0, fn @cache_key, _config -> :ok end)
+      expect_unchanged()
 
       assert :ok = Auto.force_refresh(policy_id)
     end
@@ -95,38 +89,9 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     @tag capture_log: true
     test "handles error responses", %{config: config} do
       expect_refresh(config)
-      {:ok, policy_id} = start_fetch_policy()
+      {:ok, policy_id} = start_cache_policy(@policy)
 
-      response = %Response{status_code: 503}
-
-      MockFetcher
-      |> stub(:fetch, fn @fetcher_id -> {:error, response} end)
-
-      assert {:error, ^response} = Auto.force_refresh(policy_id)
+      assert_returns_error(fn -> Auto.force_refresh(policy_id) end)
     end
-  end
-
-  defp start_fetch_policy(options \\ []) do
-    policy_id = UUID.uuid4() |> String.to_atom()
-
-    {:ok, _pid} =
-      CachePolicy.start_link(
-        cache: MockCache,
-        cache_key: @cache_key,
-        cache_policy: CachePolicy.auto(options),
-        fetcher: MockFetcher,
-        fetcher_id: @fetcher_id,
-        name: policy_id
-      )
-
-    {:ok, policy_id}
-  end
-
-  defp expect_refresh(config) do
-    MockFetcher
-    |> stub(:fetch, fn @fetcher_id -> {:ok, config} end)
-
-    MockCache
-    |> expect(:set, fn @cache_key, ^config -> :ok end)
   end
 end
