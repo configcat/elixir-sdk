@@ -4,14 +4,12 @@ defmodule ConfigCat.ConfigFetcherTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
-  alias ConfigCat.Constants
+  alias ConfigCat.{Constants, MockAPI}
   alias HTTPoison.Response
 
   require ConfigCat.Constants
 
   setup :verify_on_exit!
-
-  Mox.defmock(APIMock, for: HTTPoison.Base)
 
   setup do
     config = %{"key" => "value"}
@@ -24,7 +22,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
-    default_options = [api: APIMock, mode: mode, name: name, sdk_key: sdk_key]
+    default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
     options = Keyword.merge(default_options, options)
 
     {:ok, _pid} =
@@ -32,7 +30,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       |> Keyword.merge(options)
       |> ConfigFetcher.start_link()
 
-    allow(APIMock, self(), name)
+    allow(MockAPI, self(), name)
 
     {:ok, name}
   end
@@ -43,7 +41,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     url =
       "#{Constants.base_url()}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
 
-    APIMock
+    MockAPI
     |> stub(:get, fn ^url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
@@ -57,7 +55,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     response = %Response{status_code: 200, body: config}
 
-    APIMock
+    MockAPI
     |> stub(:get, fn _url, headers, _options ->
       assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/#{mode}-")
 
@@ -77,7 +75,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       headers: [{"ETag", etag}]
     }
 
-    APIMock
+    MockAPI
     |> stub(:get, fn _url, headers, _options ->
       assert List.keyfind(headers, "ETag", 0) == nil
       {:ok, initial_response}
@@ -90,7 +88,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       headers: [{"ETag", etag}]
     }
 
-    APIMock
+    MockAPI
     |> expect(:get, fn _url, headers, _options ->
       assert {"If-None-Match", ^etag} = List.keyfind(headers, "If-None-Match", 0)
       {:ok, not_modified_response}
@@ -108,7 +106,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       headers: [{"ETag", etag}]
     }
 
-    APIMock
+    MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
     assert {:ok, :unchanged} = ConfigFetcher.fetch(fetcher)
@@ -120,7 +118,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     response = %Response{status_code: 503}
 
-    APIMock
+    MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
     assert {:error, ^response} = ConfigFetcher.fetch(fetcher)
@@ -132,7 +130,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     error = %HTTPoison.Error{reason: "failed"}
 
-    APIMock
+    MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
     assert {:error, ^error} = ConfigFetcher.fetch(fetcher)
@@ -144,7 +142,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     url = "#{base_url}#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
 
-    APIMock
+    MockAPI
     |> expect(:get, fn ^url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
@@ -158,7 +156,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     response = %Response{status_code: 200, body: config}
 
-    APIMock
+    MockAPI
     |> expect(:get, fn _url, _headers, [proxy: ^proxy] ->
       {:ok, response}
     end)

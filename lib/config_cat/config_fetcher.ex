@@ -124,7 +124,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp log_error(error) do
-    Logger.warn("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
+    Logger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
+    Logger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
   end
 
   @impl GenServer

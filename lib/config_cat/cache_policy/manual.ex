@@ -1,0 +1,49 @@
+defmodule ConfigCat.CachePolicy.Manual do
+  use GenServer
+
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.CachePolicy.Helpers
+
+  defstruct mode: "m"
+
+  @behaviour CachePolicy
+
+  def new do
+    %__MODULE__{}
+  end
+
+  def start_link(options) do
+    Helpers.start_link(__MODULE__, options)
+  end
+
+  @impl GenServer
+  def init(state) do
+    {:ok, state}
+  end
+
+  @impl CachePolicy
+  def get(policy_id) do
+    GenServer.call(policy_id, :get)
+  end
+
+  @impl CachePolicy
+  def force_refresh(policy_id) do
+    GenServer.call(policy_id, :force_refresh)
+  end
+
+  @impl GenServer
+  def handle_call(:get, _from, state) do
+    {:reply, Helpers.cached_config(state), state}
+  end
+
+  @impl GenServer
+  def handle_call(:force_refresh, _from, state) do
+    case Helpers.refresh_config(state) do
+      :ok ->
+        {:reply, :ok, state}
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+end

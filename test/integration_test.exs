@@ -1,7 +1,7 @@
 defmodule ConfigCat.IntegrationTest do
   use ExUnit.Case, async: true
 
-  alias ConfigCat.FetchPolicy
+  alias ConfigCat.CachePolicy
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
@@ -41,7 +41,7 @@ defmodule ConfigCat.IntegrationTest do
     {:ok, client} =
       start_config_cat(
         @sdk_key,
-        fetch_policy: FetchPolicy.lazy(cache_expiry_seconds: 5)
+        fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 5)
       )
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
