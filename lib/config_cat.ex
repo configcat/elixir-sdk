@@ -46,7 +46,6 @@ defmodule ConfigCat do
     client_options =
       options
       |> Keyword.put(:cache_policy_id, policy_options[:name])
-      |> Keyword.put(:fetcher_id, fetcher_options[:name])
       |> client_options()
 
     children =
