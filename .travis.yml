@@ -4,6 +4,7 @@ elixir:
 otp_release: '23.0'
 
 script:
+  - mix format --check-formatted
   - mix dialyzer
   - mix test
 
