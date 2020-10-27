@@ -4,6 +4,8 @@ defmodule ConfigCat.CachePolicy.Auto do
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Helpers
 
+  require Logger
+
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
 
   @behaviour CachePolicy
@@ -69,11 +71,19 @@ defmodule ConfigCat.CachePolicy.Auto do
     with original <- Helpers.cached_config(state),
          :ok <- Helpers.refresh_config(state) do
       unless Helpers.cached_config(state) == original do
-        callback = state[:on_changed] || fn -> :ok end
-        callback.()
+        safely_call_callback(state[:on_changed])
       end
 
       :ok
     end
+  end
+
+  defp safely_call_callback(nil), do: :ok
+
+  defp safely_call_callback(callback) do
+    callback.()
+  rescue
+    e ->
+      Logger.error("on_change callback failed: #{inspect(e)}")
   end
 end

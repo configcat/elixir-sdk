@@ -146,6 +146,16 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert_receive(:callback)
     end
 
+    @tag capture_log: true
+    test "handles errors in the change callback", %{config: config} do
+      expect_refresh(config)
+
+      policy = CachePolicy.auto(on_changed: fn -> raise RuntimeError, "callback failed" end)
+      {:ok, policy_id} = start_cache_policy(policy)
+
+      assert {:ok, ^config} = Auto.get(policy_id)
+    end
+
     test "does not update config when server responds that the config hasn't changed", %{
       config: config
     } do
