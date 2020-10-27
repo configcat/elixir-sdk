@@ -58,6 +58,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       expect_refresh(config)
 
       assert :ok = Lazy.force_refresh(policy_id)
+      assert {:ok, ^config} = Lazy.get(policy_id)
     end
 
     test "fetches new config even if cache is not expired", %{config: config} do

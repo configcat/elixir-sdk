@@ -47,32 +47,33 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     end
 
     test "refreshes automatically after poll interval", %{config: config} do
-      interval = 1
       old_config = %{"old" => "config"}
 
       expect_refresh(old_config)
 
-      policy = CachePolicy.auto(poll_interval_seconds: interval)
+      policy = CachePolicy.auto(poll_interval_seconds: 1)
       {:ok, policy_id} = start_cache_policy(policy)
 
       expect_refresh(config)
 
-      Process.sleep(interval * 1000)
+      delay_ms = policy.poll_interval_seconds * 1000 + 50
+      Process.sleep(delay_ms)
 
-      # Ensure previous auto-poll has completed by sending a new message
-      Auto.get(policy_id)
+      assert {:ok, ^config} = Auto.get(policy_id)
     end
   end
 
   describe "refreshing the config" do
     test "stores new config in the cache", %{config: config} do
-      expect_refresh(config)
+      old_config = %{"old" => "config"}
 
+      expect_refresh(old_config)
       {:ok, policy_id} = start_cache_policy(@policy)
+      assert {:ok, ^old_config} = Auto.get(policy_id)
 
       expect_refresh(config)
-
       assert :ok = Auto.force_refresh(policy_id)
+      assert {:ok, ^config} = Auto.get(policy_id)
     end
 
     test "does not update config when server responds that the config hasn't changed", %{
