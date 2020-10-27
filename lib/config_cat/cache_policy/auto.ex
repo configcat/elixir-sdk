@@ -4,7 +4,9 @@ defmodule ConfigCat.CachePolicy.Auto do
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Helpers
 
-  defstruct poll_interval_seconds: 60, mode: "a"
+  require Logger
+
+  defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
 
   @behaviour CachePolicy
 
@@ -49,7 +51,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:force_refresh, _from, state) do
-    case Helpers.refresh_config(state) do
+    case refresh(state) do
       :ok ->
         {:reply, :ok, state}
 
@@ -59,9 +61,29 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   defp polled_refresh(%{poll_interval_seconds: seconds} = state) do
-    Helpers.refresh_config(state)
+    refresh(state)
     Process.send_after(self(), :polled_refresh, seconds * 1000)
 
     {:noreply, state}
+  end
+
+  defp refresh(state) do
+    with original <- Helpers.cached_config(state),
+         :ok <- Helpers.refresh_config(state) do
+      unless Helpers.cached_config(state) == original do
+        safely_call_callback(state[:on_changed])
+      end
+
+      :ok
+    end
+  end
+
+  defp safely_call_callback(nil), do: :ok
+
+  defp safely_call_callback(callback) do
+    callback.()
+  rescue
+    e ->
+      Logger.error("on_change callback failed: #{inspect(e)}")
   end
 end

@@ -19,12 +19,12 @@ defmodule ConfigCat.CachePolicy.ManualTest do
   end
 
   describe "getting the config" do
-    test "returns the config from the cache without refreshing", %{config: config} do
+    test "returns the config from the cache without refreshing" do
       {:ok, policy_id} = start_cache_policy(@policy)
 
       expect_not_refreshed()
 
-      assert {:ok, ^config} = Manual.get(policy_id)
+      assert {:error, :not_found} = Manual.get(policy_id)
     end
   end
 
@@ -35,6 +35,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
       expect_refresh(config)
 
       assert :ok = Manual.force_refresh(policy_id)
+      assert {:ok, ^config} = Manual.get(policy_id)
     end
 
     test "does not update config when server responds that the config hasn't changed" do
