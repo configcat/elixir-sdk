@@ -267,17 +267,16 @@ defmodule ConfigCat.ConfigFetcherTest do
         Map.get(config, Constants.preferences())
         |> Map.get(Constants.preferences_base_url())
 
-      redirect_url =
-        config_url(redirect_path, sdk_key)
+      redirect_url = config_url(redirect_path, sdk_key)
 
-        # First call: call global, no call should be made to the eu endpoint or the redirect one
-        MockAPI
-        |> expect(:get, 1, fn ^eu_url, _headers, [] ->
-          {:ok, %Response{status_code: 200, body: config}}
-        end)
-        |> expect(:get, 1, fn ^redirect_url, _headers, [] ->
-          {:ok, %Response{status_code: 200, body: config}}
-        end)
+      # First call: call global, no call should be made to the eu endpoint or the redirect one
+      MockAPI
+      |> expect(:get, 1, fn ^eu_url, _headers, [] ->
+        {:ok, %Response{status_code: 200, body: config}}
+      end)
+      |> expect(:get, 1, fn ^redirect_url, _headers, [] ->
+        {:ok, %Response{status_code: 200, body: config}}
+      end)
 
       assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
     end

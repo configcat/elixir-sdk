@@ -64,7 +64,6 @@ defmodule ConfigCat.IntegrationTest do
     assert {:error, %HTTPoison.Error{}} = ConfigCat.force_refresh(client: client)
   end
 
-
   @tag capture_log: true
   test "handles data_governance: eu_only" do
     {:ok, client} = start_config_cat(@sdk_key, data_governance: DataGovernance.eu_only())
