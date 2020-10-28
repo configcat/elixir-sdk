@@ -32,7 +32,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
           | {:sdk_key, String.t()}
-          | {:data_governance, DataGovernance.id()}
+          | {:data_governance, DataGovernance.t()}
   @type options :: [option]
 
   @behaviour ConfigFetcher

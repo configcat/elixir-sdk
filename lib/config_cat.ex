@@ -7,6 +7,7 @@ defmodule ConfigCat do
     Client,
     Config,
     Constants,
+    DataGovernance,
     InMemoryCache,
     User
   }
@@ -21,7 +22,7 @@ defmodule ConfigCat do
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
           | {:http_proxy, String.t()}
-          | {:data_governance, DataGovernance.id()}
+          | {:data_governance, DataGovernance.t()}
   @type options :: [option()]
   @type refresh_result :: Client.refresh_result()
   @type value :: Config.value()
