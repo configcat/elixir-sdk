@@ -269,7 +269,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
       redirect_url = config_url(redirect_path, sdk_key)
 
-      # First call: call global, no call should be made to the eu endpoint or the redirect one
+      # First call: call global, calls should be made normally
       MockAPI
       |> expect(:get, 1, fn ^eu_url, _headers, [] ->
         {:ok, %Response{status_code: 200, body: config}}
