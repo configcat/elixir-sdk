@@ -18,8 +18,17 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   require ConfigCat.Constants
   require Logger
 
+  @type option ::
+          {:base_url, String.t()}
+          | {:http_proxy, String.t()}
+          | {:mode, String.t()}
+          | {:name, ConfigFetcher.id()}
+          | {:sdk_key, String.t()}
+  @type options :: [option]
+
   @behaviour ConfigFetcher
 
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     {name, options} = Keyword.pop!(options, :name)
 
