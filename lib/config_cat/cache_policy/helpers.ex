@@ -1,4 +1,16 @@
 defmodule ConfigCat.CachePolicy.Helpers do
+  alias ConfigCat.{CachePolicy, ConfigCache, ConfigFetcher}
+
+  @type state :: %{
+          :cache => module(),
+          :cache_key => ConfigCache.key(),
+          :fetcher => module(),
+          :fetcher_id => ConfigFetcher.id(),
+          :name => CachePolicy.id(),
+          optional(atom()) => any()
+        }
+
+  @spec start_link(module(), CachePolicy.options(), map()) :: GenServer.on_start()
   def start_link(module, options, additional_state \\ %{}) do
     name = Keyword.fetch!(options, :name)
     initial_state = make_initial_state(options, additional_state)
@@ -23,6 +35,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   defp default_options, do: [fetcher: ConfigCat.CacheControlConfigFetcher]
 
+  @spec cached_config(state()) :: ConfigCache.result()
   def cached_config(state) do
     cache = Map.fetch!(state, :cache)
     cache_key = Map.fetch!(state, :cache_key)
@@ -30,6 +43,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
     cache.get(cache_key)
   end
 
+  @spec refresh_config(state()) :: CachePolicy.refresh_result()
   def refresh_config(state) do
     fetcher = Map.fetch!(state, :fetcher)
     fetcher_id = Map.fetch!(state, :fetcher_id)

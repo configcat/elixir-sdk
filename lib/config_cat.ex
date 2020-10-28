@@ -5,19 +5,35 @@ defmodule ConfigCat do
     CacheControlConfigFetcher,
     CachePolicy,
     Client,
+    Config,
     Constants,
-    InMemoryCache
+    InMemoryCache,
+    User
   }
 
   require Constants
 
+  @type api_option :: {:client, client()}
+  @type client :: Client.client()
+  @type key :: Config.key()
+  @type option ::
+          {:base_url, String.t()}
+          | {:cache, module()}
+          | {:cache_policy, CachePolicy.t()}
+          | {:http_proxy, String.t()}
+  @type options :: [option()]
+  @type refresh_result :: Client.refresh_result()
+  @type value :: Config.value()
+  @type variation_id :: Config.variation_id()
+
   @default_cache InMemoryCache
 
+  @spec start_link(String.t(), options()) :: Supervisor.on_start()
   def start_link(sdk_key, options \\ [])
 
   def start_link(nil, _options), do: raise(ArgumentError, "SDK Key is required")
 
-  def start_link(sdk_key, options) do
+  def start_link(sdk_key, options) when is_binary(sdk_key) and is_list(options) do
     options =
       default_options()
       |> Keyword.merge(options)
@@ -66,11 +82,13 @@ defmodule ConfigCat do
     end
   end
 
+  @spec get_all_keys([api_option()]) :: [key()]
   def get_all_keys(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)
     Client.get_all_keys(client_name(name))
   end
 
+  @spec get_value(key(), value(), User.t() | [api_option()]) :: value()
   def get_value(key, default_value, user_or_options \\ []) do
     if Keyword.keyword?(user_or_options) do
       get_value(key, default_value, nil, user_or_options)
@@ -79,11 +97,13 @@ defmodule ConfigCat do
     end
   end
 
+  @spec get_value(key(), value(), User.t() | nil, [api_option()]) :: value()
   def get_value(key, default_value, user, options) do
     name = Keyword.get(options, :client, __MODULE__)
     Client.get_value(client_name(name), key, default_value, user)
   end
 
+  @spec get_variation_id(key(), variation_id(), User.t() | [api_option()]) :: variation_id()
   def get_variation_id(key, default_variation_id, user_or_options \\ []) do
     if Keyword.keyword?(user_or_options) do
       get_variation_id(key, default_variation_id, nil, user_or_options)
@@ -92,11 +112,13 @@ defmodule ConfigCat do
     end
   end
 
+  @spec get_variation_id(key(), variation_id(), User.t() | nil, [api_option()]) :: variation_id()
   def get_variation_id(key, default_variation_id, user, options) do
     name = Keyword.get(options, :client, __MODULE__)
     Client.get_variation_id(client_name(name), key, default_variation_id, user)
   end
 
+  @spec force_refresh([api_option()]) :: refresh_result()
   def force_refresh(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)
     Client.force_refresh(client_name(name))

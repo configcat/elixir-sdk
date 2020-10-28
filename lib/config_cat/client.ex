@@ -1,29 +1,41 @@
 defmodule ConfigCat.Client do
   use GenServer
 
-  alias ConfigCat.{Constants, Rollout}
+  alias ConfigCat.{CachePolicy, Config, Constants, Rollout, User}
 
   require Constants
   require Logger
 
+  @type client :: atom()
+  @type option ::
+          {:cache_policy, module()} | {:cache_policy_id, CachePolicy.id()} | {:name, client()}
+  @type options :: [option]
+  @type refresh_result :: CachePolicy.refresh_result()
+
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name) do
       GenServer.start_link(__MODULE__, Map.new(options), name: name)
     end
   end
 
+  @spec get_all_keys(client()) :: [Config.key()]
   def get_all_keys(client) do
     GenServer.call(client, :get_all_keys)
   end
 
+  @spec get_value(client(), Config.key(), Config.value(), User.t() | nil) :: Config.value()
   def get_value(client, key, default_value, user \\ nil) do
     GenServer.call(client, {:get_value, key, default_value, user})
   end
 
+  @spec get_variation_id(client(), Config.key(), Config.variation_id(), User.t() | nil) ::
+          Config.variation_id()
   def get_variation_id(client, key, default_variation_id, user \\ nil) do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 
+  @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
     GenServer.call(client, :force_refresh)
   end

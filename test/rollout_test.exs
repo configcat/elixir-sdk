@@ -153,7 +153,7 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
-  defp build_custom(_custom_key, nil), do: nil
+  defp build_custom(_custom_key, nil), do: %{}
   defp build_custom(custom_key, custom_value), do: %{custom_key => custom_value}
 
   defp normalize(nil), do: nil

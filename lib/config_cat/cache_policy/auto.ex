@@ -8,13 +8,23 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
 
+  @type callback :: (() -> :ok)
+  @type options :: keyword() | map()
+  @type t :: %__MODULE__{
+          mode: String.t(),
+          on_changed: callback(),
+          poll_interval_seconds: pos_integer()
+        }
+
   @behaviour CachePolicy
 
+  @spec new(options()) :: t()
   def new(options \\ []) do
     struct(__MODULE__, options)
     |> Map.update!(:poll_interval_seconds, &max(&1, 1))
   end
 
+  @spec start_link(CachePolicy.options()) :: GenServer.on_start()
   def start_link(options) do
     Helpers.start_link(__MODULE__, options)
   end

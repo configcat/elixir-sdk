@@ -1,7 +1,12 @@
 defmodule ConfigCat.ConfigFetcher do
+  alias ConfigCat.Config
   alias HTTPoison.{Error, Response}
 
-  @callback fetch(atom()) :: {:ok, map()} | {:ok, :unchanged} | {:error, Error.t() | Response.t()}
+  @type fetch_error :: {:error, Error.t() | Response.t()}
+  @type id :: atom()
+  @type result :: {:ok, Config.t()} | {:ok, :unchanged} | fetch_error()
+
+  @callback fetch(id()) :: result()
 end
 
 defmodule ConfigCat.CacheControlConfigFetcher do
@@ -13,8 +18,17 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   require ConfigCat.Constants
   require Logger
 
+  @type option ::
+          {:base_url, String.t()}
+          | {:http_proxy, String.t()}
+          | {:mode, String.t()}
+          | {:name, ConfigFetcher.id()}
+          | {:sdk_key, String.t()}
+  @type options :: [option]
+
   @behaviour ConfigFetcher
 
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     {name, options} = Keyword.pop!(options, :name)
 
