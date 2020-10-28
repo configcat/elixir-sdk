@@ -10,6 +10,7 @@ defmodule ConfigCat.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       dialyzer: [
+        list_unused_filters: true,
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ]
     ]
