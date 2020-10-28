@@ -1,6 +1,6 @@
 defmodule ConfigCat.ConfigCache do
-  @type cache_key :: String.t()
+  @type key :: String.t()
 
-  @callback get(cache_key) :: {:ok, map()} | {:error, :not_found}
-  @callback set(cache_key, map()) :: :ok
+  @callback get(key) :: {:ok, map()} | {:error, :not_found}
+  @callback set(key, map()) :: :ok
 end

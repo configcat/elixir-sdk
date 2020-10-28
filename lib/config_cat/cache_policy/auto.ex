@@ -8,6 +8,14 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
 
+  @type callback :: (() -> :ok)
+  @type options :: keyword() | map()
+  @type t :: %__MODULE__{
+          mode: String.t(),
+          on_changed: callback(),
+          poll_interval_seconds: pos_integer()
+        }
+
   @behaviour CachePolicy
 
   def new(options \\ []) do

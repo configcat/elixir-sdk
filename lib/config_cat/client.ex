@@ -1,10 +1,13 @@
 defmodule ConfigCat.Client do
   use GenServer
 
-  alias ConfigCat.{Constants, Rollout}
+  alias ConfigCat.{CachePolicy, Constants, Rollout}
 
   require Constants
   require Logger
+
+  @type client :: atom()
+  @type refresh_result :: CachePolicy.refresh_result()
 
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name) do

@@ -1,7 +1,11 @@
 defmodule ConfigCat.ConfigFetcher do
   alias HTTPoison.{Error, Response}
 
-  @callback fetch(atom()) :: {:ok, map()} | {:ok, :unchanged} | {:error, Error.t() | Response.t()}
+  @type fetch_error :: {:error, Error.t() | Response.t()}
+  @type id :: atom()
+  @type result :: {:ok, map()} | {:ok, :unchanged} | fetch_error()
+
+  @callback fetch(id()) :: result()
 end
 
 defmodule ConfigCat.CacheControlConfigFetcher do

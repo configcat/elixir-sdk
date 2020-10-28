@@ -7,6 +7,12 @@ defmodule ConfigCat.CachePolicy.Lazy do
   @enforce_keys [:cache_expiry_seconds]
   defstruct [:cache_expiry_seconds, mode: "l"]
 
+  @type options :: keyword() | map()
+  @type t :: %__MODULE__{
+          cache_expiry_seconds: non_neg_integer(),
+          mode: String.t()
+        }
+
   @behaviour CachePolicy
 
   def new(options) do

@@ -6,6 +6,8 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   defstruct mode: "m"
 
+  @type t :: %__MODULE__{mode: String.t()}
+
   @behaviour CachePolicy
 
   def new do
