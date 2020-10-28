@@ -1,20 +1,21 @@
 defmodule ConfigCat.CachePolicy do
-  alias ConfigCat.{ConfigCache, ConfigFetcher}
+  alias ConfigCat.{Config, ConfigCache, ConfigFetcher}
   alias __MODULE__.{Auto, Lazy, Manual}
 
+  @type id :: atom()
   @type option ::
           {:cache, module()}
           | {:cache_key, ConfigCache.key()}
           | {:cache_policy, t()}
+          | {:fetcher, module()}
           | {:fetcher_id, ConfigFetcher.id()}
-          | {:name, policy_id()}
+          | {:name, id()}
   @type options :: [option]
-  @type policy_id :: atom()
   @type refresh_result :: :ok | ConfigFetcher.fetch_error()
   @type t :: Auto.t() | Lazy.t() | Manual.t()
 
-  @callback get(policy_id()) :: {:ok, map()} | {:error, :not_found}
-  @callback force_refresh(policy_id()) :: refresh_result()
+  @callback get(id()) :: {:ok, Config.t()} | {:error, :not_found}
+  @callback force_refresh(id()) :: refresh_result()
 
   @spec auto(Auto.options()) :: Auto.t()
   def auto(options \\ []) do

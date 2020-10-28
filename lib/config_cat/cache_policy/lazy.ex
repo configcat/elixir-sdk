@@ -15,10 +15,12 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   @behaviour CachePolicy
 
+  @spec new(options()) :: t()
   def new(options) do
     struct(__MODULE__, options)
   end
 
+  @spec start_link(CachePolicy.options()) :: GenServer.on_start()
   def start_link(options) do
     Helpers.start_link(__MODULE__, options, %{last_update: nil})
   end

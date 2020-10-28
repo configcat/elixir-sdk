@@ -1,9 +1,10 @@
 defmodule ConfigCat.ConfigFetcher do
+  alias ConfigCat.Config
   alias HTTPoison.{Error, Response}
 
   @type fetch_error :: {:error, Error.t() | Response.t()}
   @type id :: atom()
-  @type result :: {:ok, map()} | {:ok, :unchanged} | fetch_error()
+  @type result :: {:ok, Config.t()} | {:ok, :unchanged} | fetch_error()
 
   @callback fetch(id()) :: result()
 end

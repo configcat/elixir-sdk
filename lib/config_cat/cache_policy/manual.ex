@@ -10,10 +10,12 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   @behaviour CachePolicy
 
+  @spec new :: t()
   def new do
     %__MODULE__{}
   end
 
+  @spec start_link(CachePolicy.options()) :: GenServer.on_start()
   def start_link(options) do
     Helpers.start_link(__MODULE__, options)
   end
