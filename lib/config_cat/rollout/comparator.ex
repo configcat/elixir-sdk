@@ -1,4 +1,11 @@
 defmodule ConfigCat.Rollout.Comparator do
+  alias ConfigCat.Config
+  alias Version.InvalidVersionError
+
+  @type comparator :: Config.comparator()
+  @type description :: String.t()
+  @type result :: {:ok, boolean()} | {:error, Exception.t()}
+
   @is_one_of 0
   @is_not_one_of 1
   @contains 2
@@ -39,9 +46,12 @@ defmodule ConfigCat.Rollout.Comparator do
     @is_not_one_of_sensitive => "IS NOT ONE OF (Sensitive)"
   }
 
+  @spec description(comparator()) :: description()
   def description(comparator) do
     Map.get(@descriptions, comparator, "Unsupported comparator")
   end
+
+  @spec compare(comparator(), String.t(), String.t()) :: result()
 
   def compare(@is_one_of, user_value, comparison_value),
     do: is_one_of(user_value, comparison_value)
@@ -151,7 +161,7 @@ defmodule ConfigCat.Rollout.Comparator do
     result = Version.compare(user_version, comparison_version) in valid_comparisons
     {:ok, result}
   rescue
-    error in Version.InvalidVersionError -> {:error, error}
+    error in InvalidVersionError -> {:error, error}
   end
 
   defp to_version(value) do

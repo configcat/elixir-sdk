@@ -1,4 +1,5 @@
 defmodule ConfigCat.Config do
+  @type comparator :: non_neg_integer()
   @type key :: String.t()
   # TODO: flesh this out
   @type t :: map()

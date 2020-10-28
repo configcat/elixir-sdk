@@ -1,9 +1,12 @@
 defmodule ConfigCat.Rollout do
+  alias ConfigCat.{Config, Constants, User}
+  alias ConfigCat.Rollout.Comparator
+
   require Logger
   require ConfigCat.Constants
 
-  alias ConfigCat.{Constants, User, Rollout.Comparator}
-
+  @spec evaluate(Config.key(), User.t() | nil, Config.value(), Config.variation_id(), Config.t()) ::
+          {Config.value(), Config.variation_id()}
   def evaluate(key, user, default_value, default_variation_id, config) do
     log_evaluating(key)
 
@@ -94,15 +97,15 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  def evaluate_percentage_rules(_percentage_rules = [], _user, _key), do: {:none, nil}
+  defp evaluate_percentage_rules(_percentage_rules = [], _user, _key), do: {:none, nil}
 
-  def evaluate_percentage_rules(percentage_rules, user, key) do
+  defp evaluate_percentage_rules(percentage_rules, user, key) do
     hash_val = hash_user(user, key)
 
     Enum.reduce_while(percentage_rules, {0, nil}, &evaluate_percentage_rule(&1, &2, hash_val))
   end
 
-  def evaluate_percentage_rule(rule, increment, hash_val) do
+  defp evaluate_percentage_rule(rule, increment, hash_val) do
     {bucket, _v} = increment
     bucket = increment_bucket(bucket, rule)
 
