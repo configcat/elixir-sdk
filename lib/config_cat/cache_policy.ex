@@ -32,10 +32,10 @@ defmodule ConfigCat.CachePolicy do
     Manual.new()
   end
 
-  @spec policy_name(t()) :: atom()
+  @spec policy_name(t()) :: module()
   def policy_name(%policy{}), do: policy
 
-  @spec policy_name(options()) :: atom()
+  @spec policy_name(options()) :: module()
   def policy_name(options) when is_list(options) do
     options
     |> Keyword.fetch!(:cache_policy)
