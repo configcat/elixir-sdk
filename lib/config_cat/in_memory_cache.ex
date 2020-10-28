@@ -3,8 +3,12 @@ defmodule ConfigCat.InMemoryCache do
 
   alias ConfigCat.ConfigCache
 
+  @type option :: {:cache_key, ConfigCache.key()}
+  @type options :: [option]
+
   @behaviour ConfigCache
 
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     name =
       options
