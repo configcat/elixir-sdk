@@ -133,6 +133,12 @@ defmodule ConfigCat do
     Client.get_all_variation_ids(client_name(name), user)
   end
 
+  @spec get_key_and_value(variation_id(), [api_option()]) :: {key(), value()} | nil
+  def get_key_and_value(variation_id, options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_key_and_value(client_name(name), variation_id)
+  end
+
   @spec force_refresh([api_option()]) :: refresh_result()
   def force_refresh(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)

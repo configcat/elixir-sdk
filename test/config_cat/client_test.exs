@@ -80,6 +80,13 @@ defmodule ConfigCat.ClientTest do
       actual = client |> Client.get_all_variation_ids() |> Enum.sort()
       assert actual == expected
     end
+
+    test "get_key_and_value/2 returns matching key/value pair for a variation id", %{
+      client: client
+    } do
+      assert {"key1", true} = Client.get_key_and_value(client, "fakeId1")
+      assert {"key2", false} = Client.get_key_and_value(client, "fakeId2")
+    end
   end
 
   describe "when the configuration has not been fetched" do
@@ -106,6 +113,11 @@ defmodule ConfigCat.ClientTest do
 
     test "get_all_variation_ids/2 returns an empty list of variation ids", %{client: client} do
       assert Client.get_all_variation_ids(client) == []
+    end
+
+    @tag capture_log: true
+    test "get_key_and_value/2 returns nil", %{client: client} do
+      assert Client.get_key_and_value(client, "any_variation") == nil
     end
   end
 

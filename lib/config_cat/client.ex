@@ -40,6 +40,11 @@ defmodule ConfigCat.Client do
     GenServer.call(client, {:get_all_variation_ids, user})
   end
 
+  @spec get_key_and_value(client(), Config.variation_id()) :: {Config.key(), Config.value()} | nil
+  def get_key_and_value(client, variation_id) do
+    GenServer.call(client, {:get_key_and_value, variation_id})
+  end
+
   @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
     GenServer.call(client, :force_refresh)
@@ -84,6 +89,22 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
+  def handle_call({:get_key_and_value, variation_id}, _from, state) do
+    with {:ok, config} <- cached_config(state),
+         {:ok, feature_flags} <- Map.fetch(config, Constants.feature_flags()),
+         result <- Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id)) do
+      {:reply, result, state}
+    else
+      _ ->
+        Logger.warn(
+          "Evaluating get_key_and_value(#{variation_id}) failed. Cache is empty. Returning nil."
+        )
+
+        {:reply, nil, state}
+    end
+  end
+
+  @impl GenServer
   def handle_call(:force_refresh, _from, state) do
     %{cache_policy: policy, cache_policy_id: policy_id} = state
 
@@ -105,6 +126,24 @@ defmodule ConfigCat.Client do
     with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
          {_value, variation} = result do
       variation
+    end
+  end
+
+  defp entry_matching({key, setting}, variation_id) do
+    value_matching(key, setting, variation_id) ||
+      value_matching(key, Map.get(setting, Constants.rollout_rules()), variation_id) ||
+      value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
+  end
+
+  def value_matching(key, value, variation_id) when is_list(value) do
+    Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
+  end
+
+  def value_matching(key, value, variation_id) do
+    if Map.get(value, Constants.variation_id(), nil) == variation_id do
+      {key, Map.get(value, Constants.value())}
+    else
+      nil
     end
   end
 
