@@ -1,5 +1,4 @@
 defmodule ConfigCat.Constants do
-
   defmacro base_url, do: "https://cdn.configcat.com"
   defmacro base_path, do: "configuration-files"
   defmacro config_filename, do: "config_v5.json"
@@ -13,5 +12,4 @@ defmodule ConfigCat.Constants do
   defmacro percentage, do: "p"
   defmacro value, do: "v"
   defmacro variation_id, do: "i"
-
 end
