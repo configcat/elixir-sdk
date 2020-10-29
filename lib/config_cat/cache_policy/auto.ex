@@ -80,7 +80,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   defp refresh(state) do
     with original <- Helpers.cached_config(state),
          :ok <- Helpers.refresh_config(state) do
-      unless Helpers.cached_config(state) == original do
+      if config_changed?(state, original) do
         safely_call_callback(state[:on_changed])
       end
 
@@ -88,12 +88,20 @@ defmodule ConfigCat.CachePolicy.Auto do
     end
   end
 
+  defp config_changed?(state, original) do
+    Helpers.cached_config(state) != original
+  end
+
   defp safely_call_callback(nil), do: :ok
 
   defp safely_call_callback(callback) do
-    callback.()
-  rescue
-    e ->
-      Logger.error("on_change callback failed: #{inspect(e)}")
+    Task.start(fn ->
+      try do
+        callback.()
+      rescue
+        e ->
+          Logger.error("on_change callback failed: #{inspect(e)}")
+      end
+    end)
   end
 end
