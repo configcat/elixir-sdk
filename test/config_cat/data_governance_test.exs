@@ -25,7 +25,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
      }}
   end
 
-  defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
+  defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
     name = UUID.uuid4() |> String.to_atom()
     default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
     options = Keyword.merge(default_options, options)
@@ -91,7 +91,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   end
 
   test "test_sdk_global_organization_eu_only",
-       %{sdk_key: sdk_key, redirect_base_url: redirect_base_url} = context do
+       %{sdk_key: sdk_key} = context do
     global_url = global_config_url(sdk_key)
     eu_url = eu_config_url(sdk_key)
 
@@ -133,10 +133,6 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
-
-  test "EU with redirection",
-       %{config_with_redirect: config, sdk_key: sdk_key} = context do
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.eu_only())
 
   test "test_sdk_global_custom_base_url",
        %{sdk_key: sdk_key, custom_base_url: custom_base_url} = context do
