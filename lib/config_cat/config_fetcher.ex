@@ -56,7 +56,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       api: ConfigCat.API,
       base_url: Constants.base_url_global(),
       data_governance: DataGovernance.global(),
-      custom_endpoint: false
+      custom_endpoint: false,
+      redirects: %{}
     }
 
   defp custom_server_options(state, options) do
@@ -155,8 +156,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
        when code >= 200 and code < 300 do
     with etag <- extract_etag(headers),
-         %{base_url: new_base_url, custom_endpoint: custom_endpoint} <-
-           Map.take(state, [:base_url, :custom_endpoint]),
+         %{base_url: new_base_url, custom_endpoint: custom_endpoint, redirects: redirects} <-
+           Map.take(state, [:base_url, :custom_endpoint, :redirects]),
          p <- Map.get(config, Constants.preferences(), %{}),
          base_url <- Map.get(p, Constants.preferences_base_url()),
          redirect <- Map.get(p, Constants.redirect()) do
@@ -165,8 +166,17 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           custom_endpoint && redirect != RedirectMode.force_redirect() ->
             state
 
-          base_url && new_base_url != base_url ->
-            {_, {_, _}, state} = handle_fetch_call(%{state | base_url: base_url})
+          redirect == RedirectMode.no_redirect() ->
+            state
+
+          base_url && !Map.has_key?(redirects, new_base_url) ->
+            {_, {_, _}, state} =
+              handle_fetch_call(%{
+                state
+                | base_url: base_url,
+                  redirects: Map.put(redirects, base_url, 1)
+              })
+
             state
 
           true ->
