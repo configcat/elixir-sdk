@@ -211,27 +211,35 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
+  test "test_sdk_base_url_forced",
+       %{sdk_key: sdk_key, custom_base_url: custom_base_url, forced_base_url: forced_base_url} =
+         context do
+    global_url = global_config_url(sdk_key)
     eu_url = eu_config_url(sdk_key)
+    custom_url = config_url(custom_base_url, sdk_key)
+    forced_url = config_url(forced_base_url, sdk_key)
 
-    redirect_path =
-      Map.get(config, Constants.preferences())
-      |> Map.get(Constants.preferences_base_url())
+    config_to_forced = stub_response(forced_base_url, RedirectMode.force_redirect())
 
-    redirect_url = config_url(redirect_path, sdk_key)
+    {:ok, fetcher} =
+      start_fetcher(context, data_governance: DataGovernance.global(), base_url: custom_base_url)
 
-    # First call: call custom, no call should be made to the eu endpoint or the redirect one
     MockAPI
-    |> expect(:get, 1, fn ^custom_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: %{}}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 0, fn ^redirect_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 1, fn ^custom_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_forced}}
+    end)
+    |> expect(:get, 2, fn ^forced_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
   test "redirection with force redirect",
