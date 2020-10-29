@@ -35,6 +35,16 @@ defmodule ConfigCat.Client do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 
+  @spec get_all_variation_ids(client(), User.t() | nil) :: [Config.variation_id()]
+  def get_all_variation_ids(client, user \\ nil) do
+    GenServer.call(client, {:get_all_variation_ids, user})
+  end
+
+  @spec get_key_and_value(client(), Config.variation_id()) :: {Config.key(), Config.value()} | nil
+  def get_key_and_value(client, variation_id) do
+    GenServer.call(client, {:get_key_and_value, variation_id})
+  end
+
   @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
     GenServer.call(client, :force_refresh)
@@ -47,14 +57,8 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:get_all_keys, _from, state) do
-    with {:ok, config} <- cached_config(state) do
-      feature_flags = Map.get(config, Constants.feature_flags(), %{})
-      keys = Map.keys(feature_flags)
-      {:reply, keys, state}
-    else
-      {:error, :not_found} -> {:reply, [], state}
-      error -> {:reply, error, state}
-    end
+    result = do_get_all_keys(state)
+    {:reply, result, state}
   end
 
   @impl GenServer
@@ -69,11 +73,34 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_variation_id, key, default_variation_id, user}, _from, state) do
-    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
-         {_value, variation} = result do
-      {:reply, variation, state}
+    result = do_get_variation_id(key, default_variation_id, user, state)
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call({:get_all_variation_ids, user}, _from, state) do
+    result =
+      state
+      |> do_get_all_keys()
+      |> Enum.map(&do_get_variation_id(&1, nil, user, state))
+      |> Enum.reject(&is_nil/1)
+
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call({:get_key_and_value, variation_id}, _from, state) do
+    with {:ok, config} <- cached_config(state),
+         {:ok, feature_flags} <- Map.fetch(config, Constants.feature_flags()),
+         result <- Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id)) do
+      {:reply, result, state}
     else
-      error -> {:reply, error, state}
+      _ ->
+        Logger.warn(
+          "Evaluating get_key_and_value(#{variation_id}) failed. Cache is empty. Returning nil."
+        )
+
+        {:reply, nil, state}
     end
   end
 
@@ -83,6 +110,41 @@ defmodule ConfigCat.Client do
 
     result = policy.force_refresh(policy_id)
     {:reply, result, state}
+  end
+
+  defp do_get_all_keys(state) do
+    with {:ok, config} <- cached_config(state) do
+      feature_flags = Map.get(config, Constants.feature_flags(), %{})
+      Map.keys(feature_flags)
+    else
+      {:error, :not_found} -> []
+      error -> error
+    end
+  end
+
+  defp do_get_variation_id(key, default_variation_id, user, state) do
+    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
+         {_value, variation} = result do
+      variation
+    end
+  end
+
+  defp entry_matching({key, setting}, variation_id) do
+    value_matching(key, setting, variation_id) ||
+      value_matching(key, Map.get(setting, Constants.rollout_rules()), variation_id) ||
+      value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
+  end
+
+  def value_matching(key, value, variation_id) when is_list(value) do
+    Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
+  end
+
+  def value_matching(key, value, variation_id) do
+    if Map.get(value, Constants.variation_id(), nil) == variation_id do
+      {key, Map.get(value, Constants.value())}
+    else
+      nil
+    end
   end
 
   defp cached_config(state) do
