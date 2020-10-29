@@ -160,16 +160,30 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-    # Second call: only the redirected URL
+  test "test_sdk_eu_custom_base_url",
+       %{sdk_key: sdk_key, custom_base_url: custom_base_url} = context do
+    global_url = global_config_url(sdk_key)
+    eu_url = eu_config_url(sdk_key)
+    custom_url = config_url(custom_base_url, sdk_key)
+
+    config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
+
+    {:ok, fetcher} =
+      start_fetcher(context, data_governance: DataGovernance.eu_only(), base_url: custom_base_url)
+
     MockAPI
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 2, fn ^custom_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 1, fn ^redirect_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: %{}}}
+    end)
+    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
   test "redirection with custom endpoint",
