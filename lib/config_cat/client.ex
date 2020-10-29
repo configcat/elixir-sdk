@@ -35,6 +35,11 @@ defmodule ConfigCat.Client do
     GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
   end
 
+  @spec get_all_variation_ids(client(), User.t() | nil) :: [Config.variation_id()]
+  def get_all_variation_ids(client, user \\ nil) do
+    GenServer.call(client, {:get_all_variation_ids, user})
+  end
+
   @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
     GenServer.call(client, :force_refresh)
@@ -47,14 +52,8 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:get_all_keys, _from, state) do
-    with {:ok, config} <- cached_config(state) do
-      feature_flags = Map.get(config, Constants.feature_flags(), %{})
-      keys = Map.keys(feature_flags)
-      {:reply, keys, state}
-    else
-      {:error, :not_found} -> {:reply, [], state}
-      error -> {:reply, error, state}
-    end
+    result = do_get_all_keys(state)
+    {:reply, result, state}
   end
 
   @impl GenServer
@@ -69,12 +68,19 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_variation_id, key, default_variation_id, user}, _from, state) do
-    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
-         {_value, variation} = result do
-      {:reply, variation, state}
-    else
-      error -> {:reply, error, state}
-    end
+    result = do_get_variation_id(key, default_variation_id, user, state)
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call({:get_all_variation_ids, user}, _from, state) do
+    result =
+      state
+      |> do_get_all_keys()
+      |> Enum.map(&do_get_variation_id(&1, nil, user, state))
+      |> Enum.reject(&is_nil/1)
+
+    {:reply, result, state}
   end
 
   @impl GenServer
@@ -83,6 +89,23 @@ defmodule ConfigCat.Client do
 
     result = policy.force_refresh(policy_id)
     {:reply, result, state}
+  end
+
+  defp do_get_all_keys(state) do
+    with {:ok, config} <- cached_config(state) do
+      feature_flags = Map.get(config, Constants.feature_flags(), %{})
+      Map.keys(feature_flags)
+    else
+      {:error, :not_found} -> []
+      error -> error
+    end
+  end
+
+  defp do_get_variation_id(key, default_variation_id, user, state) do
+    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
+         {_value, variation} = result do
+      variation
+    end
   end
 
   defp cached_config(state) do

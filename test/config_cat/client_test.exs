@@ -75,12 +75,10 @@ defmodule ConfigCat.ClientTest do
                "default_variation_id"
     end
 
-    test "get_variation_id/4 looks up the variation id for a key", %{
-      client: client,
-      feature: feature,
-      variation: variation
-    } do
-      assert Client.get_variation_id(client, feature, "default") == variation
+    test "get_all_variation_ids/1 returns all known variation ids", %{client: client} do
+      expected = ~w(fakeId1 fakeId2) |> Enum.sort()
+      actual = client |> Client.get_all_variation_ids() |> Enum.sort()
+      assert actual == expected
     end
   end
 
@@ -104,6 +102,10 @@ defmodule ConfigCat.ClientTest do
 
     test "get_variation_id/4 returns default variation", %{client: client} do
       assert Client.get_variation_id(client, "any_feature", "default") == "default"
+    end
+
+    test "get_all_variation_ids/2 returns an empty list of variation ids", %{client: client} do
+      assert Client.get_all_variation_ids(client) == []
     end
   end
 

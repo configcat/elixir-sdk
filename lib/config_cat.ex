@@ -118,6 +118,21 @@ defmodule ConfigCat do
     Client.get_variation_id(client_name(name), key, default_variation_id, user)
   end
 
+  @spec get_all_variation_ids(User.t() | [api_option()]) :: [variation_id()]
+  def get_all_variation_ids(user_or_options \\ []) do
+    if Keyword.keyword?(user_or_options) do
+      get_all_variation_ids(nil, user_or_options)
+    else
+      get_all_variation_ids(user_or_options, [])
+    end
+  end
+
+  @spec get_all_variation_ids(User.t() | nil, [api_option()]) :: [variation_id()]
+  def get_all_variation_ids(user, options) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_all_variation_ids(client_name(name), user)
+  end
+
   @spec force_refresh([api_option()]) :: refresh_result()
   def force_refresh(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)
