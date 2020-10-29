@@ -14,34 +14,11 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   setup :verify_on_exit!
 
   setup do
-    config_with_redirect = %{
-      Constants.preferences() => %{
-        Constants.preferences_base_url() => "https://redirect.configcat.com",
-        Constants.redirect() => RedirectMode.should_redirect()
-      }
-    }
-
-    config_with_redirect = %{
-      Constants.preferences() => %{
-        Constants.preferences_base_url() => "https://redirect.configcat.com",
-        Constants.redirect() => RedirectMode.should_redirect()
-      }
-    }
-
-    config_with_force_redirect = %{
-      Constants.preferences() => %{
-        Constants.preferences_base_url() => "https://force.configcat.com",
-        Constants.redirect() => RedirectMode.force_redirect()
-      }
-    }
-
     {:ok,
      %{
        redirect_base_url: "https://redirect.configcat.com",
-       force_base_url: "https://force.configcat.com",
+       forced_base_url: "https://forced.configcat.com",
        custom_base_url: "https://custom.configcat.com",
-       config_with_redirect: config_with_redirect,
-       config_with_force_redirect: config_with_force_redirect,
        etag: "ETAG",
        mode: "m",
        sdk_key: "SDK_KEY"
@@ -136,17 +113,17 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   end
 
   test "test_sdk_eu_organization_eu_only",
-       %{sdk_key: sdk_key, redirect_base_url: redirect_base_url} = context do
+       %{sdk_key: sdk_key} = context do
     global_url = global_config_url(sdk_key)
     eu_url = eu_config_url(sdk_key)
 
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
     config_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.eu_only())
 
     MockAPI
-    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
     |> expect(:get, 2, fn ^eu_url, _headers, [] ->
