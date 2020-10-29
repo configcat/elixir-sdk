@@ -242,28 +242,26 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "redirection with force redirect",
-       %{config_with_force_redirect: config, sdk_key: sdk_key} = context do
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.eu_only())
-
+  test "test_sdk_redirect_loop",
+       %{sdk_key: sdk_key} = context do
+    global_url = global_config_url(sdk_key)
     eu_url = eu_config_url(sdk_key)
 
-    redirect_path =
-      Map.get(config, Constants.preferences())
-      |> Map.get(Constants.preferences_base_url())
+    config_to_global = stub_response(Constants.base_url_global(), RedirectMode.should_redirect())
+    config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
 
-    redirect_url = config_url(redirect_path, sdk_key)
+    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
 
-    # First call: call global, calls should be made normally
     MockAPI
-    |> expect(:get, 1, fn ^eu_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 1, fn ^redirect_url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+    |> expect(:get, 2, fn ^eu_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
   defp stub_response(response_uri, redirect) do
