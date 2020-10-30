@@ -43,14 +43,15 @@ defmodule ConfigCat do
       |> generate_cache_key(sdk_key)
       |> Keyword.put(:sdk_key, sdk_key)
 
-    name = Keyword.get(options, :name, __MODULE__)
+    name = Keyword.fetch!(options, :name)
     Supervisor.start_link(__MODULE__, options, name: name)
   end
 
   defp default_options,
     do: [
       cache: @default_cache,
-      cache_policy: CachePolicy.auto()
+      cache_policy: CachePolicy.auto(),
+      name: __MODULE__
     ]
 
   @impl Supervisor
