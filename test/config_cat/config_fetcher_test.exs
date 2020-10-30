@@ -34,7 +34,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   test "successful fetch" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    url = global_config_url(@sdk_key)
+    url = global_config_url()
 
     MockAPI
     |> stub(:get, fn ^url, _headers, [] ->
@@ -157,12 +157,13 @@ defmodule ConfigCat.ConfigFetcherTest do
     {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  defp global_config_url(sdk_key) do
+  defp global_config_url(sdk_key \\ @sdk_key) do
     config_url(Constants.base_url_global(), sdk_key)
   end
 
   defp config_url(base_url, sdk_key) do
-    base_url |> URI.parse()
+    base_url
+    |> URI.parse()
     |> URI.merge("#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
     |> URI.to_string()
   end

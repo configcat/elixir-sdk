@@ -13,17 +13,12 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
   setup :verify_on_exit!
 
-  setup do
-    {:ok,
-     %{
-       redirect_base_url: "https://redirect.configcat.com",
-       forced_base_url: "https://forced.configcat.com",
-       custom_base_url: "https://custom.configcat.com",
-       etag: "ETAG",
-       mode: "m",
-       sdk_key: "SDK_KEY"
-     }}
-  end
+  @redirect_base_url "https://redirect.configcat.com"
+  @forced_base_url "https://forced.configcat.com"
+  @custom_base_url "https://custom.configcat.com"
+  @mode "m"
+  @sdk_key "SDK_KEY"
+  @fetcher_options %{mode: @mode, sdk_key: @sdk_key}
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
     name = UUID.uuid4() |> String.to_atom()
@@ -39,15 +34,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, name}
   end
 
-  test "test_sdk_global_organization_global",
-       %{sdk_key: sdk_key, redirect_base_url: redirect_base_url} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    redirect_url = config_url(redirect_base_url, sdk_key)
+  test "test_sdk_global_organization_global" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    redirect_url = config_url(@redirect_base_url)
 
-    config = stub_response(redirect_base_url, RedirectMode.no_redirect())
+    config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
 
     MockAPI
     |> expect(:get, 2, fn ^global_url, _headers, [] ->
@@ -64,15 +58,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_eu_organization_global",
-       %{sdk_key: sdk_key, redirect_base_url: redirect_base_url} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    redirect_url = config_url(redirect_base_url, sdk_key)
+  test "test_sdk_eu_organization_global" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    redirect_url = config_url(@redirect_base_url)
 
-    config = stub_response(redirect_base_url, RedirectMode.no_redirect())
+    config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.eu_only())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.eu_only())
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, [] ->
@@ -89,15 +82,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_global_organization_eu_only",
-       %{sdk_key: sdk_key} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
+  test "test_sdk_global_organization_eu_only" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
 
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
     config_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
@@ -111,15 +103,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_eu_organization_eu_only",
-       %{sdk_key: sdk_key} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
+  test "test_sdk_eu_organization_eu_only" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
 
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
     config_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.eu_only())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.eu_only())
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, [] ->
@@ -133,16 +124,18 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_global_custom_base_url",
-       %{sdk_key: sdk_key, custom_base_url: custom_base_url} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    custom_url = config_url(custom_base_url, sdk_key)
+  test "test_sdk_global_custom_base_url" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    custom_url = config_url(@custom_base_url)
 
     config_to_global = stub_response(Constants.base_url_global(), RedirectMode.no_redirect())
 
     {:ok, fetcher} =
-      start_fetcher(context, data_governance: DataGovernance.global(), base_url: custom_base_url)
+      start_fetcher(@fetcher_options,
+        data_governance: DataGovernance.global(),
+        base_url: @custom_base_url
+      )
 
     MockAPI
     |> expect(:get, 2, fn ^custom_url, _headers, [] ->
@@ -159,16 +152,18 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_eu_custom_base_url",
-       %{sdk_key: sdk_key, custom_base_url: custom_base_url} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    custom_url = config_url(custom_base_url, sdk_key)
+  test "test_sdk_eu_custom_base_url" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    custom_url = config_url(@custom_base_url)
 
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
     {:ok, fetcher} =
-      start_fetcher(context, data_governance: DataGovernance.eu_only(), base_url: custom_base_url)
+      start_fetcher(@fetcher_options,
+        data_governance: DataGovernance.eu_only(),
+        base_url: @custom_base_url
+      )
 
     MockAPI
     |> expect(:get, 2, fn ^custom_url, _headers, [] ->
@@ -185,15 +180,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_global_forced",
-       %{sdk_key: sdk_key, forced_base_url: forced_base_url} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    forced_url = config_url(forced_base_url, sdk_key)
+  test "test_sdk_global_forced" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    forced_url = config_url(@forced_base_url)
 
-    config_to_forced = stub_response(forced_base_url, RedirectMode.force_redirect())
+    config_to_forced = stub_response(@forced_base_url, RedirectMode.force_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
@@ -210,18 +204,19 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_base_url_forced",
-       %{sdk_key: sdk_key, custom_base_url: custom_base_url, forced_base_url: forced_base_url} =
-         context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
-    custom_url = config_url(custom_base_url, sdk_key)
-    forced_url = config_url(forced_base_url, sdk_key)
+  test "test_sdk_base_url_forced" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
+    custom_url = config_url(@custom_base_url)
+    forced_url = config_url(@forced_base_url)
 
-    config_to_forced = stub_response(forced_base_url, RedirectMode.force_redirect())
+    config_to_forced = stub_response(@forced_base_url, RedirectMode.force_redirect())
 
     {:ok, fetcher} =
-      start_fetcher(context, data_governance: DataGovernance.global(), base_url: custom_base_url)
+      start_fetcher(@fetcher_options,
+        data_governance: DataGovernance.global(),
+        base_url: @custom_base_url
+      )
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, [] ->
@@ -241,15 +236,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "test_sdk_redirect_loop",
-       %{sdk_key: sdk_key} = context do
-    global_url = global_config_url(sdk_key)
-    eu_url = eu_config_url(sdk_key)
+  test "test_sdk_redirect_loop" do
+    global_url = global_config_url()
+    eu_url = eu_config_url()
 
     config_to_global = stub_response(Constants.base_url_global(), RedirectMode.should_redirect())
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
 
-    {:ok, fetcher} = start_fetcher(context, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
@@ -272,15 +266,15 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     }
   end
 
-  defp global_config_url(sdk_key) do
+  defp global_config_url(sdk_key \\ @sdk_key) do
     config_url(Constants.base_url_global(), sdk_key)
   end
 
-  defp eu_config_url(sdk_key) do
+  defp eu_config_url(sdk_key \\ @sdk_key) do
     config_url(Constants.base_url_eu_only(), sdk_key)
   end
 
-  defp config_url(base_url, sdk_key) do
+  defp config_url(base_url, sdk_key \\ @sdk_key) do
     "#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
   end
 end
