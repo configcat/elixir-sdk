@@ -228,7 +228,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     |> expect(:get, 1, fn ^custom_url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
-    |> expect(:get, 2, fn ^forced_url, _headers, [] ->
+    |> expect(:get, 3, fn ^forced_url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
 
@@ -249,11 +249,20 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 2, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 1, fn ^eu_url, _headers, [] ->
       {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+
+    MockAPI
+    |> expect(:get, 1, fn ^eu_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_global}}
+    end)
+    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+      {:ok, %Response{status_code: 200, body: config_to_eu}}
+    end)
+
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 

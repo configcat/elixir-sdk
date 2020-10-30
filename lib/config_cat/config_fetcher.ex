@@ -167,7 +167,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
               "Redirect loop during config.json fetch. Please contact support@configcat.com."
             )
 
-            state
+            # redirects needs reset as customers might change their configs at any time.
+            %{state | redirects: %{}}
 
           true ->
             state
