@@ -142,6 +142,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          p <- Map.get(config, Constants.preferences(), %{}),
          base_url <- Map.get(p, Constants.preferences_base_url()),
          redirect <- Map.get(p, Constants.redirect()) do
+      followed? = Map.has_key?(redirects, new_base_url)
+
       state =
         cond do
           custom_endpoint? && redirect != RedirectMode.force_redirect() ->
@@ -150,13 +152,20 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           redirect == RedirectMode.no_redirect() ->
             state
 
-          base_url && !Map.has_key?(redirects, new_base_url) ->
+          base_url && !followed? ->
             {_, {_, _}, state} =
               do_fetch(%{
                 state
                 | base_url: base_url,
                   redirects: Map.put(redirects, base_url, 1)
               })
+
+            state
+
+          followed? ->
+            Logger.warn(
+              "Redirect loop during config.json fetch. Please contact support@configcat.com."
+            )
 
             state
 
