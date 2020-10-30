@@ -111,7 +111,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp base_headers(%{mode: mode}) do
-    version = Application.spec(:config_cat, :vsn) |> to_string()
+    version = Application.spec(:configcat, :vsn) |> to_string()
     user_agent = "ConfigCat-Elixir/#{mode}-#{version}"
 
     [
