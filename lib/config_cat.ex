@@ -34,6 +34,7 @@ defmodule ConfigCat do
   def start_link(sdk_key, options \\ [])
 
   def start_link(nil, _options), do: raise(ArgumentError, "SDK Key is required")
+  def start_link("", _options), do: raise(ArgumentError, "SDK Key is required")
 
   def start_link(sdk_key, options) when is_binary(sdk_key) and is_list(options) do
     options =

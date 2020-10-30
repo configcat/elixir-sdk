@@ -6,8 +6,12 @@ defmodule ConfigCat.IntegrationTest do
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
-  test "requires SDK key" do
+  test "raises error if SDK key is missing" do
     assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat(nil) end
+  end
+
+  test "raises error if SDK key is an empty string" do
+    assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat("") end
   end
 
   test "fetches config" do
