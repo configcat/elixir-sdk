@@ -13,12 +13,12 @@ ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature fl
 [![Hex.pm](https://img.shields.io/hexpm/dt/configcat.svg?style=flat-square)](https://hex.pm/packages/configcat)
 
 # Getting Started
-### 1. Add `config_cat` to your list of dependencies in `mix.exs`:
+### 1. Add `configcat` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:config_cat, "~> 1.0.0"}
+    {:configcat, "~> 1.0.0"}
   ]
 end
 ```
