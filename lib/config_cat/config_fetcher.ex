@@ -153,7 +153,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
             state
 
           base_url && !followed? ->
-            {_, {_, _}, state} =
+            {_, _, state} =
               do_fetch(%{
                 state
                 | base_url: base_url,
