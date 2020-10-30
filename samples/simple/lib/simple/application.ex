@@ -11,7 +11,7 @@ defmodule Simple.Application do
     Logger.configure(level: :info)
 
     children = [
-      {ConfigCat, @sdk_key},
+      {ConfigCat, [sdk_key: @sdk_key]},
       Simple
     ]
 
