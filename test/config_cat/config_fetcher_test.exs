@@ -128,9 +128,10 @@ defmodule ConfigCat.ConfigFetcherTest do
     assert {:error, ^error} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "allows base URL to be configured", %{config: config, sdk_key: sdk_key} = context do
-    base_url = "https://BASE_URL"
-    {:ok, fetcher} = start_fetcher(context, base_url: base_url)
+  test "allows base URL to be configured" do
+    # the extra "/" at the end is intentional, to make sure it works regardless.
+    base_url = "https://BASE_URL/"
+    {:ok, fetcher} = start_fetcher(@fetcher_options, base_url: base_url)
 
     url = config_url(base_url, @sdk_key)
 
@@ -161,7 +162,9 @@ defmodule ConfigCat.ConfigFetcherTest do
   end
 
   defp config_url(base_url, sdk_key) do
-    "#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
+    base_url |> URI.parse()
+    |> URI.merge("#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
+    |> URI.to_string()
   end
 
   defp assert_user_agent_matches(headers, expected) do
