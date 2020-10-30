@@ -144,7 +144,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          redirect <- Map.get(p, Constants.redirect()) do
       followed? = Map.has_key?(redirects, new_base_url)
 
-      state =
+      new_state =
         cond do
           custom_endpoint? && redirect != RedirectMode.force_redirect() ->
             state
@@ -182,7 +182,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         """)
       end
 
-      {:reply, {:ok, config}, %{state | etag: etag}}
+      {:reply, {:ok, config}, %{new_state | etag: etag}}
     end
   end
 
