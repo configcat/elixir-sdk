@@ -7,23 +7,19 @@ defmodule ConfigCat.ConfigFetcherTest do
   alias ConfigCat.{Constants, MockAPI}
   alias HTTPoison.Response
 
-  require ConfigCat.Constants
+  require ConfigCat.{Constants}
 
   setup :verify_on_exit!
 
-  setup do
-    config = %{"key" => "value"}
-    etag = "ETAG"
-    mode = "m"
-    sdk_key = "SDK_KEY"
-
-    {:ok, %{config: config, etag: etag, mode: mode, sdk_key: sdk_key}}
-  end
+  @config %{"key" => "value"}
+  @etag "ETAG"
+  @mode "m"
+  @sdk_key "SDK_KEY"
+  @fetcher_options %{mode: @mode, sdk_key: @sdk_key}
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
     default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
-    options = Keyword.merge(default_options, options)
 
     {:ok, _pid} =
       default_options
@@ -35,29 +31,27 @@ defmodule ConfigCat.ConfigFetcherTest do
     {:ok, name}
   end
 
-  test "successful fetch", %{config: config, sdk_key: sdk_key} = context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "successful fetch" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    url =
-      "#{Constants.base_url()}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
+    url = global_config_url()
 
     MockAPI
     |> stub(:get, fn ^url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: @config}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, @config} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "user agent header that includes the fetch mode",
-       %{config: config, mode: mode} = context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "user agent header that includes the fetch mode" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    response = %Response{status_code: 200, body: config}
+    response = %Response{status_code: 200, body: @config}
 
     MockAPI
     |> stub(:get, fn _url, headers, _options ->
-      assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/#{mode}-")
+      assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/#{@mode}-")
 
       {:ok, response}
     end)
@@ -65,14 +59,13 @@ defmodule ConfigCat.ConfigFetcherTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "sends proper cache control header on later requests",
-       %{config: config, etag: etag} = context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "sends proper cache control header on later requests" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     initial_response = %Response{
       status_code: 200,
-      body: config,
-      headers: [{"ETag", etag}]
+      body: @config,
+      headers: [{"ETag", @etag}]
     }
 
     MockAPI
@@ -85,25 +78,24 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     not_modified_response = %Response{
       status_code: 304,
-      headers: [{"ETag", etag}]
+      headers: [{"ETag", @etag}]
     }
 
     MockAPI
     |> expect(:get, fn _url, headers, _options ->
-      assert {"If-None-Match", ^etag} = List.keyfind(headers, "If-None-Match", 0)
+      assert {"If-None-Match", @etag} = List.keyfind(headers, "If-None-Match", 0)
       {:ok, not_modified_response}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "returns unchanged response when server responds that the config hasn't changed",
-       %{etag: etag} = context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "returns unchanged response when server responds that the config hasn't changed" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     response = %Response{
       status_code: 304,
-      headers: [{"ETag", etag}]
+      headers: [{"ETag", @etag}]
     }
 
     MockAPI
@@ -113,8 +105,8 @@ defmodule ConfigCat.ConfigFetcherTest do
   end
 
   @tag capture_log: true
-  test "returns error for non-200 response from ConfigCat", context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "returns error for non-200 response from ConfigCat" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     response = %Response{status_code: 503}
 
@@ -125,8 +117,8 @@ defmodule ConfigCat.ConfigFetcherTest do
   end
 
   @tag capture_log: true
-  test "returns error for error response from ConfigCat", context do
-    {:ok, fetcher} = start_fetcher(context)
+  test "returns error for error response from ConfigCat" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     error = %HTTPoison.Error{reason: "failed"}
 
@@ -136,25 +128,26 @@ defmodule ConfigCat.ConfigFetcherTest do
     assert {:error, ^error} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "allows base URL to be configured", %{config: config, sdk_key: sdk_key} = context do
+  test "allows base URL to be configured" do
+    # the extra "/" at the end is intentional, to make sure it works regardless.
     base_url = "https://BASE_URL/"
-    {:ok, fetcher} = start_fetcher(context, base_url: base_url)
+    {:ok, fetcher} = start_fetcher(@fetcher_options, base_url: base_url)
 
-    url = "#{base_url}#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}"
+    url = config_url(base_url, @sdk_key)
 
     MockAPI
     |> expect(:get, fn ^url, _headers, [] ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: @config}}
     end)
 
     {:ok, _} = ConfigFetcher.fetch(fetcher)
   end
 
-  test "sends http proxy options when provided", %{config: config} = context do
+  test "sends http proxy options when provided" do
     proxy = "https://PROXY"
-    {:ok, fetcher} = start_fetcher(context, http_proxy: proxy)
+    {:ok, fetcher} = start_fetcher(@fetcher_options, http_proxy: proxy)
 
-    response = %Response{status_code: 200, body: config}
+    response = %Response{status_code: 200, body: @config}
 
     MockAPI
     |> expect(:get, fn _url, _headers, [proxy: ^proxy] ->
@@ -162,6 +155,17 @@ defmodule ConfigCat.ConfigFetcherTest do
     end)
 
     {:ok, _} = ConfigFetcher.fetch(fetcher)
+  end
+
+  defp global_config_url(sdk_key \\ @sdk_key) do
+    config_url(Constants.base_url_global(), sdk_key)
+  end
+
+  defp config_url(base_url, sdk_key) do
+    base_url
+    |> URI.parse()
+    |> URI.merge("#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
+    |> URI.to_string()
   end
 
   defp assert_user_agent_matches(headers, expected) do

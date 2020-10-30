@@ -7,6 +7,7 @@ defmodule ConfigCat do
     Client,
     Config,
     Constants,
+    DataGovernance,
     InMemoryCache,
     User
   }
@@ -20,6 +21,7 @@ defmodule ConfigCat do
           {:base_url, String.t()}
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
+          | {:data_governance, DataGovernance.t()}
           | {:http_proxy, String.t()}
   @type options :: [option()]
   @type refresh_result :: Client.refresh_result()
@@ -188,6 +190,6 @@ defmodule ConfigCat do
     options
     |> Keyword.update!(:name, &fetcher_name/1)
     |> Keyword.put(:mode, options[:cache_policy].mode)
-    |> Keyword.take([:base_url, :http_proxy, :mode, :name, :sdk_key])
+    |> Keyword.take([:base_url, :http_proxy, :data_governance, :mode, :name, :sdk_key])
   end
 end

@@ -1,7 +1,8 @@
 defmodule ConfigCat.IntegrationTest do
   use ExUnit.Case, async: true
 
-  alias ConfigCat.CachePolicy
+  require ConfigCat.DataGovernance
+  alias ConfigCat.{CachePolicy, DataGovernance}
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
@@ -61,6 +62,14 @@ defmodule ConfigCat.IntegrationTest do
     {:ok, client} = start_config_cat(@sdk_key, base_url: "https://invalidcdn.configcat.com")
 
     assert {:error, %HTTPoison.Error{}} = ConfigCat.force_refresh(client: client)
+  end
+
+  @tag capture_log: true
+  test "handles data_governance: eu_only" do
+    {:ok, client} = start_config_cat(@sdk_key, data_governance: DataGovernance.eu_only())
+
+    assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
+             "This text came from ConfigCat"
   end
 
   defp start_config_cat(sdk_key, options \\ []) do

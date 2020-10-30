@@ -7,19 +7,28 @@ defmodule ConfigCat.ConfigFetcher do
   @type result :: {:ok, Config.t()} | {:ok, :unchanged} | fetch_error()
 
   @callback fetch(id()) :: result()
+
+  defmodule RedirectMode do
+    defmacro no_redirect, do: 0
+    defmacro should_redirect, do: 1
+    defmacro force_redirect, do: 2
+  end
 end
 
 defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
-  alias ConfigCat.{ConfigFetcher, Constants}
+  alias ConfigCat.{ConfigFetcher, Constants, DataGovernance}
+  alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require ConfigCat.Constants
+  require ConfigCat.{Constants, DataGovernance}
+  require ConfigFetcher.RedirectMode
   require Logger
 
   @type option ::
           {:base_url, String.t()}
+          | {:data_governance, DataGovernance.t()}
           | {:http_proxy, String.t()}
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
@@ -35,13 +44,29 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     initial_state =
       default_options()
       |> Keyword.merge(options)
-      |> Enum.into(%{})
-      |> Map.put(:etag, nil)
+      |> choose_base_url()
+      |> Map.new()
+      |> Map.merge(%{etag: nil, redirects: %{}})
 
     GenServer.start_link(__MODULE__, initial_state, name: name)
   end
 
-  defp default_options, do: [api: ConfigCat.API, base_url: Constants.base_url()]
+  defp default_options,
+    do: [api: ConfigCat.API, data_governance: DataGovernance.global()]
+
+  defp choose_base_url(options) do
+    case Keyword.get(options, :base_url) do
+      nil ->
+        base_url = options |> Keyword.get(:data_governance) |> default_url()
+        Keyword.merge(options, base_url: base_url, custom_endpoint?: false)
+
+      _ ->
+        Keyword.put(options, :custom_endpoint?, true)
+    end
+  end
+
+  defp default_url(DataGovernance.eu_only()), do: Constants.base_url_eu_only()
+  defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher
   def fetch(fetcher) do
@@ -55,6 +80,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @impl GenServer
   def handle_call(:fetch, _from, state) do
+    do_fetch(state)
+  end
+
+  defp do_fetch(state) do
     Logger.info("Fetching configuration from ConfigCat")
 
     with api <- Map.get(state, :api),
@@ -107,8 +136,54 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
        when code >= 200 and code < 300 do
-    with etag <- extract_etag(headers) do
-      {:reply, {:ok, config}, %{state | etag: etag}}
+    with etag <- extract_etag(headers),
+         %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
+           state,
+         p <- Map.get(config, Constants.preferences(), %{}),
+         base_url <- Map.get(p, Constants.preferences_base_url()),
+         redirect <- Map.get(p, Constants.redirect()) do
+      followed? = Map.has_key?(redirects, new_base_url)
+
+      new_state =
+        cond do
+          custom_endpoint? && redirect != RedirectMode.force_redirect() ->
+            state
+
+          redirect == RedirectMode.no_redirect() ->
+            state
+
+          base_url && !followed? ->
+            {_, _, state} =
+              do_fetch(%{
+                state
+                | base_url: base_url,
+                  redirects: Map.put(redirects, base_url, 1)
+              })
+
+            state
+
+          followed? ->
+            Logger.warn(
+              "Redirect loop during config.json fetch. Please contact support@configcat.com."
+            )
+
+            # redirects needs reset as customers might change their configs at any time.
+            %{state | redirects: %{}}
+
+          true ->
+            state
+        end
+
+      if redirect == RedirectMode.should_redirect() do
+        Logger.warn("""
+        Your data_governance parameter at ConfigCat client initialization
+        is not in sync with your preferences on the ConfigCat Dashboard:
+        https://app.configcat.com/organization/data-governance.
+        Only Organization Admins can set this preference.
+        """)
+      end
+
+      {:reply, {:ok, config}, %{new_state | etag: etag}}
     end
   end
 
