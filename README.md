@@ -9,8 +9,8 @@ ConfigCat is a <a href="https://configcat.com" target="_blank">hosted feature fl
 
 [![Build Status](https://travis-ci.com/configcat/elixir-sdk.svg?branch=master)](https://travis-ci.com/configcat/elixir-sdk)
 [![Coverage Status](https://codecov.io/github/configcat/elixir-sdk/badge.svg?branch=master)](https://codecov.io/github/configcat/elixir-sdk?branch=master)
-[![Hex.pm](https://img.shields.io/hexpm/v/configcat.svg?style=flat-square)](https://hex.pm/packages/configcat)
-[![Hex.pm](https://img.shields.io/hexpm/dt/configcat.svg?style=flat-square)](https://hex.pm/packages/configcat)
+[![Hex.pm](https://img.shields.io/hexpm/v/configcat.svg?style=circle)](https://hex.pm/packages/configcat)
+[![Hex.pm](https://img.shields.io/hexpm/dt/configcat.svg?style=circle)](https://hex.pm/packages/configcat)
 
 # Getting Started
 ### 1. Add `configcat` to your list of dependencies in `mix.exs`:
