@@ -28,11 +28,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @type option ::
           {:base_url, String.t()}
+          | {:data_governance, DataGovernance.t()}
           | {:http_proxy, String.t()}
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
           | {:sdk_key, String.t()}
-          | {:data_governance, DataGovernance.t()}
   @type options :: [option]
 
   @behaviour ConfigFetcher
