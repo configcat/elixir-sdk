@@ -8,6 +8,9 @@ script:
   - mix dialyzer
   - mix coveralls.travis
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
 cache:
   directories:
     - priv/plts
