@@ -28,7 +28,6 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
     name = UUID.uuid4() |> String.to_atom()
     default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
-    options = Keyword.merge(default_options, options)
 
     {:ok, _pid} =
       default_options
@@ -266,7 +265,6 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
   defp stub_response(response_uri, redirect) do
     %{
-      "f" => %{"test" => "json"},
       Constants.preferences() => %{
         Constants.preferences_base_url() => response_uri,
         Constants.redirect() => redirect

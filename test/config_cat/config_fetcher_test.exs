@@ -29,7 +29,6 @@ defmodule ConfigCat.ConfigFetcherTest do
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
     default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
-    options = Keyword.merge(default_options, options)
 
     {:ok, _pid} =
       default_options

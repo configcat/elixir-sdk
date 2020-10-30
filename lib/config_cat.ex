@@ -21,8 +21,8 @@ defmodule ConfigCat do
           {:base_url, String.t()}
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
-          | {:http_proxy, String.t()}
           | {:data_governance, DataGovernance.t()}
+          | {:http_proxy, String.t()}
   @type options :: [option()]
   @type refresh_result :: Client.refresh_result()
   @type value :: Config.value()

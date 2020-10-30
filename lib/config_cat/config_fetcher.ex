@@ -43,49 +43,30 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
     initial_state =
       default_options()
-      |> custom_server_options(options)
-      |> Map.merge(Enum.into(options, %{}))
-      |> data_governance_options(options)
-      |> Map.put(:etag, nil)
+      |> Keyword.merge(options)
+      |> choose_base_url()
+      |> Map.new()
+      |> Map.merge(%{etag: nil, redirects: %{}})
 
     GenServer.start_link(__MODULE__, initial_state, name: name)
   end
 
   defp default_options,
-    do: %{
-      api: ConfigCat.API,
-      base_url: Constants.base_url_global(),
-      data_governance: DataGovernance.global(),
-      custom_endpoint: false,
-      redirects: %{}
-    }
+    do: [api: ConfigCat.API, data_governance: DataGovernance.global()]
 
-  defp custom_server_options(state, options) do
-    case List.keyfind(options, :base_url, 0) do
-      {:base_url, _url} ->
-        %{state | custom_endpoint: true}
+  defp choose_base_url(options) do
+    case Keyword.get(options, :base_url) do
+      nil ->
+        base_url = options |> Keyword.get(:data_governance) |> default_url()
+        Keyword.merge(options, base_url: base_url, custom_endpoint?: false)
 
       _ ->
-        state
+        Keyword.put(options, :custom_endpoint?, true)
     end
   end
 
-  defp data_governance_options(state, options) do
-    with %{data_governance: data_governance, custom_endpoint: custom_endpoint} <-
-           Map.take(state, [:data_governance, :custom_endpoint]) do
-      cond do
-        custom_endpoint ->
-          {:base_url, base_url} = List.keyfind(options, :base_url, 0)
-          %{state | base_url: base_url}
-
-        data_governance == DataGovernance.eu_only() ->
-          %{state | base_url: Constants.base_url_eu_only()}
-
-        true ->
-          state
-      end
-    end
-  end
+  defp default_url(DataGovernance.eu_only()), do: Constants.base_url_eu_only()
+  defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher
   def fetch(fetcher) do
@@ -99,10 +80,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @impl GenServer
   def handle_call(:fetch, _from, state) do
-    handle_fetch_call(state)
+    do_fetch(state)
   end
 
-  defp handle_fetch_call(state) do
+  defp do_fetch(state) do
     Logger.info("Fetching configuration from ConfigCat")
 
     with api <- Map.get(state, :api),
@@ -156,14 +137,14 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
        when code >= 200 and code < 300 do
     with etag <- extract_etag(headers),
-         %{base_url: new_base_url, custom_endpoint: custom_endpoint, redirects: redirects} <-
-           Map.take(state, [:base_url, :custom_endpoint, :redirects]),
+         %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
+           state,
          p <- Map.get(config, Constants.preferences(), %{}),
          base_url <- Map.get(p, Constants.preferences_base_url()),
          redirect <- Map.get(p, Constants.redirect()) do
       state =
         cond do
-          custom_endpoint && redirect != RedirectMode.force_redirect() ->
+          custom_endpoint? && redirect != RedirectMode.force_redirect() ->
             state
 
           redirect == RedirectMode.no_redirect() ->
@@ -171,7 +152,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
           base_url && !Map.has_key?(redirects, new_base_url) ->
             {_, {_, _}, state} =
-              handle_fetch_call(%{
+              do_fetch(%{
                 state
                 | base_url: base_url,
                   redirects: Map.put(redirects, base_url, 1)

@@ -1,7 +1,7 @@
 defmodule ConfigCat.IntegrationTest do
   use ExUnit.Case, async: true
 
-  require ConfigCat.{DataGovernance}
+  require ConfigCat.DataGovernance
   alias ConfigCat.{CachePolicy, DataGovernance}
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
