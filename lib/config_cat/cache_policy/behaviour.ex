@@ -1,4 +1,6 @@
 defmodule ConfigCat.CachePolicy.Behaviour do
+  @moduledoc false
+
   alias ConfigCat.{CachePolicy, Config}
 
   @type id :: CachePolicy.id()

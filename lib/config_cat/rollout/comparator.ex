@@ -1,4 +1,6 @@
 defmodule ConfigCat.Rollout.Comparator do
+  @moduledoc false
+
   alias ConfigCat.Config
   alias Version.InvalidVersionError
 

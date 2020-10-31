@@ -1,4 +1,6 @@
 defmodule ConfigCat.CachePolicy.Helpers do
+  @moduledoc false
+
   alias ConfigCat.{CachePolicy, ConfigCache, ConfigFetcher}
 
   @type state :: %{

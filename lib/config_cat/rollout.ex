@@ -1,4 +1,6 @@
 defmodule ConfigCat.Rollout do
+  @moduledoc false
+
   alias ConfigCat.{Config, Constants, User}
   alias ConfigCat.Rollout.Comparator
 

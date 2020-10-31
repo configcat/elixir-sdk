@@ -1,4 +1,6 @@
 defmodule ConfigCat.InMemoryCache do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.ConfigCache

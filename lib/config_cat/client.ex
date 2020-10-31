@@ -1,4 +1,6 @@
 defmodule ConfigCat.Client do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.{CachePolicy, Config, Constants, Rollout, User}

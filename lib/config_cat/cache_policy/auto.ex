@@ -1,4 +1,6 @@
 defmodule ConfigCat.CachePolicy.Auto do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.CachePolicy

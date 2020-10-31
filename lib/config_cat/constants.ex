@@ -1,4 +1,6 @@
 defmodule ConfigCat.Constants do
+  @moduledoc false
+
   defmacro base_url_global, do: "https://cdn-global.configcat.com"
   defmacro base_url_eu_only, do: "https://cdn-eu.configcat.com"
 
