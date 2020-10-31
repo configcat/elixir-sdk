@@ -2,7 +2,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
   require Logger
 
@@ -16,7 +16,7 @@ defmodule ConfigCat.CachePolicy.Auto do
           poll_interval_seconds: pos_integer()
         }
 
-  @behaviour CachePolicy
+  @behaviour Behaviour
 
   @spec new(options()) :: t()
   def new(options \\ []) do
@@ -44,12 +44,12 @@ defmodule ConfigCat.CachePolicy.Auto do
     polled_refresh(state)
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def get(policy_id) do
     GenServer.call(policy_id, :get)
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def force_refresh(policy_id) do
     GenServer.call(policy_id, :force_refresh)
   end
