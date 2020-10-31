@@ -11,6 +11,7 @@ defmodule ConfigCat.CachePolicy do
           | {:fetcher_id, ConfigFetcher.id()}
           | {:name, id()}
   @type options :: [option]
+  @type refresh_result :: :ok | ConfigFetcher.fetch_error()
   @type t :: Auto.t() | Lazy.t() | Manual.t()
 
   @spec auto(Auto.options()) :: Auto.t()
