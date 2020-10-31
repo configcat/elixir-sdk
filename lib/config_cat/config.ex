@@ -1,6 +1,5 @@
 defmodule ConfigCat.Config do
-  @moduledoc false
-
+  @typedoc false
   @type comparator :: non_neg_integer()
   @type key :: String.t()
   @type t :: map()
