@@ -19,6 +19,7 @@ defmodule ConfigCat.MixProject do
       docs: [
         assets: "assets",
         extras: ["README.md"],
+        logo: "assets/logo.png",
         main: "README"
       ],
       test_coverage: [tool: ExCoveralls],
