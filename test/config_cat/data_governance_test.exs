@@ -4,11 +4,11 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
-  alias ConfigCat.{Constants, DataGovernance, MockAPI}
+  alias ConfigCat.{Constants, MockAPI}
   alias ConfigCat.ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require ConfigCat.{Constants, DataGovernance}
+  require ConfigCat.Constants
   require ConfigCat.ConfigFetcher.RedirectMode
 
   setup :verify_on_exit!
@@ -41,7 +41,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
     |> expect(:get, 2, fn ^global_url, _headers, [] ->
@@ -65,7 +65,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.eu_only())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :eu_only)
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, [] ->
@@ -89,7 +89,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
     config_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
@@ -110,7 +110,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
     config_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.no_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.eu_only())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :eu_only)
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, [] ->
@@ -133,7 +133,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     {:ok, fetcher} =
       start_fetcher(@fetcher_options,
-        data_governance: DataGovernance.global(),
+        data_governance: :global,
         base_url: @custom_base_url
       )
 
@@ -161,7 +161,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     {:ok, fetcher} =
       start_fetcher(@fetcher_options,
-        data_governance: DataGovernance.eu_only(),
+        data_governance: :eu_only,
         base_url: @custom_base_url
       )
 
@@ -187,7 +187,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     config_to_forced = stub_response(@forced_base_url, RedirectMode.force_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->
@@ -214,7 +214,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     {:ok, fetcher} =
       start_fetcher(@fetcher_options,
-        data_governance: DataGovernance.global(),
+        data_governance: :global,
         base_url: @custom_base_url
       )
 
@@ -243,7 +243,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     config_to_global = stub_response(Constants.base_url_global(), RedirectMode.should_redirect())
     config_to_eu = stub_response(Constants.base_url_eu_only(), RedirectMode.should_redirect())
 
-    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: DataGovernance.global())
+    {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, [] ->

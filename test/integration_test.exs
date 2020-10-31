@@ -1,8 +1,7 @@
 defmodule ConfigCat.IntegrationTest do
   use ExUnit.Case, async: true
 
-  require ConfigCat.DataGovernance
-  alias ConfigCat.{CachePolicy, DataGovernance}
+  alias ConfigCat.CachePolicy
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
@@ -70,7 +69,7 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles data_governance: eu_only" do
-    {:ok, client} = start_config_cat(@sdk_key, data_governance: DataGovernance.eu_only())
+    {:ok, client} = start_config_cat(@sdk_key, data_governance: :eu_only)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
              "This text came from ConfigCat"
