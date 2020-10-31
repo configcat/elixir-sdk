@@ -45,9 +45,9 @@ defmodule ConfigCat do
     Supervisor.start_link(__MODULE__, options, name: name)
   end
 
-  def validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
-  def validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
-  def validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
+  defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
+  defp validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
+  defp validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
 
   defp default_options,
     do: [

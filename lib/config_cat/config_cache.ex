@@ -5,5 +5,5 @@ defmodule ConfigCat.ConfigCache do
   @type result :: {:ok, Config.t()} | {:error, :not_found}
 
   @callback get(key) :: {:ok, Config.t()} | {:error, :not_found}
-  @callback set(key, Config.t()) :: :ok
+  @callback set(key, config :: Config.t()) :: :ok
 end

@@ -17,6 +17,7 @@ defmodule ConfigCat.User do
     |> struct!(other_props)
   end
 
+  @doc false
   @spec get_attribute(t(), String.t()) :: String.t() | nil
   def get_attribute(user, attribute) do
     do_get_attribute(user, attribute)

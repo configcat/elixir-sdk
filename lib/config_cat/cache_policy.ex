@@ -11,6 +11,7 @@ defmodule ConfigCat.CachePolicy do
           | {:fetcher_id, ConfigFetcher.id()}
           | {:name, id()}
   @type options :: [option]
+  @typedoc false
   @type refresh_result :: :ok | ConfigFetcher.fetch_error()
   @type t :: Auto.t() | Lazy.t() | Manual.t()
 
@@ -29,6 +30,7 @@ defmodule ConfigCat.CachePolicy do
     Manual.new()
   end
 
+  @doc false
   @spec policy_name(t()) :: module()
   def policy_name(%policy{}), do: policy
 
@@ -39,11 +41,13 @@ defmodule ConfigCat.CachePolicy do
     |> policy_name()
   end
 
+  @doc false
   @spec child_spec(options()) :: Supervisor.child_spec()
   def child_spec(options) do
     policy_name(options).child_spec(options)
   end
 
+  @doc false
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     policy_name(options).start_link(options)
