@@ -4,6 +4,9 @@ defmodule ConfigCat.MixProject do
   def project do
     [
       app: :configcat,
+      name: "ConfigCat",
+      source_url: "https://github.com/configcat/elixir-sdk",
+      homepage_url: "https://configcat.com/",
       version: "1.0.0",
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
