@@ -23,6 +23,7 @@ defmodule ConfigCat do
           | {:cache_policy, CachePolicy.t()}
           | {:data_governance, DataGovernance.t()}
           | {:http_proxy, String.t()}
+          | {:sdk_key, String.t()}
   @type options :: [option()]
   @type refresh_result :: Client.refresh_result()
   @type value :: Config.value()
@@ -30,26 +31,29 @@ defmodule ConfigCat do
 
   @default_cache InMemoryCache
 
-  @spec start_link(String.t(), options()) :: Supervisor.on_start()
-  def start_link(sdk_key, options \\ [])
+  @spec start_link(options()) :: Supervisor.on_start()
+  def start_link(options) when is_list(options) do
+    sdk_key = options[:sdk_key]
+    validate_sdk_key(sdk_key)
 
-  def start_link(nil, _options), do: raise(ArgumentError, "SDK Key is required")
-
-  def start_link(sdk_key, options) when is_binary(sdk_key) and is_list(options) do
     options =
       default_options()
       |> Keyword.merge(options)
       |> generate_cache_key(sdk_key)
-      |> Keyword.put(:sdk_key, sdk_key)
 
-    name = Keyword.get(options, :name, __MODULE__)
+    name = Keyword.fetch!(options, :name)
     Supervisor.start_link(__MODULE__, options, name: name)
   end
+
+  def validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
+  def validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
+  def validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
 
   defp default_options,
     do: [
       cache: @default_cache,
-      cache_policy: CachePolicy.auto()
+      cache_policy: CachePolicy.auto(),
+      name: __MODULE__
     ]
 
   @impl Supervisor
