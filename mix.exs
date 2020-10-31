@@ -16,6 +16,11 @@ defmodule ConfigCat.MixProject do
         list_unused_filters: true,
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ],
+      docs: [
+        assets: "assets",
+        extras: ["README.md"],
+        main: "README"
+      ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
