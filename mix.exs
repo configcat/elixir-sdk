@@ -44,7 +44,8 @@ defmodule ConfigCat.MixProject do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false}
     ]
   end
 end
