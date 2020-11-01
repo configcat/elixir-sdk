@@ -20,7 +20,7 @@ defmodule ConfigCat.MixProject do
         assets: "assets",
         extras: ["README.md"],
         logo: "assets/logo.png",
-        main: "README"
+        main: "readme"
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [

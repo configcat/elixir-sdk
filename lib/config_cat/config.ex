@@ -6,7 +6,7 @@ defmodule ConfigCat.Config do
   @typedoc false
   @type comparator :: non_neg_integer()
 
-  @typedoc "The identifier of a configuration setting."
+  @typedoc "The name of a configuration setting."
   @type key :: String.t()
 
   @typedoc "A collection of configuration settings."
@@ -15,6 +15,6 @@ defmodule ConfigCat.Config do
   @typedoc "The actual value of a configuration setting."
   @type value :: String.t() | boolean() | number()
 
-  @typedoc "The identifier of a variation being tested."
+  @typedoc "The name of a variation being tested."
   @type variation_id :: String.t()
 end
