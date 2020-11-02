@@ -18,17 +18,17 @@ end
 defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
-  alias ConfigCat.{ConfigFetcher, Constants, DataGovernance}
+  alias ConfigCat.{ConfigFetcher, Constants}
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require ConfigCat.{Constants, DataGovernance}
+  require ConfigCat.Constants
   require ConfigFetcher.RedirectMode
   require Logger
 
   @type option ::
           {:base_url, String.t()}
-          | {:data_governance, DataGovernance.t()}
+          | {:data_governance, ConfigCat.data_governance()}
           | {:http_proxy, String.t()}
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
@@ -52,7 +52,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp default_options,
-    do: [api: ConfigCat.API, data_governance: DataGovernance.global()]
+    do: [api: ConfigCat.API, data_governance: :global]
 
   defp choose_base_url(options) do
     case Keyword.get(options, :base_url) do
@@ -65,7 +65,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp default_url(DataGovernance.eu_only()), do: Constants.base_url_eu_only()
+  defp default_url(:eu_only), do: Constants.base_url_eu_only()
   defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher

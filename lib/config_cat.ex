@@ -7,7 +7,6 @@ defmodule ConfigCat do
     Client,
     Config,
     Constants,
-    DataGovernance,
     InMemoryCache,
     User
   }
@@ -16,12 +15,13 @@ defmodule ConfigCat do
 
   @type api_option :: {:client, client()}
   @type client :: Client.client()
+  @type data_governance :: :eu_only | :global
   @type key :: Config.key()
   @type option ::
           {:base_url, String.t()}
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
-          | {:data_governance, DataGovernance.t()}
+          | {:data_governance, data_governance()}
           | {:http_proxy, String.t()}
           | {:sdk_key, String.t()}
   @type options :: [option()]
