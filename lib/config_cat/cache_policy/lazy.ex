@@ -2,7 +2,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
   @enforce_keys [:cache_expiry_seconds]
   defstruct [:cache_expiry_seconds, mode: "l"]
@@ -13,7 +13,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
           mode: String.t()
         }
 
-  @behaviour CachePolicy
+  @behaviour Behaviour
 
   @spec new(options()) :: t()
   def new(options) do
@@ -30,12 +30,12 @@ defmodule ConfigCat.CachePolicy.Lazy do
     {:ok, state}
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def get(policy_id) do
     GenServer.call(policy_id, :get)
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def force_refresh(policy_id) do
     GenServer.call(policy_id, :force_refresh)
   end

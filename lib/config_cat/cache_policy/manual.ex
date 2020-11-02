@@ -2,13 +2,13 @@ defmodule ConfigCat.CachePolicy.Manual do
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
   defstruct mode: "m"
 
   @type t :: %__MODULE__{mode: String.t()}
 
-  @behaviour CachePolicy
+  @behaviour Behaviour
 
   @spec new :: t()
   def new do
@@ -25,12 +25,12 @@ defmodule ConfigCat.CachePolicy.Manual do
     {:ok, state}
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def get(policy_id) do
     GenServer.call(policy_id, :get)
   end
 
-  @impl CachePolicy
+  @impl Behaviour
   def force_refresh(policy_id) do
     GenServer.call(policy_id, :force_refresh)
   end
