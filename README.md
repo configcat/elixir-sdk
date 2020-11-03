@@ -7,7 +7,7 @@ ConfigCat SDK for Elixir provides easy integration for your application to Confi
 ConfigCat is a feature flag and configuration management service that lets you separate releases from deployments. You can turn your features ON/OFF using [ConfigCat Dashboard](http://app.configcat.com) even after they are deployed. ConfigCat lets you target specific groups of users based on region, email or any other custom user attribute.
 
 ConfigCat is a [hosted feature flag service](http://configcat.com). Manage feature toggles across frontend, backend, mobile, desktop apps. [Alternative to LaunchDarkly](http://configcat.com). Management app + feature flag SDKs.
-https://api.travis-ci.com/configcat/elixir-sdk.svg?branch=main
+
 [![Build Status](https://api.travis-ci.com/configcat/elixir-sdk.svg)](https://travis-ci.com/configcat/elixir-sdk)
 [![Coverage Status](https://codecov.io/github/configcat/elixir-sdk/badge.svg?branch=main)](https://codecov.io/github/configcat/elixir-sdk?branch=main)
 [![Hex.pm](https://img.shields.io/hexpm/v/configcat.svg?style=circle)](https://hex.pm/packages/configcat)
