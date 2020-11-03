@@ -9,6 +9,8 @@ defmodule ConfigCat.MixProject do
       homepage_url: "https://configcat.com/",
       version: "1.0.0",
       elixir: "~> 1.10",
+      description: description(),
+      package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -56,5 +58,18 @@ defmodule ConfigCat.MixProject do
       {:excoveralls, "~> 0.10", only: :test},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false}
     ]
+  end
+
+  defp package do
+    [licenses: ["MIT"], links: %{"GitHub" => "https://github.com/configcat/elixir-sdk"}]
+  end
+
+  defp description do
+    """
+    ConfigCat SDK for Elixir.
+
+    Feature Flags created by developers for developers with ❤️. ConfigCat lets you manage feature flags across frontend, backend, mobile, and desktop apps without (re)deploying code. % rollouts, user targeting, segmentation. Feature toggle SDKs for all main languages.
+    Alternative to LaunchDarkly. Host yourself, or use the hosted management app at https://configcat.com.
+    """
   end
 end

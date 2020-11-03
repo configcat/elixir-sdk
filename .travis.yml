@@ -19,3 +19,10 @@ cache:
 #   include:
 #     - elixir: '1.9'
 #       otp_release: '20.0'
+
+deploy:
+  provider: script
+  script: mix hex.publish
+  on:
+    tags: true
+    branch: master
