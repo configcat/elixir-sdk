@@ -1,7 +1,7 @@
 defmodule ConfigCat.CachePolicy.Helpers do
   @moduledoc false
 
-  alias ConfigCat.{CachePolicy, Config, ConfigCache, ConfigFetcher}
+  alias ConfigCat.{CachePolicy, ConfigCache, ConfigFetcher}
 
   @type state :: %{
           :cache => module(),
@@ -37,7 +37,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   defp default_options, do: [fetcher: ConfigCat.CacheControlConfigFetcher]
 
-  @spec cached_config(state()) :: {:ok, Config.t()} | {:error, :not_found}
+  @spec cached_config(state()) :: ConfigCache.result()
   def cached_config(state) do
     cache = Map.fetch!(state, :cache)
     cache_key = Map.fetch!(state, :cache_key)

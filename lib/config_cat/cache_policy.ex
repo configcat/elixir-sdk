@@ -41,12 +41,18 @@ defmodule ConfigCat.CachePolicy do
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
-          {:on_changed, (() -> :ok)}
+          {:on_changed, on_changed_callback()}
           | {:poll_interval_seconds, pos_integer()}
         ]
 
   @typedoc false
   @type id :: atom()
+
+  @typedoc "Options for lazy-polling mode."
+  @type lazy_options :: [{:cache_expiry_seconds, non_neg_integer()}]
+
+  @typedoc "Callback to call when configuration changes."
+  @type on_changed_callback :: (() -> :ok)
 
   @typedoc false
   @type option ::
@@ -60,14 +66,11 @@ defmodule ConfigCat.CachePolicy do
   @typedoc false
   @type options :: [option]
 
-  @typedoc "Options for lazy-polling mode."
-  @type lazy_options :: [{:cache_expiry_seconds, non_neg_integer()}]
-
   @typedoc false
   @type refresh_result :: :ok | ConfigFetcher.fetch_error()
 
   @typedoc "The polling mode"
-  @type t :: struct()
+  @opaque t :: Auto.t() | Lazy.t() | Manual.t()
 
   @doc """
   Auto-polling mode.

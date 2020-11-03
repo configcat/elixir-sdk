@@ -16,13 +16,16 @@ defmodule ConfigCat.ConfigCache do
   @typedoc "The cache key under which the configuration is stored"
   @type key :: String.t()
 
+  @typedoc "The result of a cache fetch."
+  @type result :: {:ok, Config.t()} | {:error, :not_found}
+
   @doc """
   Fetches the configuration stored under the given cache key.
 
   Returns `{:ok, config}` if there is a cached configuration or
   `{:error, :not_found}` if not.
   """
-  @callback get(key) :: {:ok, Config.t()} | {:error, :not_found}
+  @callback get(key) :: result()
 
   @doc """
   Stores an updated configuration under the given cache key.
