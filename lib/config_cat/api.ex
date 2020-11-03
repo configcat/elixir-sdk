@@ -1,4 +1,6 @@
 defmodule ConfigCat.API do
+  @moduledoc false
+
   use HTTPoison.Base
 
   def process_request_headers(headers) do

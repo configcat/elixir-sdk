@@ -4,6 +4,9 @@ defmodule ConfigCat.MixProject do
   def project do
     [
       app: :configcat,
+      name: "ConfigCat",
+      source_url: "https://github.com/configcat/elixir-sdk",
+      homepage_url: "https://configcat.com/",
       version: "1.0.0",
       elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -12,6 +15,12 @@ defmodule ConfigCat.MixProject do
       dialyzer: [
         list_unused_filters: true,
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      docs: [
+        assets: "assets",
+        extras: ["README.md"],
+        logo: "assets/logo.png",
+        main: "readme"
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -44,7 +53,8 @@ defmodule ConfigCat.MixProject do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false}
     ]
   end
 end

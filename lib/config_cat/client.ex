@@ -1,4 +1,6 @@
 defmodule ConfigCat.Client do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.{CachePolicy, Config, Constants, Rollout, User}
@@ -6,7 +8,7 @@ defmodule ConfigCat.Client do
   require Constants
   require Logger
 
-  @type client :: atom()
+  @type client :: ConfigCat.instance_id()
   @type option ::
           {:cache_policy, module()} | {:cache_policy_id, CachePolicy.id()} | {:name, client()}
   @type options :: [option]

@@ -1,4 +1,6 @@
 defmodule ConfigCat.ConfigFetcher do
+  @moduledoc false
+
   alias ConfigCat.Config
   alias HTTPoison.{Error, Response}
 
@@ -9,6 +11,8 @@ defmodule ConfigCat.ConfigFetcher do
   @callback fetch(id()) :: result()
 
   defmodule RedirectMode do
+    @moduledoc false
+
     defmacro no_redirect, do: 0
     defmacro should_redirect, do: 1
     defmacro force_redirect, do: 2
@@ -16,6 +20,8 @@ defmodule ConfigCat.ConfigFetcher do
 end
 
 defmodule ConfigCat.CacheControlConfigFetcher do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.{ConfigFetcher, Constants}

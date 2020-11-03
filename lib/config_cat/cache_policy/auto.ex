@@ -1,4 +1,6 @@
 defmodule ConfigCat.CachePolicy.Auto do
+  @moduledoc false
+
   use GenServer
 
   alias ConfigCat.CachePolicy
@@ -8,11 +10,11 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
 
-  @type callback :: (() -> :ok)
+  @type on_changed_callback :: CachePolicy.on_changed_callback()
   @type options :: keyword() | map()
   @type t :: %__MODULE__{
           mode: String.t(),
-          on_changed: callback(),
+          on_changed: on_changed_callback(),
           poll_interval_seconds: pos_integer()
         }
 
