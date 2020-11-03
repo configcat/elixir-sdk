@@ -22,7 +22,7 @@ cache:
 
 deploy:
   provider: script
-  script: mix hex.publish
+  script: mix hex.publish --yes
   skip_cleanup: true
   on:
     tags: true
