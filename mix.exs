@@ -1,11 +1,13 @@
 defmodule ConfigCat.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/configcat/elixir-sdk"
+
   def project do
     [
       app: :configcat,
       name: "ConfigCat",
-      source_url: "https://github.com/configcat/elixir-sdk",
+      source_url: @source_url,
       homepage_url: "https://configcat.com/",
       version: "1.0.0",
       elixir: "~> 1.10",
@@ -34,7 +36,6 @@ defmodule ConfigCat.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
@@ -44,24 +45,21 @@ defmodule ConfigCat.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:elixir_uuid, "~> 1.2"},
       {:httpoison, "~> 1.7"},
       {:jason, "~> 1.2"},
-      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:mox, "~> 1.0", only: :test},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false}
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 
   defp package do
-    [licenses: ["MIT"], links: %{"GitHub" => "https://github.com/configcat/elixir-sdk"}]
+    [licenses: ["MIT"], links: %{"GitHub" => @source_url}]
   end
 
   defp description do
