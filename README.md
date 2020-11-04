@@ -11,7 +11,11 @@ ConfigCat is a [hosted feature flag service](http://configcat.com). Manage featu
 [![Build Status](https://api.travis-ci.com/configcat/elixir-sdk.svg)](https://travis-ci.com/configcat/elixir-sdk)
 [![Coverage Status](https://codecov.io/github/configcat/elixir-sdk/badge.svg?branch=main)](https://codecov.io/github/configcat/elixir-sdk?branch=main)
 [![Hex.pm](https://img.shields.io/hexpm/v/configcat.svg?style=circle)](https://hex.pm/packages/configcat)
+[![HexDocs.pm](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/configcat/)
 [![Hex.pm](https://img.shields.io/hexpm/dt/configcat.svg?style=circle)](https://hex.pm/packages/configcat)
+[![Hex.pm](https://img.shields.io/hexpm/l/configcat.svg)](https://hex.pm/packages/configcat)
+[![Last Updated](https://img.shields.io/github/last-commit/configcat/elixir-sdk.svg)](https://github.com/configcat/elixir-sdk/commits/main)
+
 
 # Getting Started
 
@@ -27,7 +31,7 @@ end
 
 ### 2. Go to [Connect your application](https://app.configcat.com/sdkkey) tab to get your _SDK Key_:
 
-![SDK-KEY](assets/readme01.png "SDK-KEY")
+![SDK-KEY](assets/getting_sdk_key.png "SDK-KEY")
 
 ### 3. Add `ConfigCat` to your application Supervisor tree:
 
