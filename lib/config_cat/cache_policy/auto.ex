@@ -3,9 +3,10 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   use GenServer
 
-  alias ConfigCat.CachePolicy
+  alias ConfigCat.{CachePolicy, Constants}
   alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
+  require Constants
   require Logger
 
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
@@ -38,22 +39,32 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_continue(:initial_fetch, state) do
-    polled_refresh(state)
+    refresh(state)
+    schedule_next_refresh(state)
+
+    {:noreply, state}
   end
 
   @impl GenServer
   def handle_info(:polled_refresh, state) do
-    polled_refresh(state)
+    pid = self()
+
+    Task.start_link(fn ->
+      refresh(state)
+      schedule_next_refresh(state, pid)
+    end)
+
+    {:noreply, state}
   end
 
   @impl Behaviour
   def get(policy_id) do
-    GenServer.call(policy_id, :get)
+    GenServer.call(policy_id, :get, Constants.fetch_timeout())
   end
 
   @impl Behaviour
   def force_refresh(policy_id) do
-    GenServer.call(policy_id, :force_refresh)
+    GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer
@@ -72,11 +83,8 @@ defmodule ConfigCat.CachePolicy.Auto do
     end
   end
 
-  defp polled_refresh(%{poll_interval_seconds: seconds} = state) do
-    refresh(state)
-    Process.send_after(self(), :polled_refresh, seconds * 1000)
-
-    {:noreply, state}
+  defp schedule_next_refresh(%{poll_interval_seconds: seconds}, pid \\ self()) do
+    Process.send_after(pid, :polled_refresh, seconds * 1000)
   end
 
   defp refresh(state) do

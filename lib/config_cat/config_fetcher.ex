@@ -28,8 +28,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require ConfigCat.Constants
-  require ConfigFetcher.RedirectMode
+  require Constants
+  require RedirectMode
   require Logger
 
   @type option ::
@@ -76,7 +76,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @impl ConfigFetcher
   def fetch(fetcher) do
-    GenServer.call(fetcher, :fetch)
+    GenServer.call(fetcher, :fetch, Constants.fetch_timeout())
   end
 
   @impl GenServer

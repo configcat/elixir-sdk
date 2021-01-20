@@ -3,8 +3,10 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   use GenServer
 
-  alias ConfigCat.CachePolicy
+  alias ConfigCat.{CachePolicy, Constants}
   alias ConfigCat.CachePolicy.{Behaviour, Helpers}
+
+  require Constants
 
   @enforce_keys [:cache_expiry_seconds]
   defstruct [:cache_expiry_seconds, mode: "l"]
@@ -34,12 +36,12 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   @impl Behaviour
   def get(policy_id) do
-    GenServer.call(policy_id, :get)
+    GenServer.call(policy_id, :get, Constants.fetch_timeout())
   end
 
   @impl Behaviour
   def force_refresh(policy_id) do
-    GenServer.call(policy_id, :force_refresh)
+    GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer

@@ -3,8 +3,10 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   use GenServer
 
-  alias ConfigCat.CachePolicy
+  alias ConfigCat.{CachePolicy, Constants}
   alias ConfigCat.CachePolicy.{Behaviour, Helpers}
+
+  require Constants
 
   defstruct mode: "m"
 
@@ -34,7 +36,7 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   @impl Behaviour
   def force_refresh(policy_id) do
-    GenServer.call(policy_id, :force_refresh)
+    GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer
