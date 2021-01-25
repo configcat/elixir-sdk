@@ -23,33 +23,37 @@ defmodule ConfigCat.Client do
 
   @spec get_all_keys(client()) :: [Config.key()]
   def get_all_keys(client) do
-    GenServer.call(client, :get_all_keys)
+    GenServer.call(client, :get_all_keys, Constants.fetch_timeout())
   end
 
   @spec get_value(client(), Config.key(), Config.value(), User.t() | nil) :: Config.value()
   def get_value(client, key, default_value, user \\ nil) do
-    GenServer.call(client, {:get_value, key, default_value, user})
+    GenServer.call(client, {:get_value, key, default_value, user}, Constants.fetch_timeout())
   end
 
   @spec get_variation_id(client(), Config.key(), Config.variation_id(), User.t() | nil) ::
           Config.variation_id()
   def get_variation_id(client, key, default_variation_id, user \\ nil) do
-    GenServer.call(client, {:get_variation_id, key, default_variation_id, user})
+    GenServer.call(
+      client,
+      {:get_variation_id, key, default_variation_id, user},
+      Constants.fetch_timeout()
+    )
   end
 
   @spec get_all_variation_ids(client(), User.t() | nil) :: [Config.variation_id()]
   def get_all_variation_ids(client, user \\ nil) do
-    GenServer.call(client, {:get_all_variation_ids, user})
+    GenServer.call(client, {:get_all_variation_ids, user}, Constants.fetch_timeout())
   end
 
   @spec get_key_and_value(client(), Config.variation_id()) :: {Config.key(), Config.value()} | nil
   def get_key_and_value(client, variation_id) do
-    GenServer.call(client, {:get_key_and_value, variation_id})
+    GenServer.call(client, {:get_key_and_value, variation_id}, Constants.fetch_timeout())
   end
 
   @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
-    GenServer.call(client, :force_refresh)
+    GenServer.call(client, :force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer

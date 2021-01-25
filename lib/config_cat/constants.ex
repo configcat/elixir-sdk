@@ -19,4 +19,5 @@ defmodule ConfigCat.Constants do
   defmacro percentage, do: "p"
   defmacro value, do: "v"
   defmacro variation_id, do: "i"
+  defmacro fetch_timeout, do: 10_000
 end
