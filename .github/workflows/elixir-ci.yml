@@ -8,7 +8,7 @@ on:
     branches: [ main ]
 
 env:
-  ELIXIR_VERSIONS: ['1.10.x', '1.11.x']
+  ELIXIR_VERSION: '1.10.x'
   OTP_VERSION: '23.0'
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-versions: ${{ env.ELIXIR_VERSIONS }}
+        elixir-versions: ['1.10.x', '1.11.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
@@ -62,7 +62,7 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: '1.10.x'
+        elixir-version: ${{ env.ELIXIR_VERSION }}
         otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
