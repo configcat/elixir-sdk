@@ -77,8 +77,8 @@ jobs:
         mix local.hex --force
         mix deps.get
 
-    - name: Execute tests
-      run: mix test
+    - name: Run dialyzer
+      run: mix dialyzer
       
     - name: 🚀Publish
       run: mix hex.publish --yes
