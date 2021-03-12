@@ -9,6 +9,8 @@ on:
   pull_request:
     branches: [ main ]
 
+  workflow_dispatch:
+  
 env:
   ELIXIR_VERSION: '1.10.x'
   OTP_VERSION: '23.0'
