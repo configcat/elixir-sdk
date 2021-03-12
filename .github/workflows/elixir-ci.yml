@@ -14,12 +14,15 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        elixir-versions: ['1.10.x', '1.11.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${{ env.ELIXIR_VERSION }}
+        elixir-version: ${{ matrix.elixir-versions }}
         otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
@@ -28,8 +31,8 @@ jobs:
         path: |
           deps
           priv/plts
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
+        key: ${{ runner.os }}-mix-${{ matrix.elixir-versions }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir-versions }}
 
     - name: Install dependencies
       run: |
@@ -65,11 +68,9 @@ jobs:
     - name: Restore cache
       uses: actions/cache@v2
       with:
-        path: |
-          deps
-          priv/plts
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
+        path: deps
+        key: ${{ runner.os }}-mix-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ env.ELIXIR_VERSION }}
         
     - name: Install dependencies
       run: |
