@@ -8,18 +8,21 @@ on:
     branches: [ main ]
 
 env:
-  ELIXIR_VERSION: '1.10.3'
+  ELIXIR_VERSIONS: ['1.10.x', '1.11.x']
   OTP_VERSION: '23.0'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        elixir-versions: ${{ env.ELIXIR_VERSIONS }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${{ env.ELIXIR_VERSION }}
+        elixir-version: ${{ matrix.elixir-versions }}
         otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
@@ -59,7 +62,7 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${{ env.ELIXIR_VERSION }}
+        elixir-version: '1.10.x'
         otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
@@ -77,9 +80,6 @@ jobs:
         mix local.hex --force
         mix deps.get
 
-    - name: Run dialyzer
-      run: mix dialyzer
-      
     - name: 🚀Publish
       run: mix hex.publish --yes
       env:
