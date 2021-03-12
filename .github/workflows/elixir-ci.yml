@@ -19,8 +19,8 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${ELIXIR_VERSION}
-        otp-version: ${OTP_VERSION}
+        elixir-version: ${{ env.ELIXIR_VERSION }}
+        otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
       uses: actions/cache@v2
@@ -53,8 +53,8 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${ELIXIR_VERSION}
-        otp-version: ${OTP_VERSION}
+        elixir-version: ${{ env.ELIXIR_VERSION }}
+        otp-version: ${{ env.OTP_VERSION }}
         
     - name: Restore cache
       uses: actions/cache@v2
@@ -70,3 +70,5 @@ jobs:
       
     - name: 🚀Publish
       run: mix hex.publish --yes
+      env:
+        HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
