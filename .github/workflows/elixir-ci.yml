@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-versions: ['1.10.x', '1.11.x']
+        elixir-versions: ['1.10.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
