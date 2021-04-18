@@ -1,4 +1,4 @@
-# Contributing to the ConfigCat SDK for Go
+# Contributing to the ConfigCat SDK for Elixir
 
 ConfigCat SDK is an open source project. Feedback and contribution are welcome. Contributions are made to this repo via Issues and Pull Requests.
 
