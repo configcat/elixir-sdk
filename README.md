@@ -89,7 +89,7 @@ https://configcat.com/support
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are welcome. For more info please read the [Contribution Guideline](CONTRIBUTING.md).
 
 ## About ConfigCat
 
