@@ -42,7 +42,7 @@ def start(_type, _args) do
     MyApp
   ]
 
-  opts = [strategy: :one_for_one, name: Simple.Supervisor]
+  opts = [strategy: :one_for_one, name: MyApp.Supervisor]
   Supervisor.start_link(children, opts)
 end
 ```
