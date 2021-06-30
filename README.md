@@ -29,9 +29,8 @@ def deps do
 end
 ```
 
-### 2. Go to [Connect your application](https://app.configcat.com/sdkkey) tab to get your _SDK Key_:
-
-![SDK-KEY](assets/getting_sdk_key.png "SDK-KEY")
+### 2. Go to <a href="https://app.configcat.com/sdkkey" target="_blank">Connect your application</a> section to get your *SDK Key*:
+![SDK-KEY](https://raw.githubusercontent.com/ConfigCat/.net-sdk/master/media/readme02-2.png  "SDK-KEY")
 
 ### 3. Add `ConfigCat` to your application Supervisor tree:
 
