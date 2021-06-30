@@ -30,7 +30,7 @@ end
 ```
 
 ### 2. Go to <a href="https://app.configcat.com/sdkkey" target="_blank">Connect your application</a> section to get your *SDK Key*:
-![SDK-KEY](https://raw.githubusercontent.com/ConfigCat/.net-sdk/master/media/readme02-2.png  "SDK-KEY")
+![SDK-KEY](https://raw.githubusercontent.com/ConfigCat/elixir-sdk/main/assets/readme02-2.png  "SDK-KEY")
 
 ### 3. Add `ConfigCat` to your application Supervisor tree:
 
