@@ -1,0 +1,29 @@
+name: Elixir Snyk
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+env:
+  ELIXIR_VERSION: '1.10.x'
+  OTP_VERSION: '23.0'
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: snyk/actions/setup@master
+      - name: Set up Elixir
+        uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      - name: Run Snyk to check for vulnerabilities
+        run: snyk monitor
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
