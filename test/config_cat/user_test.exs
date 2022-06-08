@@ -4,7 +4,7 @@ defmodule ConfigCat.UserTest do
   alias ConfigCat.User
 
   describe "creating a user" do
-    test "creates a user with only an identifer" do
+    test "creates a user with only an identifier" do
       identifier = "IDENTIFIER"
       user = User.new(identifier)
 
