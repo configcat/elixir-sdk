@@ -51,6 +51,11 @@ defmodule ConfigCat.Client do
     GenServer.call(client, {:get_key_and_value, variation_id}, Constants.fetch_timeout())
   end
 
+  @spec get_all_values(client(), User.t() | nil) :: %{Config.key() => Config.value()}
+  def get_all_values(client, user \\ nil) do
+    GenServer.call(client, {:get_all_values, user}, Constants.fetch_timeout())
+  end
+
   @spec force_refresh(client()) :: refresh_result()
   def force_refresh(client) do
     GenServer.call(client, :force_refresh, Constants.fetch_timeout())
@@ -69,12 +74,8 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_value, key, default_value, user}, _from, state) do
-    with {:ok, result} <- evaluate(key, user, default_value, nil, state),
-         {value, _variation} = result do
-      {:reply, value, state}
-    else
-      error -> {:reply, error, state}
-    end
+    result = do_get_value(key, default_value, user, state)
+    {:reply, result, state}
   end
 
   @impl GenServer
@@ -111,11 +112,30 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
+  def handle_call({:get_all_values, user}, _from, state) do
+    result =
+      state
+      |> do_get_all_keys()
+      |> Map.new(fn key -> {key, do_get_value(key, nil, user, state)} end)
+
+    {:reply, result, state}
+  end
+
+  @impl GenServer
   def handle_call(:force_refresh, _from, state) do
     %{cache_policy: policy, cache_policy_id: policy_id} = state
 
     result = policy.force_refresh(policy_id)
     {:reply, result, state}
+  end
+
+  defp do_get_value(key, default_value, user, state) do
+    with {:ok, result} <- evaluate(key, user, default_value, nil, state),
+         {value, _variation} = result do
+      value
+    else
+      error -> error
+    end
   end
 
   defp do_get_all_keys(state) do

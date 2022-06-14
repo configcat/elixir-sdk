@@ -382,6 +382,27 @@ defmodule ConfigCat do
   end
 
   @doc """
+  Fetches the values of all feature flags or settings from your configuration.
+
+  To use ConfigCat's [targeting](https://configcat.com/docs/advanced/targeting)
+  feature, provide a `ConfigCat.User` struct containing the information used by
+  the targeting rules.
+
+  Returns a map of all key value pairs.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec get_all_values(User.t() | nil, [api_option()]) :: %{key() => value()}
+  def get_all_values(user, options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.get_all_values(client_name(name), user)
+  end
+
+  @doc """
   Force a refresh of the configuration from ConfigCat's CDN.
 
   Depending on the polling mode you're using, `ConfigCat` may automatically

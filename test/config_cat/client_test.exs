@@ -87,6 +87,22 @@ defmodule ConfigCat.ClientTest do
       assert {"key1", true} = Client.get_key_and_value(client, "fakeId1")
       assert {"key2", false} = Client.get_key_and_value(client, "fakeId2")
     end
+
+    test "get_all_values/1 returns all key/value pairs", %{client: client} do
+      expected =
+        %{
+          "testBoolKey" => true,
+          "testStringKey" => "testValue",
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "key1" => true,
+          "key2" => false
+        }
+        |> Enum.sort()
+
+      actual = client |> Client.get_all_values() |> Enum.sort()
+      assert actual == expected
+    end
   end
 
   describe "when the configuration has not been fetched" do
@@ -118,6 +134,10 @@ defmodule ConfigCat.ClientTest do
     @tag capture_log: true
     test "get_key_and_value/2 returns nil", %{client: client} do
       assert Client.get_key_and_value(client, "any_variation") == nil
+    end
+
+    test "get_all_values/1 returns an empty map", %{client: client} do
+      assert Client.get_all_values(client) == %{}
     end
   end
 
