@@ -135,6 +135,10 @@ defmodule ConfigCat.ClientTest do
     test "get_key_and_value/2 returns nil", %{client: client} do
       assert Client.get_key_and_value(client, "any_variation") == nil
     end
+
+    test "get_all_values/1 returns an empty map", %{client: client} do
+      assert Client.get_all_values(client) == %{}
+    end
   end
 
   defp start_client do

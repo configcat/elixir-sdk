@@ -117,7 +117,6 @@ defmodule ConfigCat.Client do
       state
       |> do_get_all_keys()
       |> Map.new(fn key -> {key, do_get_value(key, nil, user, state)} end)
-      |> Enum.reject(&is_nil/1)
 
     {:reply, result, state}
   end
