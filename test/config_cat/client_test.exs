@@ -89,14 +89,17 @@ defmodule ConfigCat.ClientTest do
     end
 
     test "get_all_values/1 returns all key/value pairs", %{client: client} do
-      expected = %{
-        "testBoolKey" => true,
-        "testStringKey" => "testValue",
-        "testIntKey" => 1,
-        "testDoubleKey" => 1.1,
-        "key1" => true,
-        "key2" => false
-      } |> Enum.sort()
+      expected =
+        %{
+          "testBoolKey" => true,
+          "testStringKey" => "testValue",
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "key1" => true,
+          "key2" => false
+        }
+        |> Enum.sort()
+
       actual = client |> Client.get_all_values() |> Enum.sort()
       assert actual == expected
     end
