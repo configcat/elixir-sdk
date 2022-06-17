@@ -210,9 +210,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp log_response(%Response{headers: headers, status_code: status_code} = response) do
     Logger.info(
-      "ConfigCat configuration json fetch response code: #{status_code} Cached: #{
-        extract_etag(headers)
-      }"
+      "ConfigCat configuration json fetch response code: #{status_code} Cached: #{extract_etag(headers)}"
     )
 
     response
