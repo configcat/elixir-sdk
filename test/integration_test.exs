@@ -75,6 +75,14 @@ defmodule ConfigCat.IntegrationTest do
              "This text came from ConfigCat"
   end
 
+  @tag capture_log: true
+  test "handles timeout" do
+    {:ok, client} = start_config_cat(@sdk_key, connect_timeout: 0, read_timeout: 0)
+
+    assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
+             "default value"
+  end
+
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
 

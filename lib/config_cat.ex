@@ -100,6 +100,20 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", http_proxy: "https://my_proxy.example.com"]}
     ```
 
+  - `connect_timeout`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
+    in milliseconds. Default is 8000.
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout: 8000]}
+    ```
+
+  - `read_timeout`: **OPTIONAL** timeout for receiving an HTTP response from
+    the socket, in milliseconds. Default is 5000
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout: 5000]}
+    ```
+
   - `name`: **OPTIONAL** A unique identifier for this instance of `ConfigCat`.
     Defaults to `ConfigCat`.  Must be provided if you need to run more than one
     instance of `ConfigCat` in the same application. If you provide a `name`,
@@ -172,6 +186,8 @@ defmodule ConfigCat do
           | {:cache_policy, CachePolicy.t()}
           | {:data_governance, data_governance()}
           | {:http_proxy, String.t()}
+          | {:connect_timeout, Integer.t()}
+          | {:read_timeout, Integer.t()}
           | {:name, instance_id()}
           | {:sdk_key, String.t()}
 
@@ -469,6 +485,15 @@ defmodule ConfigCat do
     options
     |> Keyword.update!(:name, &fetcher_name/1)
     |> Keyword.put(:mode, options[:cache_policy].mode)
-    |> Keyword.take([:base_url, :http_proxy, :data_governance, :mode, :name, :sdk_key])
+    |> Keyword.take([
+      :base_url,
+      :http_proxy,
+      :connect_timeout,
+      :read_timeout,
+      :data_governance,
+      :mode,
+      :name,
+      :sdk_key
+    ])
   end
 end
