@@ -20,13 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-versions: ['1.11.x', '1.12.x', '1.13.x']
+        elixir-version: ['1.11.x', '1.12.x', '1.13.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
       uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
       with:
-        elixir-version: ${{ matrix.elixir-versions }}
+        elixir-version: ${{ matrix.elixir-version }}
         otp-version: ${{ env.OTP_VERSION }}
 
     - name: Restore cache
@@ -35,8 +35,8 @@ jobs:
         path: |
           deps
           priv/plts
-        key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ matrix.elixir-versions }}-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ matrix.elixir-versions }}
+        key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ matrix.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ matrix.elixir-version }}
 
     - name: Install dependencies
       run: |
@@ -45,7 +45,7 @@ jobs:
         mix deps.get
 
     - name: Check formatting
-      if: ${{ matrix.elixir_versions == env.ELIXIR_VERSION }}
+      if: matrix.elixir-version == env.ELIXIR_VERSION
       run: mix format --check-formatted
 
     - name: Run dialyzer
