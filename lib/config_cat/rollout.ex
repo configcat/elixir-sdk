@@ -149,33 +149,25 @@ defmodule ConfigCat.Rollout do
 
   defp log_match(comparison_attribute, user_value, comparator, comparison_value, value) do
     Logger.debug(
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{
-        Comparator.description(comparator)
-      }] [#{comparison_value}] => match, returning: #{value}"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
   defp log_no_match(comparison_attribute, user_value, comparator, comparison_value) do
     Logger.debug(
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{
-        Comparator.description(comparator)
-      }] [#{comparison_value}] => no match"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
 
   defp log_validation_error(comparison_attribute, user_value, comparator, comparison_value, error) do
     Logger.warn(
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{
-        Comparator.description(comparator)
-      }] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
     )
   end
 
   defp log_no_value_found(key, default_value) do
     Logger.error(
-      "Evaluating get_value('#{key}') failed. Value not found for key '#{key}'. Return default_value: [#{
-        default_value
-      }]."
+      "Evaluating get_value('#{key}') failed. Value not found for key '#{key}'. Return default_value: [#{default_value}]."
     )
   end
 
