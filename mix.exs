@@ -52,7 +52,7 @@ defmodule ConfigCat.MixProject do
       {:jason, "~> 1.2"},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.10", only: :test},
+      {:excoveralls, "~> 0.14.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test}
     ]

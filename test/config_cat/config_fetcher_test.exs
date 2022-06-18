@@ -164,7 +164,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   defp config_url(base_url, sdk_key) do
     base_url
     |> URI.parse()
-    |> URI.merge("#{base_url}/#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
+    |> URI.merge("#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
     |> URI.to_string()
   end
 
