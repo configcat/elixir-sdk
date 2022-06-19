@@ -225,10 +225,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     Logger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
     Logger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
 
-    if error == {:error, %HTTPoison.Error{reason: :timeout}} do
-      Logger.error(
-        "Request timed out. Timeout values: [connect: #{state.connect_timeout}ms, read: #{state.read_timeout}ms]"
-      )
+    case error do
+      {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
+        Logger.error(
+          "Request timed out. Timeout values: [connect: #{state.connect_timeout}ms, read: #{state.read_timeout}ms]"
+        )
     end
   end
 
