@@ -186,8 +186,8 @@ defmodule ConfigCat do
           | {:cache_policy, CachePolicy.t()}
           | {:data_governance, data_governance()}
           | {:http_proxy, String.t()}
-          | {:connect_timeout, Integer.t()}
-          | {:read_timeout, Integer.t()}
+          | {:connect_timeout, non_neg_integer()}
+          | {:read_timeout, non_neg_integer()}
           | {:name, instance_id()}
           | {:sdk_key, String.t()}
 

@@ -36,8 +36,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           {:base_url, String.t()}
           | {:data_governance, ConfigCat.data_governance()}
           | {:http_proxy, String.t()}
-          | {:connect_timeout, Integer.t()}
-          | {:read_timeout, Integer.t()}
+          | {:connect_timeout, non_neg_integer()}
+          | {:read_timeout, non_neg_integer()}
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
           | {:sdk_key, String.t()}
