@@ -44,13 +44,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
-    |> expect(:get, 2, fn ^global_url, _headers, [] ->
+    |> expect(:get, 2, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
-    |> expect(:get, 0, fn ^redirect_url, _headers, [] ->
+    |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
 
@@ -68,13 +68,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :eu_only)
 
     MockAPI
-    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
-    |> expect(:get, 2, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 2, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
-    |> expect(:get, 0, fn ^redirect_url, _headers, [] ->
+    |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config}}
     end)
 
@@ -92,10 +92,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
-    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+    |> expect(:get, 1, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 2, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 2, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_eu}}
     end)
 
@@ -113,10 +113,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :eu_only)
 
     MockAPI
-    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 2, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 2, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_eu}}
     end)
 
@@ -138,13 +138,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       )
 
     MockAPI
-    |> expect(:get, 2, fn ^custom_url, _headers, [] ->
+    |> expect(:get, 2, fn ^custom_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
-    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
@@ -166,13 +166,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       )
 
     MockAPI
-    |> expect(:get, 2, fn ^custom_url, _headers, [] ->
+    |> expect(:get, 2, fn ^custom_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
@@ -190,13 +190,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
-    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+    |> expect(:get, 1, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
-    |> expect(:get, 2, fn ^forced_url, _headers, [] ->
+    |> expect(:get, 2, fn ^forced_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
@@ -219,16 +219,16 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       )
 
     MockAPI
-    |> expect(:get, 0, fn ^global_url, _headers, [] ->
+    |> expect(:get, 0, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 0, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
-    |> expect(:get, 1, fn ^custom_url, _headers, [] ->
+    |> expect(:get, 1, fn ^custom_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
-    |> expect(:get, 3, fn ^forced_url, _headers, [] ->
+    |> expect(:get, 3, fn ^forced_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
 
@@ -246,20 +246,20 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
-    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+    |> expect(:get, 1, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
-    |> expect(:get, 1, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 1, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
 
     MockAPI
-    |> expect(:get, 1, fn ^eu_url, _headers, [] ->
+    |> expect(:get, 1, fn ^eu_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
-    |> expect(:get, 1, fn ^global_url, _headers, [] ->
+    |> expect(:get, 1, fn ^global_url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
 

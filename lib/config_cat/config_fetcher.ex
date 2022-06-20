@@ -36,6 +36,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           {:base_url, String.t()}
           | {:data_governance, ConfigCat.data_governance()}
           | {:http_proxy, String.t()}
+          | {:connect_timeout, non_neg_integer()}
+          | {:read_timeout, non_neg_integer()}
           | {:mode, String.t()}
           | {:name, ConfigFetcher.id()}
           | {:sdk_key, String.t()}
@@ -58,7 +60,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp default_options,
-    do: [api: ConfigCat.API, data_governance: :global]
+    do: [api: ConfigCat.API, data_governance: :global, connect_timeout: 8000, read_timeout: 5000]
 
   defp choose_base_url(options) do
     case Keyword.get(options, :base_url) do
@@ -100,7 +102,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       |> handle_response(state)
     else
       error ->
-        log_error(error)
+        log_error(error, state)
         {:reply, error, state}
     end
   end
@@ -134,10 +136,13 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp http_options(state) do
-    case Map.get(state, :http_proxy) do
-      nil -> []
-      proxy -> [proxy: proxy]
-    end
+    options = Map.take(state, [:http_proxy, :connect_timeout, :read_timeout])
+
+    Enum.map(options, fn
+      {:http_proxy, value} -> {:proxy, value}
+      {:connect_timeout, value} -> {:timeout, value}
+      {:read_timeout, value} -> {:recv_timeout, value}
+    end)
   end
 
   defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
@@ -216,9 +221,19 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     response
   end
 
-  defp log_error(error) do
+  defp log_error(error, state) do
     Logger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
     Logger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
+
+    case error do
+      {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
+        Logger.error(
+          "Request timed out. Timeout values: [connect: #{state.connect_timeout}ms, read: #{state.read_timeout}ms]"
+        )
+
+      _error ->
+        :ok
+    end
   end
 
   @impl GenServer
