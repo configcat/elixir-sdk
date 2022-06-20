@@ -230,6 +230,9 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         Logger.error(
           "Request timed out. Timeout values: [connect: #{state.connect_timeout}ms, read: #{state.read_timeout}ms]"
         )
+
+      _error ->
+        :ok
     end
   end
 

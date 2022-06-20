@@ -37,7 +37,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     url = global_config_url()
 
     MockAPI
-    |> stub(:get, fn ^url, _headers, [] ->
+    |> stub(:get, fn ^url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: @config}}
     end)
 
@@ -136,8 +136,42 @@ defmodule ConfigCat.ConfigFetcherTest do
     url = config_url(base_url, @sdk_key)
 
     MockAPI
-    |> expect(:get, fn ^url, _headers, [] ->
+    |> expect(:get, fn ^url, _headers, _options ->
       {:ok, %Response{status_code: 200, body: @config}}
+    end)
+
+    {:ok, _} = ConfigFetcher.fetch(fetcher)
+  end
+
+  test "uses default timeouts if none provided" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
+
+    response = %Response{status_code: 200, body: @config}
+
+    MockAPI
+    |> expect(:get, fn _url, _headers, options ->
+      assert Keyword.get(options, :recv_timeout) == 5000
+      assert Keyword.get(options, :timeout) == 8000
+      {:ok, response}
+    end)
+
+    {:ok, _} = ConfigFetcher.fetch(fetcher)
+  end
+
+  test "uses specified timeouts when provided" do
+    connect_timeout = 4000
+    read_timeout = 2000
+
+    {:ok, fetcher} =
+      start_fetcher(@fetcher_options, connect_timeout: connect_timeout, read_timeout: read_timeout)
+
+    response = %Response{status_code: 200, body: @config}
+
+    MockAPI
+    |> expect(:get, fn _url, _headers, options ->
+      assert Keyword.get(options, :recv_timeout) == read_timeout
+      assert Keyword.get(options, :timeout) == connect_timeout
+      {:ok, response}
     end)
 
     {:ok, _} = ConfigFetcher.fetch(fetcher)
@@ -150,7 +184,8 @@ defmodule ConfigCat.ConfigFetcherTest do
     response = %Response{status_code: 200, body: @config}
 
     MockAPI
-    |> expect(:get, fn _url, _headers, [proxy: ^proxy] ->
+    |> expect(:get, fn _url, _headers, options ->
+      assert Keyword.get(options, :proxy) == proxy
       {:ok, response}
     end)
 
