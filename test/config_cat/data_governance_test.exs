@@ -24,10 +24,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     name = UUID.uuid4() |> String.to_atom()
     default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
 
-    {:ok, _pid} =
-      default_options
-      |> Keyword.merge(options)
-      |> ConfigFetcher.start_link()
+    {:ok, _pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
 
     allow(MockAPI, self(), name)
 

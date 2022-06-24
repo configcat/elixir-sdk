@@ -6,11 +6,13 @@ defmodule ConfigCat.IntegrationTest do
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
   test "raises error if SDK key is missing" do
-    assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat(nil) end
+    start_config_cat(nil)
+    |> assert_sdk_key_required()
   end
 
   test "raises error if SDK key is an empty string" do
-    assert_raise ArgumentError, "SDK Key is required", fn -> start_config_cat("") end
+    start_config_cat("")
+    |> assert_sdk_key_required()
   end
 
   test "fetches config" do
@@ -85,12 +87,19 @@ defmodule ConfigCat.IntegrationTest do
 
   defp start_config_cat(sdk_key, options \\ []) do
     name = UUID.uuid4() |> String.to_atom()
+    default_options = [name: name, sdk_key: sdk_key]
 
     with {:ok, _pid} <-
-           ConfigCat.start_link(Keyword.merge([name: name, sdk_key: sdk_key], options)) do
+           start_supervised({ConfigCat, Keyword.merge(default_options, options)}) do
       {:ok, name}
     else
       error -> error
     end
+  end
+
+  defp assert_sdk_key_required({:error, result}) do
+    assert {{:EXIT, {error, _stacktrace}}, _spec} = result
+
+    assert %ArgumentError{message: "SDK Key is required"} = error
   end
 end

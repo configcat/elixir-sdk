@@ -6,7 +6,7 @@ defmodule ConfigCat.InMemoryCacheTest do
   @cache_key "CACHE_KEY"
 
   setup do
-    {:ok, _pid} = Cache.start_link(cache_key: @cache_key)
+    {:ok, _pid} = start_supervised({Cache, [cache_key: @cache_key]})
 
     :ok
   end

@@ -150,7 +150,7 @@ defmodule ConfigCat.ClientTest do
       name: name
     ]
 
-    {:ok, _pid} = Client.start_link(options)
+    {:ok, _pid} = start_supervised({Client, options})
 
     allow(MockCachePolicy, self(), name)
 
