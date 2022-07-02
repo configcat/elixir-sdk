@@ -3,21 +3,37 @@ defmodule ConfigCat.Client do
 
   use GenServer
 
-  alias ConfigCat.{CachePolicy, Config, Constants, Rollout, User}
+  alias ConfigCat.{
+    CachePolicy,
+    Config,
+    Constants,
+    NullDataSource,
+    OverrideDataSource,
+    Rollout,
+    User
+  }
 
   require Constants
   require Logger
 
   @type client :: ConfigCat.instance_id()
   @type option ::
-          {:cache_policy, module()} | {:cache_policy_id, CachePolicy.id()} | {:name, client()}
+          {:cache_policy, module()}
+          | {:cache_policy_id, CachePolicy.id()}
+          | {:flag_overrides, OverrideDataSource.t()}
+          | {:name, client()}
   @type options :: [option]
   @type refresh_result :: CachePolicy.refresh_result()
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name) do
-      GenServer.start_link(__MODULE__, Map.new(options), name: name)
+      initial_state =
+        options
+        |> Map.new()
+        |> Map.put_new_lazy(:flag_overrides, &NullDataSource.new/0)
+
+      GenServer.start_link(__MODULE__, initial_state, name: name)
     end
   end
 
@@ -161,22 +177,16 @@ defmodule ConfigCat.Client do
       value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
   end
 
-  def value_matching(key, value, variation_id) when is_list(value) do
+  defp value_matching(key, value, variation_id) when is_list(value) do
     Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
   end
 
-  def value_matching(key, value, variation_id) do
+  defp value_matching(key, value, variation_id) do
     if Map.get(value, Constants.variation_id(), nil) == variation_id do
       {key, Map.get(value, Constants.value())}
     else
       nil
     end
-  end
-
-  defp cached_config(state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
-
-    policy.get(policy_id)
   end
 
   defp evaluate(key, user, default_value, default_variation_id, state) do
@@ -187,4 +197,45 @@ defmodule ConfigCat.Client do
       error -> error
     end
   end
+
+  defp cached_config(%{
+         cache_policy: policy,
+         cache_policy_id: policy_id,
+         flag_overrides: override_data_source
+       }) do
+    with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
+      case OverrideDataSource.behaviour(override_data_source) do
+        :local_only -> {:ok, local_settings}
+        _other -> policy.get(policy_id)
+      end
+    end
+  end
+
+  """
+    def _get_settings()
+    if !@_override_data_source.nil?
+      behaviour = @_override_data_source.get_behaviour()
+      if behaviour == OverrideBehaviour::LOCAL_ONLY
+        return @_override_data_source.get_overrides()
+      elsif behaviour == OverrideBehaviour::REMOTE_OVER_LOCAL
+        remote_settings = @_cache_policy.get()
+        local_settings = @_override_data_source.get_overrides()
+        result = local_settings.clone()
+        if remote_settings.key?(FEATURE_FLAGS) && local_settings.key?(FEATURE_FLAGS)
+          result[FEATURE_FLAGS] = result[FEATURE_FLAGS].merge(remote_settings[FEATURE_FLAGS])
+        end
+        return result
+      elsif behaviour == OverrideBehaviour::LOCAL_OVER_REMOTE
+        remote_settings = @_cache_policy.get()
+        local_settings = @_override_data_source.get_overrides()
+        result = remote_settings.clone()
+        if remote_settings.key?(FEATURE_FLAGS) && local_settings.key?(FEATURE_FLAGS)
+          result[FEATURE_FLAGS] = result[FEATURE_FLAGS].merge(local_settings[FEATURE_FLAGS])
+        end
+        return result
+      end
+    end
+    return @_cache_policy.get()
+  end
+  """
 end

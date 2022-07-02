@@ -82,6 +82,13 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", cache_policy: ConfigCat.CachePolicy.manual()]}
     ```
 
+  - `connect_timeout`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
+    in milliseconds. Default is 8000.
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout: 8000]}
+    ```
+
   - `data_governance`: **OPTIONAL** Describes the location of your feature flag
     and setting data within the ConfigCat CDN. This parameter needs to be in
     sync with your Data Governance preferences.  Defaults to `:global`. [More
@@ -91,6 +98,12 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", data_governance: :eu_only]}
     ```
 
+  - `flag_overrides`: **OPTIONAL** Specify a data source to use for [local flag
+    overrides](https://configcat.com/docs/sdk-reference/elixir#flag-overrides).
+    The data source must implement the `ConfigCat.OverrideDataSource` protocol.
+    `ConfigCat.LocalFileDataSource` and `ConfigCat.LocalMapDataSource` are
+    provided for you to use.
+
   - `http_proxy`: **OPTIONAL** Specify this option if you need to use a proxy
     server to access your ConfigCat settings. You can provide a simple URL, like
     `https://my_proxy.example.com` or include authentication information, like
@@ -98,20 +111,6 @@ defmodule ConfigCat do
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", http_proxy: "https://my_proxy.example.com"]}
-    ```
-
-  - `connect_timeout`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
-    in milliseconds. Default is 8000.
-
-    ```elixir
-    {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout: 8000]}
-    ```
-
-  - `read_timeout`: **OPTIONAL** timeout for receiving an HTTP response from
-    the socket, in milliseconds. Default is 5000
-
-    ```elixir
-    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout: 5000]}
     ```
 
   - `name`: **OPTIONAL** A unique identifier for this instance of `ConfigCat`.
@@ -126,6 +125,13 @@ defmodule ConfigCat do
 
     ```elixir
     ConfigCat.get_value("setting", "default", client: :unique_name)
+    ```
+
+  - `read_timeout`: **OPTIONAL** timeout for receiving an HTTP response from
+    the socket, in milliseconds. Default is 5000
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout: 5000]}
     ```
 
   ## Use the API
@@ -158,6 +164,7 @@ defmodule ConfigCat do
     Config,
     Constants,
     InMemoryCache,
+    OverrideDataSource,
     User
   }
 
@@ -184,11 +191,12 @@ defmodule ConfigCat do
           {:base_url, String.t()}
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
-          | {:data_governance, data_governance()}
-          | {:http_proxy, String.t()}
           | {:connect_timeout, non_neg_integer()}
-          | {:read_timeout, non_neg_integer()}
+          | {:data_governance, data_governance()}
+          | {:flag_overrides, OverrideDataSource.t()}
+          | {:http_proxy, String.t()}
           | {:name, instance_id()}
+          | {:read_timeout, non_neg_integer()}
           | {:sdk_key, String.t()}
 
   @type options :: [option()]
@@ -477,6 +485,7 @@ defmodule ConfigCat do
     |> Keyword.take([
       :cache_policy,
       :cache_policy_id,
+      :flag_overrides,
       :name
     ])
   end
