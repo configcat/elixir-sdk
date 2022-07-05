@@ -206,7 +206,18 @@ defmodule ConfigCat.Client do
     with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
       case OverrideDataSource.behaviour(override_data_source) do
         :local_only -> {:ok, local_settings}
-        _other -> policy.get(policy_id)
+        :local_over_remote ->
+          {:ok, remote_settings} = policy.get(policy_id)
+          result = Map.merge(remote_settings, local_settings, fn
+            Constants.feature_flags(), remote, local -> Map.merge(remote, local)
+          end)
+          {:ok, result}
+        :remote_over_local ->
+          {:ok, remote_settings} = policy.get(policy_id)
+          result = Map.merge(local_settings, remote_settings, fn
+            Constants.feature_flags(), local, remote -> Map.merge(local, remote)
+          end)
+          {:ok, result}
       end
     end
   end

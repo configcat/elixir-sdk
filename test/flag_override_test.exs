@@ -104,6 +104,54 @@ defmodule ConfigCat.FlagOverrideTest do
     end
   end
 
+  setup do
+    config = Jason.decode!(~s(
+      {
+        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
+        "f": {
+          "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
+        }
+      }
+    ))
+
+    MockCachePolicy
+    |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
+
+    {:ok, config: config}
+  end
+
+  describe "local_over_remote mode" do
+    test "uses flag values from a map over the remote config" do
+      map = %{
+        "fakeKey" => true,
+        "nonexisting" => true
+      }
+
+      overrides = LocalMapDataSource.new(map, :local_over_remote)
+
+      {:ok, client} = start_client(overrides)
+
+      assert Client.get_value(client, "fakeKey", false) == true
+      assert Client.get_value(client, "nonexisting", false) == true
+    end
+  end
+
+  describe "remote_over_local mode" do
+    test "uses flag values from the remote config over a map" do
+      map = %{
+        "fakeKey" => true,
+        "nonexisting" => true
+      }
+
+      overrides = LocalMapDataSource.new(map, :remote_over_local)
+
+      {:ok, client} = start_client(overrides)
+
+      assert Client.get_value(client, "fakeKey", true) == false
+      assert Client.get_value(client, "nonexisting", false) == true
+    end
+  end
+
   defp fixture_file(name) do
     __ENV__.file
     |> Path.dirname()
