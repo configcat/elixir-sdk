@@ -9,14 +9,43 @@ defmodule ConfigCat.LocalFileDataSource do
 
   require Logger
 
-  defstruct [:filename, :override_behaviour]
+  defmodule FileCache do
+    use Agent
+
+    defstruct cached_timestamp: 0, settings: nil
+
+    def start_link(_opts) do
+      Agent.start_link(fn -> %__MODULE__{} end)
+    end
+
+    def cached_settings(cache) do
+      case Agent.get(cache, fn %__MODULE__{settings: settings} -> settings end) do
+        nil -> {:error, :not_found}
+        settings -> {:ok, settings}
+      end
+    end
+
+    def cached_timestamp(cache) do
+      Agent.get(cache, fn %__MODULE__{cached_timestamp: timestamp} -> timestamp end)
+    end
+
+    def update(cache, settings, timestamp) do
+      Agent.update(cache, fn %__MODULE__{} = state ->
+        %{state | cached_timestamp: timestamp, settings: settings}
+      end)
+    end
+  end
+
+  defstruct [:cache, :filename, :override_behaviour]
 
   def new(filename, override_behaviour) do
     unless File.exists?(filename) do
       Logger.error("The file #{filename} does not exist.")
     end
 
-    %__MODULE__{filename: filename, override_behaviour: override_behaviour}
+    {:ok, pid} = FileCache.start_link([])
+
+    %__MODULE__{cache: pid, filename: filename, override_behaviour: override_behaviour}
   end
 
   defimpl OverrideDataSource do
@@ -26,14 +55,24 @@ defmodule ConfigCat.LocalFileDataSource do
 
     def behaviour(data_source), do: data_source.override_behaviour
 
-    def overrides(%{filename: filename} = _data_source) do
-      with {:ok, contents} <- File.read(filename),
-           {:ok, data} <- Jason.decode(contents) do
-        {:ok, normalize(data)}
-      else
-        error ->
-          log_error(error, filename)
-          {:error, :not_found}
+    def overrides(%{cache: cache} = data_source) do
+      refresh_cache(cache, data_source.filename)
+      FileCache.cached_settings(cache)
+    end
+
+    defp refresh_cache(cache, filename) do
+      with {:ok, %{mtime: timestamp}} <- File.stat(filename, time: :posix) do
+        unless FileCache.cached_timestamp(cache) == timestamp do
+          with {:ok, contents} <- File.read(filename),
+               {:ok, data} <- Jason.decode(contents),
+               settings <- normalize(data) do
+            FileCache.update(cache, settings, timestamp)
+          else
+            error ->
+              log_error(error, filename)
+              :ok
+          end
+        end
       end
     end
 

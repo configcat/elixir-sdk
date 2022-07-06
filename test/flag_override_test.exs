@@ -63,9 +63,12 @@ defmodule ConfigCat.FlagOverrideTest do
         IO.write(file, Jason.encode!(flags))
       end)
 
-      assert Client.get_value(client, "enabledFeature", true) == false
+      # Backdate file modification time so that it will be different when we
+      # rewrite it below. This avoids having to add a sleep to the test.
+      stat = File.stat!(filename, time: :posix)
+      File.touch!(filename, stat.mtime - 1)
 
-      # TODO: May need a sleep here once caching is implemented
+      assert Client.get_value(client, "enabledFeature", true) == false
 
       modified_flags = put_in(flags, ["flags", "enabledFeature"], true)
 
