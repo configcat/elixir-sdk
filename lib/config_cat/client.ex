@@ -205,48 +205,27 @@ defmodule ConfigCat.Client do
        }) do
     with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
       case OverrideDataSource.behaviour(override_data_source) do
-        :local_only -> {:ok, local_settings}
+        :local_only ->
+          {:ok, local_settings}
+
         :local_over_remote ->
-          {:ok, remote_settings} = policy.get(policy_id)
-          result = Map.merge(remote_settings, local_settings, fn
-            Constants.feature_flags(), remote, local -> Map.merge(remote, local)
-          end)
-          {:ok, result}
+          with {:ok, remote_settings} <- policy.get(policy_id) do
+            {:ok, merge_settings(remote_settings, local_settings)}
+          end
+
         :remote_over_local ->
-          {:ok, remote_settings} = policy.get(policy_id)
-          result = Map.merge(local_settings, remote_settings, fn
-            Constants.feature_flags(), local, remote -> Map.merge(local, remote)
-          end)
-          {:ok, result}
+          with {:ok, remote_settings} <- policy.get(policy_id) do
+            {:ok, merge_settings(local_settings, remote_settings)}
+          end
       end
     end
   end
 
-  """
-    def _get_settings()
-    if !@_override_data_source.nil?
-      behaviour = @_override_data_source.get_behaviour()
-      if behaviour == OverrideBehaviour::LOCAL_ONLY
-        return @_override_data_source.get_overrides()
-      elsif behaviour == OverrideBehaviour::REMOTE_OVER_LOCAL
-        remote_settings = @_cache_policy.get()
-        local_settings = @_override_data_source.get_overrides()
-        result = local_settings.clone()
-        if remote_settings.key?(FEATURE_FLAGS) && local_settings.key?(FEATURE_FLAGS)
-          result[FEATURE_FLAGS] = result[FEATURE_FLAGS].merge(remote_settings[FEATURE_FLAGS])
-        end
-        return result
-      elsif behaviour == OverrideBehaviour::LOCAL_OVER_REMOTE
-        remote_settings = @_cache_policy.get()
-        local_settings = @_override_data_source.get_overrides()
-        result = remote_settings.clone()
-        if remote_settings.key?(FEATURE_FLAGS) && local_settings.key?(FEATURE_FLAGS)
-          result[FEATURE_FLAGS] = result[FEATURE_FLAGS].merge(local_settings[FEATURE_FLAGS])
-        end
-        return result
-      end
-    end
-    return @_cache_policy.get()
+  defp merge_settings(%{Constants.feature_flags() => left_flags} = target, %{
+         Constants.feature_flags() => right_flags
+       }) do
+    Map.put(target, Constants.feature_flags(), Map.merge(left_flags, right_flags))
   end
-  """
+
+  defp merge_settings(target, _overrides), do: target
 end

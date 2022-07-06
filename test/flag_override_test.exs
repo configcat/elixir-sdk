@@ -9,6 +9,22 @@ defmodule ConfigCat.FlagOverrideTest do
 
   @cache_policy_id :cache_policy_id
 
+  setup do
+    config = Jason.decode!(~s(
+      {
+        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
+        "f": {
+          "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
+        }
+      }
+    ))
+
+    MockCachePolicy
+    |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
+
+    {:ok, config: config}
+  end
+
   describe "local-only mode" do
     test "uses flag values from a local file" do
       filename = fixture_file("test.json")
@@ -104,24 +120,8 @@ defmodule ConfigCat.FlagOverrideTest do
     end
   end
 
-  setup do
-    config = Jason.decode!(~s(
-      {
-        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-        "f": {
-          "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
-        }
-      }
-    ))
-
-    MockCachePolicy
-    |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
-
-    {:ok, config: config}
-  end
-
   describe "local_over_remote mode" do
-    test "uses flag values from a map over the remote config" do
+    test "overrides remote config values with locally-provided replacements" do
       map = %{
         "fakeKey" => true,
         "nonexisting" => true
@@ -137,7 +137,7 @@ defmodule ConfigCat.FlagOverrideTest do
   end
 
   describe "remote_over_local mode" do
-    test "uses flag values from the remote config over a map" do
+    test "overrides local config values with remote config" do
       map = %{
         "fakeKey" => true,
         "nonexisting" => true
@@ -183,54 +183,3 @@ defmodule ConfigCat.FlagOverrideTest do
     {:ok, name}
   end
 end
-
-# RSpec.describe 'Local test', type: :feature do
-#   script_dir = File.dirname(__FILE__)
-
-#   def stub_request()
-#     uri_template = Addressable::Template.new "https://{base_url}/{base_path}/{api_key}/{base_ext}"
-#     json = '{"f": {"fakeKey": {"v": false} } }'
-#     WebMock.stub_request(:get, uri_template)
-#         .with(
-#             body: "",
-#             headers: {
-#                 'Accept' => '*/*',
-#                 'Content-Type' => 'application/json',
-#                 'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3'
-#             }
-#         )
-#         .to_return(status: 200, body: json, headers: {})
-#   end
-
-#   it "test local over remote" do
-#     stub_request()
-#     dictionary = {
-#         "fakeKey" => true,
-#         "nonexisting" => true
-#     }
-#     client = ConfigCat::ConfigCatClient.new("test",
-#                                             poll_interval_seconds: 0,
-#                                             max_init_wait_time_seconds: 0,
-#                                             flag_overrides: ConfigCat::LocalDictionaryDataSource.new(dictionary, ConfigCat::OverrideBehaviour::LOCAL_OVER_REMOTE))
-#     expect(client.get_value("fakeKey", false)).to eq true
-#     expect(client.get_value("nonexisting", false)).to eq true
-#     client.force_refresh()
-#     client.stop()
-#   end
-
-#   it "test remote over local" do
-#     stub_request()
-#     dictionary = {
-#         "fakeKey" => true,
-#         "nonexisting" => true
-#     }
-#     client = ConfigCat::ConfigCatClient.new("test",
-#                                             poll_interval_seconds: 0,
-#                                             max_init_wait_time_seconds: 0,
-#                                             flag_overrides: ConfigCat::LocalDictionaryDataSource.new(dictionary, ConfigCat::OverrideBehaviour::REMOTE_OVER_LOCAL))
-#     expect(client.get_value("fakeKey", true)).to eq false
-#     expect(client.get_value("nonexisting", false)).to eq true
-#     client.force_refresh()
-#     client.stop()
-#   end
-# end
