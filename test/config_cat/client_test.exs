@@ -3,7 +3,7 @@ defmodule ConfigCat.ClientTest do
 
   import Mox
 
-  alias ConfigCat.{Client, MockCachePolicy}
+  alias ConfigCat.{Client, MockCachePolicy, NullDataSource}
 
   @cache_policy_id :cache_policy_id
 
@@ -147,6 +147,7 @@ defmodule ConfigCat.ClientTest do
     options = [
       cache_policy: MockCachePolicy,
       cache_policy_id: @cache_policy_id,
+      flag_overrides: NullDataSource.new(),
       name: name
     ]
 

@@ -164,6 +164,7 @@ defmodule ConfigCat do
     Config,
     Constants,
     InMemoryCache,
+    NullDataSource,
     OverrideDataSource,
     User
   }
@@ -241,6 +242,7 @@ defmodule ConfigCat do
     do: [
       cache: @default_cache,
       cache_policy: CachePolicy.auto(),
+      flag_overrides: NullDataSource.new(),
       name: __MODULE__
     ]
 
@@ -258,22 +260,37 @@ defmodule ConfigCat do
       |> Keyword.put(:cache_policy_id, policy_options[:name])
       |> client_options()
 
+    override_behaviour = OverrideDataSource.behaviour(options[:flag_overrides])
+
     children =
       [
-        {CacheControlConfigFetcher, fetcher_options},
-        {CachePolicy, policy_options},
+        default_cache(options),
+        config_fetcher(fetcher_options, override_behaviour),
+        cache_policy(policy_options, override_behaviour),
         {Client, client_options}
       ]
-      |> add_default_cache(options)
+      |> Enum.reject(&is_nil/1)
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  defp add_default_cache(children, options) do
+  defp default_cache(options) do
     case Keyword.get(options, :cache) do
-      @default_cache -> [{@default_cache, cache_options(options)} | children]
-      _ -> children
+      @default_cache -> {@default_cache, cache_options(options)}
+      _ -> nil
     end
+  end
+
+  defp config_fetcher(_options, :local_only), do: nil
+
+  defp config_fetcher(options, _override_behaviour) do
+    {CacheControlConfigFetcher, options}
+  end
+
+  defp cache_policy(_options, :local_only), do: nil
+
+  defp cache_policy(options, _override_behaviour) do
+    {CachePolicy, options}
   end
 
   @doc """

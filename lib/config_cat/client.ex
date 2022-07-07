@@ -7,7 +7,6 @@ defmodule ConfigCat.Client do
     CachePolicy,
     Config,
     Constants,
-    NullDataSource,
     OverrideDataSource,
     Rollout,
     User
@@ -28,12 +27,7 @@ defmodule ConfigCat.Client do
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name) do
-      initial_state =
-        options
-        |> Map.new()
-        |> Map.put_new_lazy(:flag_overrides, &NullDataSource.new/0)
-
-      GenServer.start_link(__MODULE__, initial_state, name: name)
+      GenServer.start_link(__MODULE__, Map.new(options), name: name)
     end
   end
 
