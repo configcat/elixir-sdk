@@ -22,7 +22,7 @@ defmodule ConfigCat.MixProject do
       ],
       docs: [
         assets: "assets",
-        extras: ["README.md"],
+        extras: ["CONTRIBUTING.md", "README.md"],
         logo: "assets/logo.png",
         main: "readme"
       ],

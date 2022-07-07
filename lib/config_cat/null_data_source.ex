@@ -11,6 +11,12 @@ defmodule ConfigCat.NullDataSource do
 
   defstruct []
 
+  @type t :: %__MODULE__{}
+
+  @doc """
+  Create a `ConfigCat.OverrideDataSource` that does nothing.
+  """
+  @spec new :: t
   def new do
     %__MODULE__{}
   end

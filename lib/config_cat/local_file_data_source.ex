@@ -10,6 +10,8 @@ defmodule ConfigCat.LocalFileDataSource do
   require Logger
 
   defmodule FileCache do
+    @moduledoc false
+
     use Agent
 
     defstruct cached_timestamp: 0, settings: nil
@@ -38,6 +40,16 @@ defmodule ConfigCat.LocalFileDataSource do
 
   defstruct [:cache, :filename, :override_behaviour]
 
+  @type t :: %__MODULE__{
+          cache: pid,
+          filename: String.t(),
+          override_behaviour: OverrideDataSource.behaviour()
+        }
+
+  @doc """
+  Create a `ConfigCat.OverrideDataSource` that loads overrides from a file.
+  """
+  @spec new(String.t(), OverrideDataSource.behaviour()) :: t
   def new(filename, override_behaviour) do
     unless File.exists?(filename) do
       Logger.error("The file #{filename} does not exist.")

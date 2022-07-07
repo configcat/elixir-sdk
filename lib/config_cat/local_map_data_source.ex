@@ -5,14 +5,22 @@ defmodule ConfigCat.LocalMapDataSource do
   See `ConfigCat.OverrideDataSource` for more details.
   """
 
-  alias ConfigCat.Constants
-  alias ConfigCat.OverrideDataSource
+  alias ConfigCat.{Config, Constants, OverrideDataSource}
 
   require ConfigCat.Constants
   require Logger
 
   defstruct [:override_behaviour, :settings]
 
+  @type t :: %__MODULE__{
+          override_behaviour: OverrideDataSource.behaviour(),
+          settings: Config.t()
+        }
+
+  @doc """
+  Create a `ConfigCat.OverrideDataSource` from a map of flag/value pairs.
+  """
+  @spec new(map, OverrideDataSource.behaviour()) :: t
   def new(overrides, override_behaviour) do
     flags =
       overrides
