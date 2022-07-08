@@ -3,14 +3,24 @@ defmodule ConfigCat.Client do
 
   use GenServer
 
-  alias ConfigCat.{CachePolicy, Config, Constants, Rollout, User}
+  alias ConfigCat.{
+    CachePolicy,
+    Config,
+    Constants,
+    OverrideDataSource,
+    Rollout,
+    User
+  }
 
   require Constants
   require Logger
 
   @type client :: ConfigCat.instance_id()
   @type option ::
-          {:cache_policy, module()} | {:cache_policy_id, CachePolicy.id()} | {:name, client()}
+          {:cache_policy, module()}
+          | {:cache_policy_id, CachePolicy.id()}
+          | {:flag_overrides, OverrideDataSource.t()}
+          | {:name, client()}
   @type options :: [option]
   @type refresh_result :: CachePolicy.refresh_result()
 
@@ -161,22 +171,16 @@ defmodule ConfigCat.Client do
       value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
   end
 
-  def value_matching(key, value, variation_id) when is_list(value) do
+  defp value_matching(key, value, variation_id) when is_list(value) do
     Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
   end
 
-  def value_matching(key, value, variation_id) do
+  defp value_matching(key, value, variation_id) do
     if Map.get(value, Constants.variation_id(), nil) == variation_id do
       {key, Map.get(value, Constants.value())}
     else
       nil
     end
-  end
-
-  defp cached_config(state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
-
-    policy.get(policy_id)
   end
 
   defp evaluate(key, user, default_value, default_variation_id, state) do
@@ -187,4 +191,35 @@ defmodule ConfigCat.Client do
       error -> error
     end
   end
+
+  defp cached_config(%{
+         cache_policy: policy,
+         cache_policy_id: policy_id,
+         flag_overrides: override_data_source
+       }) do
+    with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
+      case OverrideDataSource.behaviour(override_data_source) do
+        :local_only ->
+          {:ok, local_settings}
+
+        :local_over_remote ->
+          with {:ok, remote_settings} <- policy.get(policy_id) do
+            {:ok, merge_settings(remote_settings, local_settings)}
+          end
+
+        :remote_over_local ->
+          with {:ok, remote_settings} <- policy.get(policy_id) do
+            {:ok, merge_settings(local_settings, remote_settings)}
+          end
+      end
+    end
+  end
+
+  defp merge_settings(%{Constants.feature_flags() => left_flags} = target, %{
+         Constants.feature_flags() => right_flags
+       }) do
+    Map.put(target, Constants.feature_flags(), Map.merge(left_flags, right_flags))
+  end
+
+  defp merge_settings(target, _overrides), do: target
 end

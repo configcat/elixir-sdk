@@ -26,13 +26,16 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, cache_key} = start_cache()
 
     {:ok, _pid} =
-      CachePolicy.start_link(
-        cache: InMemoryCache,
-        cache_key: cache_key,
-        cache_policy: policy,
-        fetcher: MockFetcher,
-        fetcher_id: @fetcher_id,
-        name: policy_id
+      start_supervised(
+        {CachePolicy,
+         [
+           cache: InMemoryCache,
+           cache_key: cache_key,
+           cache_policy: policy,
+           fetcher: MockFetcher,
+           fetcher_id: @fetcher_id,
+           name: policy_id
+         ]}
       )
 
     allow(MockFetcher, self(), policy_id)
@@ -42,7 +45,7 @@ defmodule ConfigCat.CachePolicyCase do
 
   defp start_cache do
     cache_key = UUID.uuid4()
-    {:ok, _pid} = InMemoryCache.start_link(cache_key: cache_key)
+    {:ok, _pid} = start_supervised({InMemoryCache, [cache_key: cache_key]})
 
     {:ok, cache_key}
   end

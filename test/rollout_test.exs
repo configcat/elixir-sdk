@@ -165,10 +165,13 @@ defmodule ConfigCat.RolloutTest do
     name = UUID.uuid4() |> String.to_atom()
 
     with {:ok, _pid} <-
-           ConfigCat.start_link(
-             fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 300),
-             name: name,
-             sdk_key: sdk_key
+           start_supervised(
+             {ConfigCat,
+              [
+                fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 300),
+                name: name,
+                sdk_key: sdk_key
+              ]}
            ) do
       {:ok, name}
     else
