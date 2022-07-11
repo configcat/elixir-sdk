@@ -9,6 +9,9 @@ defmodule Multi.Application do
   @sdk_key_2 "PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ"
 
   def start(_type, _args) do
+
+    # Info level logging helps to inspect the feature flag evaluation process.
+    # Use the :warning level to avoid too detailed logging in your application.
     Logger.configure(level: :info)
 
     children = [

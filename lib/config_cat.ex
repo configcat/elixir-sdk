@@ -128,7 +128,7 @@ defmodule ConfigCat do
     ```
 
   - `read_timeout`: **OPTIONAL** timeout for receiving an HTTP response from
-    the socket, in milliseconds. Default is 5000
+    the socket, in milliseconds. Default is 5000.
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout: 5000]}
