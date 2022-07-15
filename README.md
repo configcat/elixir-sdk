@@ -24,7 +24,7 @@ ConfigCat is a [hosted feature flag service](http://configcat.com). Manage featu
 ```elixir
 def deps do
   [
-    {:configcat, "~> 1.0.0"}
+    {:configcat, "~> 2.0.0"}
   ]
 end
 ```
