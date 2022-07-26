@@ -139,23 +139,23 @@ defmodule ConfigCat.Rollout do
 
   defp base_value(setting_descriptor, default_value) do
     result = Map.get(setting_descriptor, Constants.value(), default_value)
-    Logger.info("Returning #{result}")
+    Logger.debug("Returning #{result}")
 
     result
   end
 
   defp log_evaluating(key) do
-    Logger.info("Evaluating get_value('#{key}').")
+    Logger.debug("Evaluating get_value('#{key}').")
   end
 
   defp log_match(comparison_attribute, user_value, comparator, comparison_value, value) do
-    Logger.info(
+    Logger.debug(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
   defp log_no_match(comparison_attribute, user_value, comparator, comparison_value) do
-    Logger.info(
+    Logger.debug(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
@@ -173,7 +173,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp log_valid_user(user) do
-    Logger.info("User object: #{inspect(user)}")
+    Logger.debug("User object: #{inspect(user)}")
   end
 
   defp log_nil_user(key) do
