@@ -9,9 +9,9 @@ defmodule Simple.Application do
 
   def start(_type, _args) do
 
-    # Info level logging helps to inspect the feature flag evaluation process.
+    # Debug level logging helps to inspect the feature flag evaluation process.
     # Use the :warning level to avoid too detailed logging in your application.
-    Logger.configure(level: :info)
+    Logger.configure(level: :debug)
 
     children = [
       {ConfigCat, [sdk_key: @sdk_key]},
