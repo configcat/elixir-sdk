@@ -60,7 +60,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp default_options,
-    do: [api: ConfigCat.API, data_governance: :global, connect_timeout_milliseconds: 8000, read_timeout_milliseconds: 5000]
+    do: [
+      api: ConfigCat.API,
+      data_governance: :global,
+      connect_timeout_milliseconds: 8000,
+      read_timeout_milliseconds: 5000
+    ]
 
   defp choose_base_url(options) do
     case Keyword.get(options, :base_url) do
@@ -136,7 +141,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp http_options(state) do
-    options = Map.take(state, [:http_proxy, :connect_timeout_milliseconds, :read_timeout_milliseconds])
+    options =
+      Map.take(state, [:http_proxy, :connect_timeout_milliseconds, :read_timeout_milliseconds])
 
     Enum.map(options, fn
       {:http_proxy, value} -> {:proxy, value}

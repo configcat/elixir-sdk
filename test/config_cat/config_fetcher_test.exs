@@ -160,7 +160,10 @@ defmodule ConfigCat.ConfigFetcherTest do
     read_timeout = 2000
 
     {:ok, fetcher} =
-      start_fetcher(@fetcher_options, connect_timeout_milliseconds: connect_timeout, read_timeout_milliseconds: read_timeout)
+      start_fetcher(@fetcher_options,
+        connect_timeout_milliseconds: connect_timeout,
+        read_timeout_milliseconds: read_timeout
+      )
 
     response = %Response{status_code: 200, body: @config}
 

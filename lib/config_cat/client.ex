@@ -185,6 +185,7 @@ defmodule ConfigCat.Client do
 
   defp evaluate(key, user, default_value, default_variation_id, state) do
     user = if user != nil, do: user, else: state.default_user
+
     with {:ok, config} <- cached_config(state) do
       {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config)}
     else
