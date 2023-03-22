@@ -82,11 +82,11 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", cache_policy: ConfigCat.CachePolicy.manual()]}
     ```
 
-  - `connect_timeout`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
+  - `connect_timeout_milliseconds`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
     in milliseconds. Default is 8000.
 
     ```elixir
-    {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout: 8000]}
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout_milliseconds: 8000]}
     ```
 
   - `data_governance`: **OPTIONAL** Describes the location of your feature flag
@@ -96,6 +96,13 @@ defmodule ConfigCat do
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", data_governance: :eu_only]}
+    ```
+
+  - `default_user`: **OPTIONAL** user object that will be used as fallback when
+    there's no user parameter is passed to the getValue() method.
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", default_user: User.new("test@test.com")]}
     ```
 
   - `flag_overrides`: **OPTIONAL** Specify a data source to use for [local flag
@@ -127,11 +134,11 @@ defmodule ConfigCat do
     ConfigCat.get_value("setting", "default", client: :unique_name)
     ```
 
-  - `read_timeout`: **OPTIONAL** timeout for receiving an HTTP response from
+  - `read_timeout_milliseconds`: **OPTIONAL** timeout for receiving an HTTP response from
     the socket, in milliseconds. Default is 5000.
 
     ```elixir
-    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout: 5000]}
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout_milliseconds: 5000]}
     ```
 
   ## Use the API
@@ -192,12 +199,13 @@ defmodule ConfigCat do
           {:base_url, String.t()}
           | {:cache, module()}
           | {:cache_policy, CachePolicy.t()}
-          | {:connect_timeout, non_neg_integer()}
+          | {:connect_timeout_milliseconds, non_neg_integer()}
           | {:data_governance, data_governance()}
+          | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
           | {:http_proxy, String.t()}
           | {:name, instance_id()}
-          | {:read_timeout, non_neg_integer()}
+          | {:read_timeout_milliseconds, non_neg_integer()}
           | {:sdk_key, String.t()}
 
   @type options :: [option()]
@@ -514,8 +522,8 @@ defmodule ConfigCat do
     |> Keyword.take([
       :base_url,
       :http_proxy,
-      :connect_timeout,
-      :read_timeout,
+      :connect_timeout_milliseconds,
+      :read_timeout_milliseconds,
       :data_governance,
       :mode,
       :name,
