@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-version: ['1.11.x', '1.12.x', '1.13.x']
+        elixir-version: ['1.11.x', '1.12.x', '1.13.x', '1.14.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
-      uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
+      uses: erlef/setup-elixir@v1
       with:
         elixir-version: ${{ matrix.elixir-version }}
         otp-version: ${{ env.OTP_VERSION }}
@@ -65,7 +65,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
-      uses: erlef/setup-elixir@885971a72ed1f9240973bd92ab57af8c1aa68f24
+      uses: erlef/setup-elixir@v1
       with:
         elixir-version: ${{ env.ELIXIR_VERSION }}
         otp-version: ${{ env.OTP_VERSION }}
