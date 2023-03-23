@@ -71,6 +71,16 @@ defmodule ConfigCat.Client do
     GenServer.call(client, :force_refresh, Constants.fetch_timeout())
   end
 
+  @spec set_default_user(client(), User.t()) :: :ok
+  def set_default_user(client, user) do
+    GenServer.call(client, {:set_default_user, user}, Constants.fetch_timeout())
+  end
+
+  @spec clear_default_user(client()) :: :ok
+  def clear_default_user(client) do
+    GenServer.call(client, :clear_default_user, Constants.fetch_timeout())
+  end
+
   @impl GenServer
   def init(state) do
     {:ok, state}
@@ -137,6 +147,14 @@ defmodule ConfigCat.Client do
 
     result = policy.force_refresh(policy_id)
     {:reply, result, state}
+  end
+
+  def handle_call({:set_default_user, user}, _from, state) do
+    {:reply, :ok, Map.put(state, :default_user, user)}
+  end
+
+  def handle_call(:clear_default_user, _from, state) do
+    {:reply, :ok, Map.delete(state, :default_user)}
   end
 
   defp do_get_value(key, default_value, user, state) do

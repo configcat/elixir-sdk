@@ -475,6 +475,40 @@ defmodule ConfigCat do
     Client.force_refresh(client_name(name))
   end
 
+  @doc """
+  Sets the default user.
+
+  Returns `:ok`.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec set_default_user(User.t(), [api_option()]) :: :ok
+  def set_default_user(user, options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.set_default_user(client_name(name), user)
+  end
+
+  @doc """
+  Clears the default user.
+
+  Returns `:ok`.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec clear_default_user([api_option()]) :: :ok
+  def clear_default_user(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.clear_default_user(client_name(name))
+  end
+
   defp cache_policy_name(name), do: :"#{name}.CachePolicy"
   defp client_name(name), do: :"#{name}.Client"
   defp fetcher_name(name), do: :"#{name}.ConfigFetcher"

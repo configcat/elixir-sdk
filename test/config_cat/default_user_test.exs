@@ -46,6 +46,11 @@ defmodule ConfigCat.DefaultUserTest do
       assert Client.get_value(client, "testStringKey", "", user) == "fake2"
     end
 
+    test "get_value/4 uses the undefined user case if default user is cleared", %{client: client} do
+      Client.clear_default_user(client)
+      assert Client.get_value(client, "testStringKey", "") == "testValue"
+    end
+
     test "get_all_values/1 uses the default user if no user is passed", %{client: client} do
       expected =
         %{
@@ -85,6 +90,11 @@ defmodule ConfigCat.DefaultUserTest do
     test "get_value/4 uses the passed user", %{client: client} do
       user = User.new("test@test2.com")
       assert Client.get_value(client, "testStringKey", "", user) == "fake2"
+    end
+
+    test "get_value/4 uses the default user if no user is passed", %{client: client} do
+      Client.set_default_user(client, User.new("test@test1.com"))
+      assert Client.get_value(client, "testStringKey", "") == "fake1"
     end
 
     test "get_all_values/1 uses the undefined user case if no user is passed", %{client: client} do
