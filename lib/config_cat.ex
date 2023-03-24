@@ -544,6 +544,7 @@ defmodule ConfigCat do
     |> Keyword.take([
       :cache_policy,
       :cache_policy_id,
+      :default_user,
       :flag_overrides,
       :name
     ])

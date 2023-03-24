@@ -149,10 +149,12 @@ defmodule ConfigCat.Client do
     {:reply, result, state}
   end
 
+  @impl GenServer
   def handle_call({:set_default_user, user}, _from, state) do
     {:reply, :ok, Map.put(state, :default_user, user)}
   end
 
+  @impl GenServer
   def handle_call(:clear_default_user, _from, state) do
     {:reply, :ok, Map.delete(state, :default_user)}
   end
