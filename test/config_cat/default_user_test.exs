@@ -31,7 +31,7 @@ defmodule ConfigCat.DefaultUserTest do
     {:ok, config: config}
   end
 
-  describe "when the default user is defined" do
+  describe "when the default user is defined in the options" do
     setup do
       {:ok, client} = start_client(User.new("test@test1.com"))
       {:ok, client: client}
@@ -77,7 +77,7 @@ defmodule ConfigCat.DefaultUserTest do
     end
   end
 
-  describe "when the default user is not defined" do
+  describe "when the default user is not defined in the options" do
     setup do
       {:ok, client} = start_client()
       {:ok, client: client}
