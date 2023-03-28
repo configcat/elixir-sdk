@@ -59,7 +59,7 @@ defmodule ConfigCat.IntegrationTest do
     {:ok, client} = start_config_cat("invalid_sdk_key")
 
     {:error, response} = ConfigCat.force_refresh(client: client)
-    assert response.status_code == 404
+    assert response.status_code == 403
   end
 
   @tag capture_log: true
@@ -79,7 +79,8 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles timeout" do
-    {:ok, client} = start_config_cat(@sdk_key, connect_timeout: 0, read_timeout: 0)
+    {:ok, client} =
+      start_config_cat(@sdk_key, connect_timeout_milliseconds: 0, read_timeout_milliseconds: 0)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
              "default value"
