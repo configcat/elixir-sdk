@@ -86,4 +86,26 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       assert_returns_error(fn -> Lazy.force_refresh(policy_id) end)
     end
   end
+
+  describe "offline" do
+    test "dose not fetch config when offline mode is set", %{config: config} do
+      {:ok, policy_id} = start_cache_policy(@policy)
+      assert Lazy.is_offline(policy_id) == false
+
+      expect_refresh(config)
+      assert :ok = Lazy.force_refresh(policy_id)
+
+      assert :ok = Lazy.set_offline(policy_id)
+      assert Lazy.is_offline(policy_id) == true
+
+      expect_not_refreshed()
+      assert :ok = Lazy.force_refresh(policy_id)
+
+      assert :ok = Lazy.set_online(policy_id)
+      assert Lazy.is_offline(policy_id) == false
+
+      expect_refresh(config)
+      assert :ok = Lazy.force_refresh(policy_id)
+    end
+  end
 end

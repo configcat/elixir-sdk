@@ -183,6 +183,33 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     end
   end
 
+  describe "offline" do
+    test "dose not fetch config when offline mode is set", %{config: config} do
+      expect_refresh(config)
+      policy = CachePolicy.auto(poll_interval_seconds: 1)
+      {:ok, policy_id} = start_cache_policy(policy)
+      assert Auto.is_offline(policy_id) == false
+
+      assert {:ok, ^config} = Auto.get(policy_id)
+
+      assert :ok = Auto.set_offline(policy_id)
+      assert Auto.is_offline(policy_id) == true
+
+      expect_not_refreshed()
+      wait_for_poll(policy)
+
+      assert {:ok, ^config} = Auto.get(policy_id)
+
+      assert :ok = Auto.set_online(policy_id)
+      assert Auto.is_offline(policy_id) == false
+
+      expect_refresh(config)
+      wait_for_poll(policy)
+
+      assert {:ok, ^config} = Auto.get(policy_id)
+    end
+  end
+
   defp wait_for_poll(policy) do
     (policy.poll_interval_seconds * 1000 + 50)
     |> Process.sleep()

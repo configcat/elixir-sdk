@@ -63,6 +63,21 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   @impl Behaviour
+  def is_offline(policy_id) do
+    GenServer.call(policy_id, :is_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_offline(policy_id) do
+    GenServer.call(policy_id, :set_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_online(policy_id) do
+    GenServer.call(policy_id, :set_online, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
   def force_refresh(policy_id) do
     GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
@@ -70,6 +85,21 @@ defmodule ConfigCat.CachePolicy.Auto do
   @impl GenServer
   def handle_call(:get, _from, state) do
     {:reply, Helpers.cached_config(state), state}
+  end
+
+  @impl GenServer
+  def handle_call(:is_offline, _from, state) do
+    {:reply, state.offline, state}
+  end
+
+  @impl GenServer
+  def handle_call(:set_offline, _from, state) do
+    {:reply, :ok, Map.put(state, :offline, true)}
+  end
+
+  @impl GenServer
+  def handle_call(:set_online, _from, state) do
+    {:reply, :ok, Map.put(state, :offline, false)}
   end
 
   @impl GenServer
@@ -88,12 +118,16 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   defp refresh(state) do
-    with original <- Helpers.cached_config(state),
-         :ok <- Helpers.refresh_config(state) do
-      if config_changed?(state, original) do
-        safely_call_callback(state[:on_changed])
-      end
+    if !state.offline do
+      with original <- Helpers.cached_config(state),
+           :ok <- Helpers.refresh_config(state) do
+        if config_changed?(state, original) do
+          safely_call_callback(state[:on_changed])
+        end
 
+        :ok
+      end
+    else
       :ok
     end
   end

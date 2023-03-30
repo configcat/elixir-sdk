@@ -40,6 +40,21 @@ defmodule ConfigCat.CachePolicy.Lazy do
   end
 
   @impl Behaviour
+  def is_offline(policy_id) do
+    GenServer.call(policy_id, :is_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_offline(policy_id) do
+    GenServer.call(policy_id, :set_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_online(policy_id) do
+    GenServer.call(policy_id, :set_online, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
   def force_refresh(policy_id) do
     GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
@@ -52,18 +67,37 @@ defmodule ConfigCat.CachePolicy.Lazy do
   end
 
   @impl GenServer
-  def handle_call(:force_refresh, _from, state) do
-    case refresh(state) do
-      {:ok, new_state} ->
-        {:reply, :ok, new_state}
+  def handle_call(:is_offline, _from, state) do
+    {:reply, state.offline, state}
+  end
 
-      error ->
-        {:reply, error, state}
+  @impl GenServer
+  def handle_call(:set_offline, _from, state) do
+    {:reply, :ok, Map.put(state, :offline, true)}
+  end
+
+  @impl GenServer
+  def handle_call(:set_online, _from, state) do
+    {:reply, :ok, Map.put(state, :offline, false)}
+  end
+
+  @impl GenServer
+  def handle_call(:force_refresh, _from, state) do
+    if state.offline do
+      {:reply, :ok, state}
+    else
+      case refresh(state) do
+        {:ok, new_state} ->
+          {:reply, :ok, new_state}
+
+        error ->
+          {:reply, error, state}
+      end
     end
   end
 
   defp maybe_refresh(state) do
-    if needs_fetch?(state) do
+    if !state.offline && needs_fetch?(state) do
       refresh(state)
     else
       {:ok, state}

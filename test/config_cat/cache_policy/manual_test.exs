@@ -53,4 +53,26 @@ defmodule ConfigCat.CachePolicy.ManualTest do
       assert_returns_error(fn -> Manual.force_refresh(policy_id) end)
     end
   end
+
+  describe "offline" do
+    test "dose not fetch config when offline mode is set", %{config: config} do
+      {:ok, policy_id} = start_cache_policy(@policy)
+      assert Manual.is_offline(policy_id) == false
+
+      expect_refresh(config)
+      assert :ok = Manual.force_refresh(policy_id)
+
+      assert :ok = Manual.set_offline(policy_id)
+      assert Manual.is_offline(policy_id) == true
+
+      expect_not_refreshed()
+      assert :ok = Manual.force_refresh(policy_id)
+
+      assert :ok = Manual.set_online(policy_id)
+      assert Manual.is_offline(policy_id) == false
+
+      expect_refresh(config)
+      assert :ok = Manual.force_refresh(policy_id)
+    end
+  end
 end

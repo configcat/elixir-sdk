@@ -34,7 +34,8 @@ defmodule ConfigCat.CachePolicyCase do
            cache_policy: policy,
            fetcher: MockFetcher,
            fetcher_id: @fetcher_id,
-           name: policy_id
+           name: policy_id,
+           offline: false
          ]}
       )
 
