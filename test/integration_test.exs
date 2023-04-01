@@ -54,7 +54,7 @@ defmodule ConfigCat.IntegrationTest do
              "This text came from ConfigCat"
   end
 
-  test "dose not fetch config when offline mode is set" do
+  test "does not fetch config when offline mode is set" do
     {:ok, client} = start_config_cat(@sdk_key, offline: true)
 
     assert ConfigCat.is_offline(client: client) == true

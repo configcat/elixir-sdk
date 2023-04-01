@@ -88,7 +88,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
   end
 
   describe "offline" do
-    test "dose not fetch config when offline mode is set", %{config: config} do
+    test "does not fetch config when offline mode is set", %{config: config} do
       {:ok, policy_id} = start_cache_policy(@policy)
       assert Lazy.is_offline(policy_id) == false
 

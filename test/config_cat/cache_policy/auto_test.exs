@@ -184,7 +184,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   end
 
   describe "offline" do
-    test "dose not fetch config when offline mode is set", %{config: config} do
+    test "does not fetch config when offline mode is set", %{config: config} do
       expect_refresh(config)
       policy = CachePolicy.auto(poll_interval_seconds: 1)
       {:ok, policy_id} = start_cache_policy(policy)
