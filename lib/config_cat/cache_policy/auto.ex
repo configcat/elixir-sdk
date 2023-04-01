@@ -118,7 +118,9 @@ defmodule ConfigCat.CachePolicy.Auto do
   end
 
   defp refresh(state) do
-    if !state.offline do
+    if state.offline do
+      :ok
+    else
       with original <- Helpers.cached_config(state),
            :ok <- Helpers.refresh_config(state) do
         if config_changed?(state, original) do
@@ -127,8 +129,6 @@ defmodule ConfigCat.CachePolicy.Auto do
 
         :ok
       end
-    else
-      :ok
     end
   end
 

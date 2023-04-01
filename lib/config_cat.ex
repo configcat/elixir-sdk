@@ -134,11 +134,11 @@ defmodule ConfigCat do
     ConfigCat.get_value("setting", "default", client: :unique_name)
     ```
 
-  - `offline`: **OPTIONAL** timeout for receiving an HTTP response from
-    the socket, in milliseconds. Default is 5000.
+  - `offline`: **OPTIONAL**  # Indicates whether the SDK should be initialized
+    in offline mode or not.
 
     ```elixir
-    {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout_milliseconds: 5000]}
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", offline: true]}
     ```
 
   - `read_timeout_milliseconds`: **OPTIONAL** timeout for receiving an HTTP response from
