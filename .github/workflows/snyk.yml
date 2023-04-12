@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  ELIXIR_VERSION: '1.10.x'
-  OTP_VERSION: '23.0'
+  ELIXIR_VERSION: '1.13.x'
+  OTP_VERSION: '24.x'
 
 jobs:
   snyk:
