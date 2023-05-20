@@ -50,7 +50,7 @@ defmodule ConfigCat.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:httpoison, "~> 1.7"},
       {:jason, "~> 1.2"},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.3", only: :dev, runtime: false},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.5", only: :test},
       {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
