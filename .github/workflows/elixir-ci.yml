@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 env:
-  ELIXIR_VERSION: '1.13.x'
-  OTP_VERSION: '24.x'
+  ELIXIR_VERSION: '1.14.x'
+  OTP_VERSION: '25.x'
 
 jobs:
   test:
