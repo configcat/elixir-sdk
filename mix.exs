@@ -47,12 +47,12 @@ defmodule ConfigCat.MixProject do
 
   defp deps do
     [
-      {:elixir_uuid, "~> 1.2"},
-      {:httpoison, "~> 1.7"},
-      {:jason, "~> 1.2"},
       {:dialyxir, "~> 1.3", only: :dev, runtime: false},
+      {:elixir_uuid, "~> 1.2"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.5", only: :test},
+      {:httpoison, "~> 1.7"},
+      {:jason, "~> 1.2"},
       {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
       {:mox, "~> 1.0", only: :test}
     ]
