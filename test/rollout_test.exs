@@ -174,8 +174,6 @@ defmodule ConfigCat.RolloutTest do
               ]}
            ) do
       {:ok, name}
-    else
-      error -> error
     end
   end
 end

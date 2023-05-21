@@ -10,9 +10,8 @@ defmodule ConfigCat.API do
   def process_response_body(""), do: ""
 
   def process_response_body(body) do
-    with {:ok, parsed} <- Jason.decode(body) do
-      parsed
-    else
+    case Jason.decode(body) do
+      {:ok, parsed} -> parsed
       _ -> body
     end
   end

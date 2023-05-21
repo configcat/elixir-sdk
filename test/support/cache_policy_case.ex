@@ -1,4 +1,6 @@
 defmodule ConfigCat.CachePolicyCase do
+  @moduledoc false
+
   use ExUnit.CaseTemplate
 
   import Mox

@@ -151,6 +151,9 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end)
   end
 
+  # This function is slightly complex, but still reasonably understandable.
+  # Breaking it up doesn't seem like it will help much.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
        when code >= 200 and code < 300 do
     with etag <- extract_etag(headers),
