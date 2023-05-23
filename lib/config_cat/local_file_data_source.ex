@@ -5,6 +5,7 @@ defmodule ConfigCat.LocalFileDataSource do
   See `ConfigCat.OverrideDataSource` for more details.
   """
 
+  alias ConfigCat.Config
   alias ConfigCat.OverrideDataSource
 
   require Logger
@@ -16,10 +17,12 @@ defmodule ConfigCat.LocalFileDataSource do
 
     defstruct cached_timestamp: 0, settings: nil
 
+    @spec start_link(GenServer.options()) :: Agent.on_start()
     def start_link(_opts) do
       Agent.start_link(fn -> %__MODULE__{} end)
     end
 
+    @spec cached_settings(Agent.agent()) :: {:ok, Config.t()} | {:error, :not_found}
     def cached_settings(cache) do
       case Agent.get(cache, fn %__MODULE__{settings: settings} -> settings end) do
         nil -> {:error, :not_found}
@@ -27,10 +30,12 @@ defmodule ConfigCat.LocalFileDataSource do
       end
     end
 
+    @spec cached_timestamp(Agent.agent()) :: integer()
     def cached_timestamp(cache) do
       Agent.get(cache, fn %__MODULE__{cached_timestamp: timestamp} -> timestamp end)
     end
 
+    @spec update(Agent.agent(), Config.t(), integer()) :: :ok
     def update(cache, settings, timestamp) do
       Agent.update(cache, fn %__MODULE__{} = state ->
         %{state | cached_timestamp: timestamp, settings: settings}
@@ -62,11 +67,14 @@ defmodule ConfigCat.LocalFileDataSource do
 
   defimpl OverrideDataSource do
     alias ConfigCat.Constants
+    alias ConfigCat.LocalFileDataSource
 
     require ConfigCat.Constants
 
+    @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour
 
+    @spec overrides(LocalFileDataSource.t()) :: {:ok, Config.t()} | {:error, :not_found}
     def overrides(%{cache: cache} = data_source) do
       refresh_cache(cache, data_source.filename)
       FileCache.cached_settings(cache)

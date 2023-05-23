@@ -34,7 +34,12 @@ defmodule ConfigCat.LocalMapDataSource do
   end
 
   defimpl OverrideDataSource do
+    alias ConfigCat.LocalMapDataSource
+
+    @spec behaviour(LocalMapDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(%{override_behaviour: behaviour}), do: behaviour
+
+    @spec overrides(LocalMapDataSource.t()) :: {:ok, Config.t()}
     def overrides(%{settings: settings}), do: {:ok, settings}
   end
 end

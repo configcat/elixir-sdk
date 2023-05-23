@@ -22,6 +22,7 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, config: config}
   end
 
+  @spec start_cache_policy(CachePolicy.t()) :: {:ok, atom()}
   def start_cache_policy(policy) do
     policy_id = UUID.uuid4() |> String.to_atom()
 
@@ -53,21 +54,25 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, cache_key}
   end
 
+  @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
     |> expect(:fetch, fn @fetcher_id -> {:ok, config} end)
   end
 
+  @spec expect_unchanged :: Mox.t()
   def expect_unchanged do
     MockFetcher
     |> expect(:fetch, fn @fetcher_id -> {:ok, :unchanged} end)
   end
 
+  @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
     MockFetcher
     |> expect(:fetch, 0, fn @fetcher_id -> {:ok, %{}} end)
   end
 
+  @spec assert_returns_error(function()) :: true
   def assert_returns_error(force_refresh_fn) do
     response = %Response{status_code: 503}
 
