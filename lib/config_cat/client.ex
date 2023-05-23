@@ -3,14 +3,12 @@ defmodule ConfigCat.Client do
 
   use GenServer
 
-  alias ConfigCat.{
-    CachePolicy,
-    Config,
-    Constants,
-    OverrideDataSource,
-    Rollout,
-    User
-  }
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
+  alias ConfigCat.OverrideDataSource
+  alias ConfigCat.Rollout
+  alias ConfigCat.User
 
   require Constants
   require Logger

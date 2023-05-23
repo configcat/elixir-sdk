@@ -5,7 +5,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.ConfigFetcher.RedirectMode
-  alias ConfigCat.{Constants, MockAPI}
+  alias ConfigCat.Constants
+  alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
   require ConfigCat.Constants

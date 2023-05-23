@@ -171,17 +171,15 @@ defmodule ConfigCat do
 
   use Supervisor
 
-  alias ConfigCat.{
-    CacheControlConfigFetcher,
-    CachePolicy,
-    Client,
-    Config,
-    Constants,
-    InMemoryCache,
-    NullDataSource,
-    OverrideDataSource,
-    User
-  }
+  alias ConfigCat.CacheControlConfigFetcher
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.Client
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
+  alias ConfigCat.InMemoryCache
+  alias ConfigCat.NullDataSource
+  alias ConfigCat.OverrideDataSource
+  alias ConfigCat.User
 
   require Constants
 

@@ -5,7 +5,9 @@ defmodule ConfigCat.CachePolicyCase do
 
   import Mox
 
-  alias ConfigCat.{CachePolicy, InMemoryCache, MockFetcher}
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.InMemoryCache
+  alias ConfigCat.MockFetcher
   alias HTTPoison.Response
 
   @fetcher_id :fetcher_id

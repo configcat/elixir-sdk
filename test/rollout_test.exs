@@ -1,7 +1,8 @@
 defmodule ConfigCat.RolloutTest do
   use ExUnit.Case, async: true
 
-  alias ConfigCat.{CachePolicy, User}
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.User
 
   @moduletag capture_log: true
 

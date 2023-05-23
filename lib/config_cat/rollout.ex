@@ -1,8 +1,10 @@
 defmodule ConfigCat.Rollout do
   @moduledoc false
 
-  alias ConfigCat.{Config, Constants, User}
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
   alias ConfigCat.Rollout.Comparator
+  alias ConfigCat.User
 
   require Logger
   require ConfigCat.Constants

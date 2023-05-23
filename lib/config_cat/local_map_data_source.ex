@@ -5,7 +5,9 @@ defmodule ConfigCat.LocalMapDataSource do
   See `ConfigCat.OverrideDataSource` for more details.
   """
 
-  alias ConfigCat.{Config, Constants, OverrideDataSource}
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
+  alias ConfigCat.OverrideDataSource
 
   require ConfigCat.Constants
   require Logger

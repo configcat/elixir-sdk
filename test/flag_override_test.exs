@@ -3,7 +3,10 @@ defmodule ConfigCat.FlagOverrideTest do
 
   import Mox
 
-  alias ConfigCat.{Client, LocalFileDataSource, LocalMapDataSource, MockCachePolicy}
+  alias ConfigCat.Client
+  alias ConfigCat.LocalFileDataSource
+  alias ConfigCat.LocalMapDataSource
+  alias ConfigCat.MockCachePolicy
 
   @moduletag capture_log: true
 

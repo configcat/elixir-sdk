@@ -2,7 +2,8 @@ defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
   alias ConfigCat.Config
-  alias HTTPoison.{Error, Response}
+  alias HTTPoison.Error
+  alias HTTPoison.Response
 
   @type fetch_error :: {:error, Error.t() | Response.t()}
   @type id :: atom()
@@ -24,7 +25,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   use GenServer
 
-  alias ConfigCat.{ConfigFetcher, Constants}
+  alias ConfigCat.ConfigFetcher
+  alias ConfigCat.Constants
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
