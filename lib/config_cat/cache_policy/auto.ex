@@ -39,8 +39,10 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_continue(:initial_fetch, state) do
-    refresh(state)
-    schedule_next_refresh(state)
+    unless state.offline do
+      refresh(state)
+      schedule_next_refresh(state)
+    end
 
     {:noreply, state}
   end
@@ -49,10 +51,12 @@ defmodule ConfigCat.CachePolicy.Auto do
   def handle_info(:polled_refresh, state) do
     pid = self()
 
-    Task.start_link(fn ->
-      refresh(state)
-      schedule_next_refresh(state, pid)
-    end)
+    unless state.offline do
+      Task.start_link(fn ->
+        refresh(state)
+        schedule_next_refresh(state, pid)
+      end)
+    end
 
     {:noreply, state}
   end
@@ -99,6 +103,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:set_online, _from, state) do
+    schedule_next_refresh(state)
     {:reply, :ok, Map.put(state, :offline, false)}
   end
 
