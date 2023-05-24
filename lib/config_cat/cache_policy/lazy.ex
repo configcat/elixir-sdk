@@ -7,6 +7,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
   require Constants
+  require Logger
 
   @enforce_keys [:cache_expiry_seconds]
   defstruct [:cache_expiry_seconds, mode: "l"]
@@ -84,6 +85,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   @impl GenServer
   def handle_call(:force_refresh, _from, state) do
     if state.offline do
+      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       {:reply, :ok, state}
     else
       case refresh(state) do

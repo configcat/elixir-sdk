@@ -7,6 +7,7 @@ defmodule ConfigCat.CachePolicy.Manual do
   alias ConfigCat.CachePolicy.{Behaviour, Helpers}
 
   require Constants
+  require Logger
 
   defstruct mode: "m"
 
@@ -77,6 +78,7 @@ defmodule ConfigCat.CachePolicy.Manual do
   @impl GenServer
   def handle_call(:force_refresh, _from, state) do
     if state.offline do
+      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       {:reply, :ok, state}
     else
       case Helpers.refresh_config(state) do

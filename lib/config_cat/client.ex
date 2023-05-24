@@ -179,6 +179,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, cache_policy_id: policy_id} = state
 
     result = policy.set_online(policy_id)
+    Logger.info("Switched to ONLINE mode.")
     {:reply, result, state}
   end
 
@@ -187,6 +188,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, cache_policy_id: policy_id} = state
 
     result = policy.set_offline(policy_id)
+    Logger.info("Switched to OFFLINE mode.")
     {:reply, result, state}
   end
 

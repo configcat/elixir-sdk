@@ -55,6 +55,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
   end
 
   describe "offline" do
+    @tag capture_log: true
     test "does not fetch config when offline mode is set", %{config: config} do
       {:ok, policy_id} = start_cache_policy(@policy)
       assert Manual.is_offline(policy_id) == false

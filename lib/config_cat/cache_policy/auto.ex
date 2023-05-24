@@ -124,6 +124,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defp refresh(state) do
     if state.offline do
+      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       :ok
     else
       with original <- Helpers.cached_config(state),
