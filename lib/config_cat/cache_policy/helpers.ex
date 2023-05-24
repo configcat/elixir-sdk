@@ -9,6 +9,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
           :fetcher => module(),
           :fetcher_id => ConfigFetcher.id(),
           :name => CachePolicy.id(),
+          :offline => false,
           optional(atom()) => any()
         }
 
@@ -29,7 +30,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
     default_options()
     |> Keyword.merge(options)
-    |> Keyword.take([:cache, :cache_key, :fetcher, :fetcher_id])
+    |> Keyword.take([:cache, :cache_key, :fetcher, :fetcher_id, :offline])
     |> Map.new()
     |> Map.merge(policy_options)
     |> Map.merge(additional_state)

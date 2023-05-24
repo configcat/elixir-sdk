@@ -81,6 +81,21 @@ defmodule ConfigCat.Client do
     GenServer.call(client, :clear_default_user, Constants.fetch_timeout())
   end
 
+  @spec set_online(client()) :: :ok
+  def set_online(client) do
+    GenServer.call(client, :set_online, Constants.fetch_timeout())
+  end
+
+  @spec set_offline(client()) :: :ok
+  def set_offline(client) do
+    GenServer.call(client, :set_offline, Constants.fetch_timeout())
+  end
+
+  @spec is_offline(client()) :: :bollean
+  def is_offline(client) do
+    GenServer.call(client, :is_offline, Constants.fetch_timeout())
+  end
+
   @impl GenServer
   def init(state) do
     {:ok, state}
@@ -157,6 +172,32 @@ defmodule ConfigCat.Client do
   @impl GenServer
   def handle_call(:clear_default_user, _from, state) do
     {:reply, :ok, Map.delete(state, :default_user)}
+  end
+
+  @impl GenServer
+  def handle_call(:set_online, _from, state) do
+    %{cache_policy: policy, cache_policy_id: policy_id} = state
+
+    result = policy.set_online(policy_id)
+    Logger.info("Switched to ONLINE mode.")
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call(:set_offline, _from, state) do
+    %{cache_policy: policy, cache_policy_id: policy_id} = state
+
+    result = policy.set_offline(policy_id)
+    Logger.info("Switched to OFFLINE mode.")
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call(:is_offline, _from, state) do
+    %{cache_policy: policy, cache_policy_id: policy_id} = state
+
+    result = policy.is_offline(policy_id)
+    {:reply, result, state}
   end
 
   defp do_get_value(key, default_value, user, state) do

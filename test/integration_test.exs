@@ -54,6 +54,25 @@ defmodule ConfigCat.IntegrationTest do
              "This text came from ConfigCat"
   end
 
+  test "does not fetch config when offline mode is set" do
+    {:ok, client} = start_config_cat(@sdk_key, offline: true)
+
+    assert ConfigCat.is_offline(client: client) == true
+
+    :ok = ConfigCat.force_refresh(client: client)
+
+    assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
+             "default value"
+
+    :ok = ConfigCat.set_online(client: client)
+    assert ConfigCat.is_offline(client: client) == false
+
+    :ok = ConfigCat.force_refresh(client: client)
+
+    assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
+             "This text came from ConfigCat"
+  end
+
   @tag capture_log: true
   test "handles errors from ConfigCat server" do
     {:ok, client} = start_config_cat("invalid_sdk_key")

@@ -62,6 +62,7 @@ defmodule ConfigCat.CachePolicy do
           | {:fetcher, module()}
           | {:fetcher_id, ConfigFetcher.id()}
           | {:name, id()}
+          | {:offline, boolean()}
 
   @typedoc false
   @type options :: [option]

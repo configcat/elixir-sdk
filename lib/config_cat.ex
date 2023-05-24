@@ -134,6 +134,13 @@ defmodule ConfigCat do
     ConfigCat.get_value("setting", "default", client: :unique_name)
     ```
 
+  - `offline`: **OPTIONAL**  # Indicates whether the SDK should be initialized
+    in offline mode or not.
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", offline: true]}
+    ```
+
   - `read_timeout_milliseconds`: **OPTIONAL** timeout for receiving an HTTP response from
     the socket, in milliseconds. Default is 5000.
 
@@ -205,6 +212,7 @@ defmodule ConfigCat do
           | {:flag_overrides, OverrideDataSource.t()}
           | {:http_proxy, String.t()}
           | {:name, instance_id()}
+          | {:offline, boolean()}
           | {:read_timeout_milliseconds, non_neg_integer()}
           | {:sdk_key, String.t()}
 
@@ -251,7 +259,8 @@ defmodule ConfigCat do
       cache: @default_cache,
       cache_policy: CachePolicy.auto(),
       flag_overrides: NullDataSource.new(),
-      name: __MODULE__
+      name: __MODULE__,
+      offline: false
     ]
 
   @impl Supervisor
@@ -509,6 +518,55 @@ defmodule ConfigCat do
     Client.clear_default_user(client_name(name))
   end
 
+  @doc """
+  Configures the SDK to allow HTTP requests.
+
+  Returns `:ok`.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec set_online([api_option()]) :: :ok
+  def set_online(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.set_online(client_name(name))
+  end
+
+  @doc """
+  Configures the SDK to not initiate HTTP requests and work only from its cache.
+
+  Returns `:ok`.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec set_offline([api_option()]) :: :ok
+  def set_offline(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.set_offline(client_name(name))
+  end
+
+  @doc """
+  Returns `true` when the SDK is configured not to initiate HTTP requests, otherwise `false`.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec is_offline([api_option()]) :: :bollean
+  def is_offline(options \\ []) do
+    name = Keyword.get(options, :client, __MODULE__)
+    Client.is_offline(client_name(name))
+  end
+
   defp cache_policy_name(name), do: :"#{name}.CachePolicy"
   defp client_name(name), do: :"#{name}.Client"
   defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
@@ -534,7 +592,7 @@ defmodule ConfigCat do
   defp cache_policy_options(options) do
     options
     |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name])
+    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name, :offline])
   end
 
   defp client_options(options) do
