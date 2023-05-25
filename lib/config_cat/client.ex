@@ -3,14 +3,12 @@ defmodule ConfigCat.Client do
 
   use GenServer
 
-  alias ConfigCat.{
-    CachePolicy,
-    Config,
-    Constants,
-    OverrideDataSource,
-    Rollout,
-    User
-  }
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
+  alias ConfigCat.OverrideDataSource
+  alias ConfigCat.Rollout
+  alias ConfigCat.User
 
   require Constants
   require Logger
@@ -202,16 +200,14 @@ defmodule ConfigCat.Client do
 
   defp do_get_value(key, default_value, user, state) do
     with {:ok, result} <- evaluate(key, user, default_value, nil, state),
-         {value, _variation} = result do
+         {value, _variation} <- result do
       value
-    else
-      error -> error
     end
   end
 
   defp do_get_all_keys(state) do
-    with {:ok, config} <- cached_config(state) do
-      feature_flags = Map.get(config, Constants.feature_flags(), %{})
+    with {:ok, config} <- cached_config(state),
+         feature_flags <- Map.get(config, Constants.feature_flags(), %{}) do
       Map.keys(feature_flags)
     else
       {:error, :not_found} -> []
@@ -221,7 +217,7 @@ defmodule ConfigCat.Client do
 
   defp do_get_variation_id(key, default_variation_id, user, state) do
     with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
-         {_value, variation} = result do
+         {_value, variation} <- result do
       variation
     end
   end
@@ -247,11 +243,15 @@ defmodule ConfigCat.Client do
   defp evaluate(key, user, default_value, default_variation_id, state) do
     user = if user != nil, do: user, else: Map.get(state, :default_user)
 
-    with {:ok, config} <- cached_config(state) do
-      {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config)}
-    else
-      {:error, :not_found} -> {:ok, {default_value, default_variation_id}}
-      error -> error
+    case cached_config(state) do
+      {:ok, config} ->
+        {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config)}
+
+      {:error, :not_found} ->
+        {:ok, {default_value, default_variation_id}}
+
+      error ->
+        error
     end
   end
 

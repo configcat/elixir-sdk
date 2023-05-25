@@ -1,5 +1,6 @@
 defmodule ConfigCat.CachePolicy.AutoTest do
-  use ConfigCat.CachePolicyCase
+  # This test uses set_mox_global, so can't be run async
+  use ConfigCat.CachePolicyCase, async: false
 
   import Mox
 

@@ -128,7 +128,7 @@ defmodule ConfigCat.Rollout.Comparator do
     {:ok, result}
   end
 
-  def is_one_of_semver(user_value, comparison_value) do
+  defp is_one_of_semver(user_value, comparison_value) do
     user_version = Version.parse!(user_value)
 
     result =

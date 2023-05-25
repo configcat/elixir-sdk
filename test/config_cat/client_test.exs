@@ -3,7 +3,9 @@ defmodule ConfigCat.ClientTest do
 
   import Mox
 
-  alias ConfigCat.{Client, MockCachePolicy, NullDataSource}
+  alias ConfigCat.Client
+  alias ConfigCat.MockCachePolicy
+  alias ConfigCat.NullDataSource
 
   @cache_policy_id :cache_policy_id
 

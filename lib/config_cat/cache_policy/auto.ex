@@ -3,8 +3,10 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   use GenServer
 
-  alias ConfigCat.{CachePolicy, Constants}
-  alias ConfigCat.CachePolicy.{Behaviour, Helpers}
+  alias ConfigCat.CachePolicy
+  alias ConfigCat.CachePolicy.Behaviour
+  alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.Constants
 
   require Constants
   require Logger

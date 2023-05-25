@@ -36,8 +36,11 @@ defmodule ConfigCat.CachePolicy do
   See `manual/0` below for details.
   """
 
-  alias ConfigCat.{ConfigCache, ConfigFetcher}
-  alias __MODULE__.{Auto, Lazy, Manual}
+  alias ConfigCat.CachePolicy.Auto
+  alias ConfigCat.CachePolicy.Lazy
+  alias ConfigCat.CachePolicy.Manual
+  alias ConfigCat.ConfigCache
+  alias ConfigCat.ConfigFetcher
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [

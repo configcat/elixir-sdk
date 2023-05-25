@@ -4,8 +4,9 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
-  alias ConfigCat.{Constants, MockAPI}
   alias ConfigCat.ConfigFetcher.RedirectMode
+  alias ConfigCat.Constants
+  alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
   require ConfigCat.Constants

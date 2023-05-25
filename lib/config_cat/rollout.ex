@@ -1,8 +1,10 @@
 defmodule ConfigCat.Rollout do
   @moduledoc false
 
-  alias ConfigCat.{Config, Constants, User}
+  alias ConfigCat.Config
+  alias ConfigCat.Constants
   alias ConfigCat.Rollout.Comparator
+  alias ConfigCat.User
 
   require Logger
   require ConfigCat.Constants
@@ -100,7 +102,7 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_percentage_rules(_percentage_rules = [], _user, _key), do: {:none, nil}
+  defp evaluate_percentage_rules([] = _percentage_rules, _user, _key), do: {:none, nil}
 
   defp evaluate_percentage_rules(percentage_rules, user, key) do
     hash_val = hash_user(user, key)

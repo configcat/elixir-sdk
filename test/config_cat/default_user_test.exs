@@ -3,7 +3,10 @@ defmodule ConfigCat.DefaultUserTest do
 
   import Mox
 
-  alias ConfigCat.{Client, MockCachePolicy, NullDataSource, User}
+  alias ConfigCat.Client
+  alias ConfigCat.MockCachePolicy
+  alias ConfigCat.NullDataSource
+  alias ConfigCat.User
 
   @moduletag capture_log: true
 

@@ -112,8 +112,6 @@ defmodule ConfigCat.IntegrationTest do
     with {:ok, _pid} <-
            start_supervised({ConfigCat, Keyword.merge(default_options, options)}) do
       {:ok, name}
-    else
-      error -> error
     end
   end
 

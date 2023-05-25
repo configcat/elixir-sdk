@@ -48,6 +48,9 @@ jobs:
       if: matrix.elixir-version == env.ELIXIR_VERSION
       run: mix format --check-formatted
 
+    - name: Run credo
+      run: mix credo
+
     - name: Run dialyzer
       run: mix dialyzer
 
