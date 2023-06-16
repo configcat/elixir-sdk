@@ -89,7 +89,7 @@ defmodule ConfigCat.Client do
     GenServer.call(client, :set_offline, Constants.fetch_timeout())
   end
 
-  @spec is_offline(client()) :: :bollean
+  @spec is_offline(client()) :: boolean()
   def is_offline(client) do
     GenServer.call(client, :is_offline, Constants.fetch_timeout())
   end

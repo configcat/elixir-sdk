@@ -559,7 +559,7 @@ defmodule ConfigCat do
     `client: :unique_name` option, specifying the name you configured for the
     instance you want to access.
   """
-  @spec is_offline([api_option()]) :: :bollean
+  @spec is_offline([api_option()]) :: boolean()
   def is_offline(options \\ []) do
     name = Keyword.get(options, :client, __MODULE__)
     Client.is_offline(client_name(name))
