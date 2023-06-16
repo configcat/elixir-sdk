@@ -170,7 +170,6 @@ defmodule ConfigCat do
   """
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.Client
   alias ConfigCat.Config
   alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
