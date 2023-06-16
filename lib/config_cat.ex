@@ -241,8 +241,9 @@ defmodule ConfigCat do
   """
   @spec get_all_keys([api_option()]) :: [key()]
   def get_all_keys(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_keys(client_name(name))
+    options
+    |> client()
+    |> Client.get_all_keys()
   end
 
   @doc "See `get_value/4`."
@@ -273,8 +274,9 @@ defmodule ConfigCat do
   """
   @spec get_value(key(), value(), User.t() | nil, [api_option()]) :: value()
   def get_value(key, default_value, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_value(client_name(name), key, default_value, user)
+    options
+    |> client()
+    |> Client.get_value(key, default_value, user)
   end
 
   @doc "See `get_variation_id/4`."
@@ -306,8 +308,9 @@ defmodule ConfigCat do
   """
   @spec get_variation_id(key(), variation_id(), User.t() | nil, [api_option()]) :: variation_id()
   def get_variation_id(key, default_variation_id, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_variation_id(client_name(name), key, default_variation_id, user)
+    options
+    |> client()
+    |> Client.get_variation_id(key, default_variation_id, user)
   end
 
   @doc "See `get_all_variation_ids/2`."
@@ -337,8 +340,9 @@ defmodule ConfigCat do
   """
   @spec get_all_variation_ids(User.t() | nil, [api_option()]) :: [variation_id()]
   def get_all_variation_ids(user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_variation_ids(client_name(name), user)
+    options
+    |> client()
+    |> Client.get_all_variation_ids(user)
   end
 
   @doc """
@@ -355,8 +359,9 @@ defmodule ConfigCat do
   """
   @spec get_key_and_value(variation_id(), [api_option()]) :: {key(), value()} | nil
   def get_key_and_value(variation_id, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_key_and_value(client_name(name), variation_id)
+    options
+    |> client()
+    |> Client.get_key_and_value(variation_id)
   end
 
   @doc """
@@ -376,8 +381,9 @@ defmodule ConfigCat do
   """
   @spec get_all_values(User.t() | nil, [api_option()]) :: %{key() => value()}
   def get_all_values(user, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_values(client_name(name), user)
+    options
+    |> client()
+    |> Client.get_all_values(user)
   end
 
   @doc """
@@ -400,8 +406,9 @@ defmodule ConfigCat do
   """
   @spec force_refresh([api_option()]) :: refresh_result()
   def force_refresh(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.force_refresh(client_name(name))
+    options
+    |> client()
+    |> Client.force_refresh()
   end
 
   @doc """
@@ -417,8 +424,9 @@ defmodule ConfigCat do
   """
   @spec set_default_user(User.t(), [api_option()]) :: :ok
   def set_default_user(user, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_default_user(client_name(name), user)
+    options
+    |> client()
+    |> Client.set_default_user(user)
   end
 
   @doc """
@@ -434,8 +442,9 @@ defmodule ConfigCat do
   """
   @spec clear_default_user([api_option()]) :: :ok
   def clear_default_user(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.clear_default_user(client_name(name))
+    options
+    |> client()
+    |> Client.clear_default_user()
   end
 
   @doc """
@@ -451,8 +460,9 @@ defmodule ConfigCat do
   """
   @spec set_online([api_option()]) :: :ok
   def set_online(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_online(client_name(name))
+    options
+    |> client()
+    |> Client.set_online()
   end
 
   @doc """
@@ -468,8 +478,9 @@ defmodule ConfigCat do
   """
   @spec set_offline([api_option()]) :: :ok
   def set_offline(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_offline(client_name(name))
+    options
+    |> client()
+    |> Client.set_offline()
   end
 
   @doc """
@@ -483,9 +494,14 @@ defmodule ConfigCat do
   """
   @spec is_offline([api_option()]) :: boolean()
   def is_offline(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.is_offline(client_name(name))
+    options
+    |> client()
+    |> Client.is_offline()
   end
 
-  defp client_name(name), do: ConfigCat.Supervisor.client_name(name)
+  defp client(options) do
+    options
+    |> Keyword.get(:client, __MODULE__)
+    |> ConfigCat.Supervisor.client_name()
+  end
 end
