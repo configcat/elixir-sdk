@@ -4,11 +4,9 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.Config
   alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
-  alias ConfigCat.User
 
   require Constants
   require Logger
@@ -27,71 +25,6 @@ defmodule ConfigCat.Client do
     with {name, options} <- Keyword.pop!(options, :name) do
       GenServer.start_link(__MODULE__, Map.new(options), name: name)
     end
-  end
-
-  @spec get_all_keys(client()) :: [Config.key()]
-  def get_all_keys(client) do
-    GenServer.call(client, :get_all_keys, Constants.fetch_timeout())
-  end
-
-  @spec get_value(client(), Config.key(), Config.value(), User.t() | nil) :: Config.value()
-  def get_value(client, key, default_value, user \\ nil) do
-    GenServer.call(client, {:get_value, key, default_value, user}, Constants.fetch_timeout())
-  end
-
-  @spec get_variation_id(client(), Config.key(), Config.variation_id(), User.t() | nil) ::
-          Config.variation_id()
-  def get_variation_id(client, key, default_variation_id, user \\ nil) do
-    GenServer.call(
-      client,
-      {:get_variation_id, key, default_variation_id, user},
-      Constants.fetch_timeout()
-    )
-  end
-
-  @spec get_all_variation_ids(client(), User.t() | nil) :: [Config.variation_id()]
-  def get_all_variation_ids(client, user \\ nil) do
-    GenServer.call(client, {:get_all_variation_ids, user}, Constants.fetch_timeout())
-  end
-
-  @spec get_key_and_value(client(), Config.variation_id()) :: {Config.key(), Config.value()} | nil
-  def get_key_and_value(client, variation_id) do
-    GenServer.call(client, {:get_key_and_value, variation_id}, Constants.fetch_timeout())
-  end
-
-  @spec get_all_values(client(), User.t() | nil) :: %{Config.key() => Config.value()}
-  def get_all_values(client, user \\ nil) do
-    GenServer.call(client, {:get_all_values, user}, Constants.fetch_timeout())
-  end
-
-  @spec force_refresh(client()) :: refresh_result()
-  def force_refresh(client) do
-    GenServer.call(client, :force_refresh, Constants.fetch_timeout())
-  end
-
-  @spec set_default_user(client(), User.t()) :: :ok
-  def set_default_user(client, user) do
-    GenServer.call(client, {:set_default_user, user}, Constants.fetch_timeout())
-  end
-
-  @spec clear_default_user(client()) :: :ok
-  def clear_default_user(client) do
-    GenServer.call(client, :clear_default_user, Constants.fetch_timeout())
-  end
-
-  @spec set_online(client()) :: :ok
-  def set_online(client) do
-    GenServer.call(client, :set_online, Constants.fetch_timeout())
-  end
-
-  @spec set_offline(client()) :: :ok
-  def set_offline(client) do
-    GenServer.call(client, :set_offline, Constants.fetch_timeout())
-  end
-
-  @spec is_offline(client()) :: boolean()
-  def is_offline(client) do
-    GenServer.call(client, :is_offline, Constants.fetch_timeout())
   end
 
   @impl GenServer

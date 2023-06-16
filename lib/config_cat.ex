@@ -243,7 +243,7 @@ defmodule ConfigCat do
   def get_all_keys(options \\ []) do
     options
     |> client()
-    |> Client.get_all_keys()
+    |> GenServer.call(:get_all_keys, Constants.fetch_timeout())
   end
 
   @doc "See `get_value/4`."
@@ -276,7 +276,7 @@ defmodule ConfigCat do
   def get_value(key, default_value, user, options) do
     options
     |> client()
-    |> Client.get_value(key, default_value, user)
+    |> GenServer.call({:get_value, key, default_value, user}, Constants.fetch_timeout())
   end
 
   @doc "See `get_variation_id/4`."
@@ -310,7 +310,10 @@ defmodule ConfigCat do
   def get_variation_id(key, default_variation_id, user, options) do
     options
     |> client()
-    |> Client.get_variation_id(key, default_variation_id, user)
+    |> GenServer.call(
+      {:get_variation_id, key, default_variation_id, user},
+      Constants.fetch_timeout()
+    )
   end
 
   @doc "See `get_all_variation_ids/2`."
@@ -342,7 +345,7 @@ defmodule ConfigCat do
   def get_all_variation_ids(user, options) do
     options
     |> client()
-    |> Client.get_all_variation_ids(user)
+    |> GenServer.call({:get_all_variation_ids, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -361,7 +364,7 @@ defmodule ConfigCat do
   def get_key_and_value(variation_id, options \\ []) do
     options
     |> client()
-    |> Client.get_key_and_value(variation_id)
+    |> GenServer.call({:get_key_and_value, variation_id}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -383,7 +386,7 @@ defmodule ConfigCat do
   def get_all_values(user, options \\ []) do
     options
     |> client()
-    |> Client.get_all_values(user)
+    |> GenServer.call({:get_all_values, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -408,7 +411,7 @@ defmodule ConfigCat do
   def force_refresh(options \\ []) do
     options
     |> client()
-    |> Client.force_refresh()
+    |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
 
   @doc """
@@ -426,7 +429,7 @@ defmodule ConfigCat do
   def set_default_user(user, options \\ []) do
     options
     |> client()
-    |> Client.set_default_user(user)
+    |> GenServer.call({:set_default_user, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -444,7 +447,7 @@ defmodule ConfigCat do
   def clear_default_user(options \\ []) do
     options
     |> client()
-    |> Client.clear_default_user()
+    |> GenServer.call(:clear_default_user, Constants.fetch_timeout())
   end
 
   @doc """
@@ -462,7 +465,7 @@ defmodule ConfigCat do
   def set_online(options \\ []) do
     options
     |> client()
-    |> Client.set_online()
+    |> GenServer.call(:set_online, Constants.fetch_timeout())
   end
 
   @doc """
@@ -480,7 +483,7 @@ defmodule ConfigCat do
   def set_offline(options \\ []) do
     options
     |> client()
-    |> Client.set_offline()
+    |> GenServer.call(:set_offline, Constants.fetch_timeout())
   end
 
   @doc """
@@ -496,7 +499,7 @@ defmodule ConfigCat do
   def is_offline(options \\ []) do
     options
     |> client()
-    |> Client.is_offline()
+    |> GenServer.call(:is_offline, Constants.fetch_timeout())
   end
 
   defp client(options) do
