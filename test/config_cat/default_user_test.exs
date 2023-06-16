@@ -41,17 +41,17 @@ defmodule ConfigCat.DefaultUserTest do
     end
 
     test "get_value/4 uses the default user if no user is passed", %{client: client} do
-      assert Client.get_value(client, "testStringKey", "") == "fake1"
+      assert ConfigCat.get_value("testStringKey", "", client: client) == "fake1"
     end
 
     test "get_value/4 uses the passed user", %{client: client} do
       user = User.new("test@test2.com")
-      assert Client.get_value(client, "testStringKey", "", user) == "fake2"
+      assert ConfigCat.get_value("testStringKey", "", user, client: client) == "fake2"
     end
 
     test "get_value/4 uses the undefined user case if default user is cleared", %{client: client} do
-      Client.clear_default_user(client)
-      assert Client.get_value(client, "testStringKey", "") == "testValue"
+      ConfigCat.clear_default_user(client: client)
+      assert ConfigCat.get_value("testStringKey", "", client: client) == "testValue"
     end
 
     test "get_all_values/1 uses the default user if no user is passed", %{client: client} do
@@ -62,7 +62,7 @@ defmodule ConfigCat.DefaultUserTest do
         }
         |> Enum.sort()
 
-      actual = client |> Client.get_all_values() |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
       assert actual == expected
     end
 
@@ -75,7 +75,7 @@ defmodule ConfigCat.DefaultUserTest do
         |> Enum.sort()
 
       user = User.new("test@test2.com")
-      actual = client |> Client.get_all_values(user) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client) |> Enum.sort()
       assert actual == expected
     end
   end
@@ -87,17 +87,17 @@ defmodule ConfigCat.DefaultUserTest do
     end
 
     test "get_value/4 uses the undefined user case if no user is passed", %{client: client} do
-      assert Client.get_value(client, "testStringKey", "") == "testValue"
+      assert ConfigCat.get_value("testStringKey", "", client: client) == "testValue"
     end
 
     test "get_value/4 uses the passed user", %{client: client} do
       user = User.new("test@test2.com")
-      assert Client.get_value(client, "testStringKey", "", user) == "fake2"
+      assert ConfigCat.get_value("testStringKey", "", user, client: client) == "fake2"
     end
 
     test "get_value/4 uses the default user if no user is passed", %{client: client} do
-      Client.set_default_user(client, User.new("test@test1.com"))
-      assert Client.get_value(client, "testStringKey", "") == "fake1"
+      ConfigCat.set_default_user(User.new("test@test1.com"), client: client)
+      assert ConfigCat.get_value("testStringKey", "", client: client) == "fake1"
     end
 
     test "get_all_values/1 uses the undefined user case if no user is passed", %{client: client} do
@@ -108,7 +108,7 @@ defmodule ConfigCat.DefaultUserTest do
         }
         |> Enum.sort()
 
-      actual = client |> Client.get_all_values() |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
       assert actual == expected
     end
 
@@ -121,13 +121,14 @@ defmodule ConfigCat.DefaultUserTest do
         |> Enum.sort()
 
       user = User.new("test@test2.com")
-      actual = client |> Client.get_all_values(user) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client) |> Enum.sort()
       assert actual == expected
     end
   end
 
   defp start_client(default_user \\ nil) do
-    name = UUID.uuid4() |> String.to_atom()
+    base_name = UUID.uuid4() |> String.to_atom()
+    name = ConfigCat.Supervisor.client_name(base_name)
 
     options = [
       cache_policy: MockCachePolicy,
@@ -141,6 +142,6 @@ defmodule ConfigCat.DefaultUserTest do
 
     allow(MockCachePolicy, self(), name)
 
-    {:ok, name}
+    {:ok, base_name}
   end
 end
