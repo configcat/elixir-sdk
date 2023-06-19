@@ -169,15 +169,9 @@ defmodule ConfigCat do
   ```
   """
 
-  use Supervisor
-
-  alias ConfigCat.CacheControlConfigFetcher
   alias ConfigCat.CachePolicy
-  alias ConfigCat.Client
   alias ConfigCat.Config
   alias ConfigCat.Constants
-  alias ConfigCat.InMemoryCache
-  alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.User
 
@@ -225,88 +219,15 @@ defmodule ConfigCat do
   @typedoc "The name of a variation being tested."
   @type variation_id :: Config.variation_id()
 
-  @default_cache InMemoryCache
-
   @doc """
-  Starts an instance of `ConfigCat`.
+  Builds a child specification to use in a Supervisor.
 
   Normally not called directly by your code. Instead, it will be
   called by your application's Supervisor once you add `ConfigCat`
   to its supervision tree.
   """
-  @spec start_link(options()) :: Supervisor.on_start()
-  def start_link(options) when is_list(options) do
-    sdk_key = options[:sdk_key]
-    validate_sdk_key(sdk_key)
-
-    options =
-      default_options()
-      |> Keyword.merge(options)
-      |> generate_cache_key(sdk_key)
-
-    name = Keyword.fetch!(options, :name)
-    Supervisor.start_link(__MODULE__, options, name: name)
-  end
-
-  defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
-  defp validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
-  defp validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
-
-  defp default_options,
-    do: [
-      cache: @default_cache,
-      cache_policy: CachePolicy.auto(),
-      flag_overrides: NullDataSource.new(),
-      name: __MODULE__,
-      offline: false
-    ]
-
-  @impl Supervisor
-  def init(options) do
-    fetcher_options = fetcher_options(options)
-
-    policy_options =
-      options
-      |> Keyword.put(:fetcher_id, fetcher_options[:name])
-      |> cache_policy_options()
-
-    client_options =
-      options
-      |> Keyword.put(:cache_policy_id, policy_options[:name])
-      |> client_options()
-
-    override_behaviour = OverrideDataSource.behaviour(options[:flag_overrides])
-
-    children =
-      [
-        default_cache(options),
-        config_fetcher(fetcher_options, override_behaviour),
-        cache_policy(policy_options, override_behaviour),
-        {Client, client_options}
-      ]
-      |> Enum.reject(&is_nil/1)
-
-    Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  defp default_cache(options) do
-    case Keyword.get(options, :cache) do
-      @default_cache -> {@default_cache, cache_options(options)}
-      _ -> nil
-    end
-  end
-
-  defp config_fetcher(_options, :local_only), do: nil
-
-  defp config_fetcher(options, _override_behaviour) do
-    {CacheControlConfigFetcher, options}
-  end
-
-  defp cache_policy(_options, :local_only), do: nil
-
-  defp cache_policy(options, _override_behaviour) do
-    {CachePolicy, options}
-  end
+  @spec child_spec(options()) :: Supervisor.child_spec()
+  defdelegate child_spec(options), to: ConfigCat.Supervisor
 
   @doc """
   Queries all settings keys in your configuration.
@@ -319,8 +240,9 @@ defmodule ConfigCat do
   """
   @spec get_all_keys([api_option()]) :: [key()]
   def get_all_keys(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_keys(client_name(name))
+    options
+    |> client()
+    |> GenServer.call(:get_all_keys, Constants.fetch_timeout())
   end
 
   @doc "See `get_value/4`."
@@ -351,8 +273,9 @@ defmodule ConfigCat do
   """
   @spec get_value(key(), value(), User.t() | nil, [api_option()]) :: value()
   def get_value(key, default_value, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_value(client_name(name), key, default_value, user)
+    options
+    |> client()
+    |> GenServer.call({:get_value, key, default_value, user}, Constants.fetch_timeout())
   end
 
   @doc "See `get_variation_id/4`."
@@ -384,8 +307,12 @@ defmodule ConfigCat do
   """
   @spec get_variation_id(key(), variation_id(), User.t() | nil, [api_option()]) :: variation_id()
   def get_variation_id(key, default_variation_id, user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_variation_id(client_name(name), key, default_variation_id, user)
+    options
+    |> client()
+    |> GenServer.call(
+      {:get_variation_id, key, default_variation_id, user},
+      Constants.fetch_timeout()
+    )
   end
 
   @doc "See `get_all_variation_ids/2`."
@@ -415,8 +342,9 @@ defmodule ConfigCat do
   """
   @spec get_all_variation_ids(User.t() | nil, [api_option()]) :: [variation_id()]
   def get_all_variation_ids(user, options) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_variation_ids(client_name(name), user)
+    options
+    |> client()
+    |> GenServer.call({:get_all_variation_ids, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -433,8 +361,9 @@ defmodule ConfigCat do
   """
   @spec get_key_and_value(variation_id(), [api_option()]) :: {key(), value()} | nil
   def get_key_and_value(variation_id, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_key_and_value(client_name(name), variation_id)
+    options
+    |> client()
+    |> GenServer.call({:get_key_and_value, variation_id}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -454,8 +383,9 @@ defmodule ConfigCat do
   """
   @spec get_all_values(User.t() | nil, [api_option()]) :: %{key() => value()}
   def get_all_values(user, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.get_all_values(client_name(name), user)
+    options
+    |> client()
+    |> GenServer.call({:get_all_values, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -478,8 +408,9 @@ defmodule ConfigCat do
   """
   @spec force_refresh([api_option()]) :: refresh_result()
   def force_refresh(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.force_refresh(client_name(name))
+    options
+    |> client()
+    |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
 
   @doc """
@@ -495,8 +426,9 @@ defmodule ConfigCat do
   """
   @spec set_default_user(User.t(), [api_option()]) :: :ok
   def set_default_user(user, options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_default_user(client_name(name), user)
+    options
+    |> client()
+    |> GenServer.call({:set_default_user, user}, Constants.fetch_timeout())
   end
 
   @doc """
@@ -512,8 +444,9 @@ defmodule ConfigCat do
   """
   @spec clear_default_user([api_option()]) :: :ok
   def clear_default_user(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.clear_default_user(client_name(name))
+    options
+    |> client()
+    |> GenServer.call(:clear_default_user, Constants.fetch_timeout())
   end
 
   @doc """
@@ -529,8 +462,9 @@ defmodule ConfigCat do
   """
   @spec set_online([api_option()]) :: :ok
   def set_online(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_online(client_name(name))
+    options
+    |> client()
+    |> GenServer.call(:set_online, Constants.fetch_timeout())
   end
 
   @doc """
@@ -546,8 +480,9 @@ defmodule ConfigCat do
   """
   @spec set_offline([api_option()]) :: :ok
   def set_offline(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.set_offline(client_name(name))
+    options
+    |> client()
+    |> GenServer.call(:set_offline, Constants.fetch_timeout())
   end
 
   @doc """
@@ -559,66 +494,16 @@ defmodule ConfigCat do
     `client: :unique_name` option, specifying the name you configured for the
     instance you want to access.
   """
-  @spec is_offline([api_option()]) :: :bollean
+  @spec is_offline([api_option()]) :: boolean()
   def is_offline(options \\ []) do
-    name = Keyword.get(options, :client, __MODULE__)
-    Client.is_offline(client_name(name))
-  end
-
-  defp cache_policy_name(name), do: :"#{name}.CachePolicy"
-  defp client_name(name), do: :"#{name}.Client"
-  defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
-
-  defp generate_cache_key(options, sdk_key) do
-    prefix =
-      case Keyword.get(options, :cache) do
-        @default_cache -> options[:name]
-        _ -> "elixir_"
-      end
-
-    cache_key =
-      :crypto.hash(:sha, "#{prefix}_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
-      |> Base.encode16()
-
-    Keyword.put(options, :cache_key, cache_key)
-  end
-
-  defp cache_options(options) do
-    Keyword.take(options, [:cache_key])
-  end
-
-  defp cache_policy_options(options) do
     options
-    |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name, :offline])
+    |> client()
+    |> GenServer.call(:is_offline, Constants.fetch_timeout())
   end
 
-  defp client_options(options) do
+  defp client(options) do
     options
-    |> Keyword.update!(:name, &client_name/1)
-    |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
-    |> Keyword.take([
-      :cache_policy,
-      :cache_policy_id,
-      :default_user,
-      :flag_overrides,
-      :name
-    ])
-  end
-
-  defp fetcher_options(options) do
-    options
-    |> Keyword.update!(:name, &fetcher_name/1)
-    |> Keyword.put(:mode, options[:cache_policy].mode)
-    |> Keyword.take([
-      :base_url,
-      :http_proxy,
-      :connect_timeout_milliseconds,
-      :read_timeout_milliseconds,
-      :data_governance,
-      :mode,
-      :name,
-      :sdk_key
-    ])
+    |> Keyword.get(:client, __MODULE__)
+    |> ConfigCat.Supervisor.client_name()
   end
 end

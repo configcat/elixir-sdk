@@ -35,11 +35,11 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "enabledFeature", false) == true
-      assert Client.get_value(client, "disabledFeature", true) == false
-      assert Client.get_value(client, "intSetting", 0) == 5
-      assert Client.get_value(client, "doubleSetting", 0.0) == 3.14
-      assert Client.get_value(client, "stringSetting", "") == "test"
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == true
+      assert ConfigCat.get_value("disabledFeature", true, client: client) == false
+      assert ConfigCat.get_value("intSetting", 0, client: client) == 5
+      assert ConfigCat.get_value("doubleSetting", 0.0, client: client) == 3.14
+      assert ConfigCat.get_value("stringSetting", "", client: client) == "test"
     end
 
     test "uses flag values from a simple-format local file" do
@@ -48,11 +48,11 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "enabledFeature", false) == true
-      assert Client.get_value(client, "disabledFeature", true) == false
-      assert Client.get_value(client, "intSetting", 0) == 5
-      assert Client.get_value(client, "doubleSetting", 0.0) == 3.14
-      assert Client.get_value(client, "stringSetting", "") == "test"
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == true
+      assert ConfigCat.get_value("disabledFeature", true, client: client) == false
+      assert ConfigCat.get_value("intSetting", 0, client: client) == 5
+      assert ConfigCat.get_value("doubleSetting", 0.0, client: client) == 3.14
+      assert ConfigCat.get_value("stringSetting", "", client: client) == "test"
     end
 
     test "reloads file when modified" do
@@ -71,7 +71,7 @@ defmodule ConfigCat.FlagOverrideTest do
       stat = File.stat!(filename, time: :posix)
       File.touch!(filename, stat.mtime - 1)
 
-      assert Client.get_value(client, "enabledFeature", true) == false
+      assert ConfigCat.get_value("enabledFeature", true, client: client) == false
 
       modified_flags = put_in(flags, ["flags", "enabledFeature"], true)
 
@@ -79,7 +79,7 @@ defmodule ConfigCat.FlagOverrideTest do
         IO.write(file, Jason.encode!(modified_flags))
       end)
 
-      assert Client.get_value(client, "enabledFeature", false) == true
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == true
     end
 
     test "uses default value if override file doesn't exist" do
@@ -88,7 +88,7 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "enabledFeature", false) == false
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == false
     end
 
     test "uses default value if override file is invalid" do
@@ -102,7 +102,7 @@ defmodule ConfigCat.FlagOverrideTest do
         IO.write(file, invalid_contents)
       end)
 
-      assert Client.get_value(client, "enabledFeature", false) == false
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == false
     end
 
     test "uses flag values from a map" do
@@ -118,11 +118,11 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "enabledFeature", false) == true
-      assert Client.get_value(client, "disabledFeature", true) == false
-      assert Client.get_value(client, "intSetting", 0) == 5
-      assert Client.get_value(client, "doubleSetting", 0.0) == 3.14
-      assert Client.get_value(client, "stringSetting", "") == "test"
+      assert ConfigCat.get_value("enabledFeature", false, client: client) == true
+      assert ConfigCat.get_value("disabledFeature", true, client: client) == false
+      assert ConfigCat.get_value("intSetting", 0, client: client) == 5
+      assert ConfigCat.get_value("doubleSetting", 0.0, client: client) == 3.14
+      assert ConfigCat.get_value("stringSetting", "", client: client) == "test"
     end
   end
 
@@ -137,8 +137,8 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "fakeKey", false) == true
-      assert Client.get_value(client, "nonexisting", false) == true
+      assert ConfigCat.get_value("fakeKey", false, client: client) == true
+      assert ConfigCat.get_value("nonexisting", false, client: client) == true
     end
   end
 
@@ -153,8 +153,8 @@ defmodule ConfigCat.FlagOverrideTest do
 
       {:ok, client} = start_client(overrides)
 
-      assert Client.get_value(client, "fakeKey", true) == false
-      assert Client.get_value(client, "nonexisting", false) == true
+      assert ConfigCat.get_value("fakeKey", true, client: client) == false
+      assert ConfigCat.get_value("nonexisting", false, client: client) == true
     end
   end
 
@@ -173,7 +173,8 @@ defmodule ConfigCat.FlagOverrideTest do
   end
 
   defp start_client(flag_overrides) do
-    name = UUID.uuid4() |> String.to_atom()
+    base_name = UUID.uuid4() |> String.to_atom()
+    name = ConfigCat.Supervisor.client_name(base_name)
 
     options = [
       cache_policy: MockCachePolicy,
@@ -186,6 +187,6 @@ defmodule ConfigCat.FlagOverrideTest do
 
     allow(MockCachePolicy, self(), name)
 
-    {:ok, name}
+    {:ok, base_name}
   end
 end
