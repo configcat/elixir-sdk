@@ -1,13 +1,14 @@
 defmodule ConfigCatTest do
   use ConfigCat.ClientCase, async: true
 
+  import Jason.Sigil
   import Mox
 
   setup :verify_on_exit!
 
   describe "when the configuration has been fetched" do
     setup do
-      config = Jason.decode!(~s(
+      config = ~J"""
         {
           "p": {"u": "https://cdn-global.configcat.com", "r": 0},
           "f": {
@@ -19,7 +20,7 @@ defmodule ConfigCatTest do
             "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
           }
         }
-      ))
+      """
 
       {:ok, client} = start_client()
 

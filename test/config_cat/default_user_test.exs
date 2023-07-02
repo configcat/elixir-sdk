@@ -1,12 +1,14 @@
 defmodule ConfigCat.DefaultUserTest do
   use ConfigCat.ClientCase, async: true
 
+  import Jason.Sigil
+
   alias ConfigCat.User
 
   @moduletag capture_log: true
 
   setup do
-    config = Jason.decode!(~s(
+    config = ~J"""
       {
         "p": {"u": "https://cdn-global.configcat.com", "r": 0},
         "f": {
@@ -19,7 +21,7 @@ defmodule ConfigCat.DefaultUserTest do
           }
         }
       }
-    ))
+    """
 
     stub_cached_config({:ok, config})
 

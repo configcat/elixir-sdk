@@ -1,20 +1,22 @@
 defmodule ConfigCat.FlagOverrideTest do
   use ConfigCat.ClientCase, async: true
 
+  import Jason.Sigil
+
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
 
   @moduletag capture_log: true
 
   setup do
-    config = Jason.decode!(~s(
+    config = ~J"""
       {
         "p": {"u": "https://cdn-global.configcat.com", "r": 0},
         "f": {
           "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
         }
       }
-    ))
+    """
 
     stub_cached_config({:ok, config})
 
