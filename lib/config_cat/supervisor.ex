@@ -26,7 +26,8 @@ defmodule ConfigCat.Supervisor do
       |> generate_cache_key(sdk_key)
 
     name = Keyword.fetch!(options, :name)
-    Supervisor.start_link(__MODULE__, options, name: name)
+
+    Supervisor.start_link(__MODULE__, options, name: :"#{name}.Supervisor")
   end
 
   defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
