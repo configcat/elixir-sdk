@@ -12,26 +12,26 @@ defmodule ConfigCat.Client do
   require Constants
   require Logger
 
-  @type client :: ConfigCat.instance_id()
+  @type id :: ConfigCat.instance_id()
   @type option ::
           {:cache_policy, module()}
           | {:cache_policy_id, CachePolicy.id()}
           | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
-          | {:name, client()}
+          | {:id, id()}
   @type options :: [option]
   @type refresh_result :: CachePolicy.refresh_result()
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    with {name, options} <- Keyword.pop!(options, :name) do
-      GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(name))
+    with {id, options} <- Keyword.pop!(options, :id) do
+      GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(id))
     end
   end
 
-  @spec via_tuple(client()) :: {:via, module(), term()}
-  def via_tuple(name) do
-    {:via, Registry, {ConfigCat.Registry, {__MODULE__, name}}}
+  @spec via_tuple(id()) :: {:via, module(), term()}
+  def via_tuple(id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, id}}}
   end
 
   @impl GenServer

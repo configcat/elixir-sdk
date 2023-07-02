@@ -118,13 +118,15 @@ defmodule ConfigCat.Supervisor do
 
   defp client_options(options) do
     options
+    |> Keyword.put(:id, options[:name])
+    |> Keyword.delete(:name)
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
       :cache_policy,
       :cache_policy_id,
       :default_user,
       :flag_overrides,
-      :name
+      :id
     ])
   end
 

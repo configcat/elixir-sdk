@@ -17,14 +17,14 @@ defmodule ConfigCat.ClientCase do
 
   @spec start_client([Client.option()]) :: {:ok, GenServer.server()}
   def start_client(opts \\ []) do
-    name = UUID.uuid4() |> String.to_atom()
+    id = UUID.uuid4() |> String.to_atom()
 
     options =
       [
         cache_policy: MockCachePolicy,
         cache_policy_id: @cache_policy_id,
         flag_overrides: NullDataSource.new(),
-        name: name
+        id: id
       ]
       |> Keyword.merge(opts)
 
@@ -32,7 +32,7 @@ defmodule ConfigCat.ClientCase do
 
     Mox.allow(MockCachePolicy, self(), pid)
 
-    {:ok, name}
+    {:ok, id}
   end
 
   @spec stub_cached_config({:ok, Config.t()} | {:error, :not_found}) :: :ok
