@@ -25,8 +25,13 @@ defmodule ConfigCat.Client do
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     with {name, options} <- Keyword.pop!(options, :name) do
-      GenServer.start_link(__MODULE__, Map.new(options), name: name)
+      GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(name))
     end
+  end
+
+  @spec via_tuple(client()) :: {:via, module(), term()}
+  def via_tuple(name) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, name}}}
   end
 
   @impl GenServer

@@ -89,9 +89,6 @@ defmodule ConfigCat.Supervisor do
     {CachePolicy, options}
   end
 
-  @spec client_name(atom()) :: atom()
-  def client_name(name), do: :"#{name}.Client"
-
   defp cache_policy_name(name), do: :"#{name}.CachePolicy"
   defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
 
@@ -121,7 +118,6 @@ defmodule ConfigCat.Supervisor do
 
   defp client_options(options) do
     options
-    |> Keyword.update!(:name, &client_name/1)
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
       :cache_policy,

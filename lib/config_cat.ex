@@ -170,6 +170,7 @@ defmodule ConfigCat do
   """
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Client
   alias ConfigCat.Config
   alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
@@ -504,6 +505,6 @@ defmodule ConfigCat do
   defp client(options) do
     options
     |> Keyword.get(:client, __MODULE__)
-    |> ConfigCat.Supervisor.client_name()
+    |> Client.via_tuple()
   end
 end

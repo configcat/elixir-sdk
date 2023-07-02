@@ -17,8 +17,7 @@ defmodule ConfigCat.ClientCase do
 
   @spec start_client([Client.option()]) :: {:ok, GenServer.server()}
   def start_client(opts \\ []) do
-    base_name = UUID.uuid4() |> String.to_atom()
-    name = ConfigCat.Supervisor.client_name(base_name)
+    name = UUID.uuid4() |> String.to_atom()
 
     options =
       [
@@ -33,7 +32,7 @@ defmodule ConfigCat.ClientCase do
 
     Mox.allow(MockCachePolicy, self(), pid)
 
-    {:ok, base_name}
+    {:ok, name}
   end
 
   @spec stub_cached_config({:ok, Config.t()} | {:error, :not_found}) :: :ok
