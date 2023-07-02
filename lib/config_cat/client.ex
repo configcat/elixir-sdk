@@ -7,6 +7,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
+  alias ConfigCat.User
 
   require Constants
   require Logger
@@ -15,6 +16,7 @@ defmodule ConfigCat.Client do
   @type option ::
           {:cache_policy, module()}
           | {:cache_policy_id, CachePolicy.id()}
+          | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
           | {:name, client()}
   @type options :: [option]
