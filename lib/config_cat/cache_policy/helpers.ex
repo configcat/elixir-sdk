@@ -3,13 +3,12 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.ConfigCache
-  alias ConfigCat.ConfigFetcher
 
   @type state :: %{
           :cache => module(),
           :cache_key => ConfigCache.key(),
           :fetcher => module(),
-          :fetcher_id => ConfigFetcher.id(),
+          :id => ConfigCat.instance_id(),
           :name => CachePolicy.id(),
           :offline => false,
           optional(atom()) => any()
@@ -32,7 +31,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
     default_options()
     |> Keyword.merge(options)
-    |> Keyword.take([:cache, :cache_key, :fetcher, :fetcher_id, :offline])
+    |> Keyword.take([:cache, :cache_key, :fetcher, :id, :offline])
     |> Map.new()
     |> Map.merge(policy_options)
     |> Map.merge(additional_state)
@@ -51,9 +50,8 @@ defmodule ConfigCat.CachePolicy.Helpers do
   @spec refresh_config(state()) :: CachePolicy.refresh_result()
   def refresh_config(state) do
     fetcher = Map.fetch!(state, :fetcher)
-    fetcher_id = Map.fetch!(state, :fetcher_id)
 
-    case fetcher.fetch(fetcher_id) do
+    case fetcher.fetch(state.id) do
       {:ok, :unchanged} ->
         :ok
 

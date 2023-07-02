@@ -27,6 +27,9 @@ defmodule ConfigCat.Supervisor do
 
     name = Keyword.fetch!(options, :name)
 
+    # Rename `name` to `id` for everything downstream
+    options = Keyword.put(options, :id, name)
+
     Supervisor.start_link(__MODULE__, options, name: :"#{name}.Supervisor")
   end
 
@@ -46,11 +49,7 @@ defmodule ConfigCat.Supervisor do
   @impl Supervisor
   def init(options) do
     fetcher_options = fetcher_options(options)
-
-    policy_options =
-      options
-      |> Keyword.put(:fetcher_id, fetcher_options[:name])
-      |> cache_policy_options()
+    policy_options = cache_policy_options(options)
 
     client_options =
       options
@@ -91,7 +90,6 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp cache_policy_name(name), do: :"#{name}.CachePolicy"
-  defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
 
   defp generate_cache_key(options, sdk_key) do
     prefix =
@@ -114,13 +112,11 @@ defmodule ConfigCat.Supervisor do
   defp cache_policy_options(options) do
     options
     |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name, :offline])
+    |> Keyword.take([:cache, :cache_key, :cache_policy, :id, :name, :offline])
   end
 
   defp client_options(options) do
     options
-    |> Keyword.put(:id, options[:name])
-    |> Keyword.delete(:name)
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
       :cache_policy,
@@ -133,7 +129,6 @@ defmodule ConfigCat.Supervisor do
 
   defp fetcher_options(options) do
     options
-    |> Keyword.update!(:name, &fetcher_name/1)
     |> Keyword.put(:mode, options[:cache_policy].mode)
     |> Keyword.take([
       :base_url,
@@ -141,8 +136,8 @@ defmodule ConfigCat.Supervisor do
       :connect_timeout_milliseconds,
       :read_timeout_milliseconds,
       :data_governance,
+      :id,
       :mode,
-      :name,
       :sdk_key
     ])
   end

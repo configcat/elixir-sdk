@@ -63,7 +63,7 @@ defmodule ConfigCat.CachePolicy do
           | {:cache_key, ConfigCache.key()}
           | {:cache_policy, t()}
           | {:fetcher, module()}
-          | {:fetcher_id, ConfigFetcher.id()}
+          | {:id, ConfigCat.instance_id()}
           | {:name, id()}
           | {:offline, boolean()}
 

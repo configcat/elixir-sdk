@@ -19,14 +19,14 @@ defmodule ConfigCat.ConfigFetcherTest do
   @fetcher_options %{mode: @mode, sdk_key: @sdk_key}
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
-    name = UUID.uuid4() |> String.to_atom()
-    default_options = [api: MockAPI, mode: mode, name: name, sdk_key: sdk_key]
+    id = UUID.uuid4() |> String.to_atom()
+    default_options = [api: MockAPI, mode: mode, id: id, sdk_key: sdk_key]
 
-    {:ok, _pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
+    {:ok, pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
 
-    allow(MockAPI, self(), name)
+    allow(MockAPI, self(), pid)
 
-    {:ok, name}
+    {:ok, id}
   end
 
   test "successful fetch" do

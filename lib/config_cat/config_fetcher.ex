@@ -36,12 +36,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @type option ::
           {:base_url, String.t()}
+          | {:connect_timeout_milliseconds, non_neg_integer()}
           | {:data_governance, ConfigCat.data_governance()}
           | {:http_proxy, String.t()}
-          | {:connect_timeout_milliseconds, non_neg_integer()}
-          | {:read_timeout_milliseconds, non_neg_integer()}
+          | {:id, ConfigCat.instance_id()}
           | {:mode, String.t()}
-          | {:name, ConfigFetcher.id()}
+          | {:read_timeout_milliseconds, non_neg_integer()}
           | {:sdk_key, String.t()}
   @type options :: [option]
 
@@ -49,7 +49,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    {name, options} = Keyword.pop!(options, :name)
+    {id, options} = Keyword.pop!(options, :id)
 
     initial_state =
       default_options()
@@ -58,7 +58,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       |> Map.new()
       |> Map.merge(%{etag: nil, redirects: %{}})
 
-    GenServer.start_link(__MODULE__, initial_state, name: name)
+    GenServer.start_link(__MODULE__, initial_state, name: via_tuple(id))
+  end
+
+  @spec via_tuple(ConfigCat.instance_id()) :: {:via, module(), term()}
+  def via_tuple(id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, id}}}
   end
 
   defp default_options,
@@ -84,8 +89,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher
-  def fetch(fetcher) do
-    GenServer.call(fetcher, :fetch, Constants.fetch_timeout())
+  def fetch(fetcher_id) do
+    fetcher_id
+    |> via_tuple()
+    |> GenServer.call(:fetch, Constants.fetch_timeout())
   end
 
   @impl GenServer
