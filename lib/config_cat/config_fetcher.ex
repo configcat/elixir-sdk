@@ -61,8 +61,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     GenServer.start_link(__MODULE__, initial_state, name: via_tuple(id))
   end
 
-  @spec via_tuple(ConfigCat.instance_id()) :: {:via, module(), term()}
-  def via_tuple(id) do
+  defp via_tuple(id) do
     {:via, Registry, {ConfigCat.Registry, {__MODULE__, id}}}
   end
 

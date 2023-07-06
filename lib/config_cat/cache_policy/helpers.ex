@@ -9,17 +9,21 @@ defmodule ConfigCat.CachePolicy.Helpers do
           :cache_key => ConfigCache.key(),
           :fetcher => module(),
           :id => ConfigCat.instance_id(),
-          :name => CachePolicy.id(),
           :offline => false,
           optional(atom()) => any()
         }
 
   @spec start_link(module(), CachePolicy.options(), map()) :: GenServer.on_start()
   def start_link(module, options, additional_state \\ %{}) do
-    name = Keyword.fetch!(options, :name)
+    id = Keyword.fetch!(options, :id)
     initial_state = make_initial_state(options, additional_state)
 
-    GenServer.start_link(module, initial_state, name: name)
+    GenServer.start_link(module, initial_state, name: via_tuple(module, id))
+  end
+
+  @spec via_tuple(module(), ConfigCat.instance_id()) :: {:via, module(), term()}
+  def via_tuple(module, id) do
+    {:via, Registry, {ConfigCat.Registry, {module, id}}}
   end
 
   defp make_initial_state(options, additional_state) do

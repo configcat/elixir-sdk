@@ -25,12 +25,11 @@ defmodule ConfigCat.Supervisor do
       |> Keyword.merge(options)
       |> generate_cache_key(sdk_key)
 
-    name = Keyword.fetch!(options, :name)
+    # Rename name -> id for everything downstream
+    {id, options} = Keyword.pop!(options, :name)
+    options = Keyword.put(options, :id, id)
 
-    # Rename `name` to `id` for everything downstream
-    options = Keyword.put(options, :id, name)
-
-    Supervisor.start_link(__MODULE__, options, name: :"#{name}.Supervisor")
+    Supervisor.start_link(__MODULE__, options, name: :"#{id}.Supervisor")
   end
 
   defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
@@ -50,11 +49,7 @@ defmodule ConfigCat.Supervisor do
   def init(options) do
     fetcher_options = fetcher_options(options)
     policy_options = cache_policy_options(options)
-
-    client_options =
-      options
-      |> Keyword.put(:cache_policy_id, policy_options[:name])
-      |> client_options()
+    client_options = client_options(options)
 
     override_behaviour = OverrideDataSource.behaviour(options[:flag_overrides])
 
@@ -89,8 +84,6 @@ defmodule ConfigCat.Supervisor do
     {CachePolicy, options}
   end
 
-  defp cache_policy_name(name), do: :"#{name}.CachePolicy"
-
   defp generate_cache_key(options, sdk_key) do
     prefix =
       case Keyword.get(options, :cache) do
@@ -110,9 +103,7 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp cache_policy_options(options) do
-    options
-    |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache, :cache_key, :cache_policy, :id, :name, :offline])
+    Keyword.take(options, [:cache, :cache_key, :cache_policy, :id, :offline])
   end
 
   defp client_options(options) do
@@ -120,7 +111,6 @@ defmodule ConfigCat.Supervisor do
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
       :cache_policy,
-      :cache_policy_id,
       :default_user,
       :flag_overrides,
       :id

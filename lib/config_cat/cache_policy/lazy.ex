@@ -32,34 +32,48 @@ defmodule ConfigCat.CachePolicy.Lazy do
     Helpers.start_link(__MODULE__, options, %{last_update: nil})
   end
 
+  defp via_tuple(id) do
+    Helpers.via_tuple(__MODULE__, id)
+  end
+
   @impl GenServer
   def init(state) do
     {:ok, state}
   end
 
   @impl Behaviour
-  def get(policy_id) do
-    GenServer.call(policy_id, :get, Constants.fetch_timeout())
+  def get(id) do
+    id
+    |> via_tuple()
+    |> GenServer.call(:get, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def is_offline(policy_id) do
-    GenServer.call(policy_id, :is_offline, Constants.fetch_timeout())
+  def is_offline(id) do
+    id
+    |> via_tuple()
+    |> GenServer.call(:is_offline, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def set_offline(policy_id) do
-    GenServer.call(policy_id, :set_offline, Constants.fetch_timeout())
+  def set_offline(id) do
+    id
+    |> via_tuple()
+    |> GenServer.call(:set_offline, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def set_online(policy_id) do
-    GenServer.call(policy_id, :set_online, Constants.fetch_timeout())
+  def set_online(id) do
+    id
+    |> via_tuple()
+    |> GenServer.call(:set_online, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def force_refresh(policy_id) do
-    GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
+  def force_refresh(id) do
+    id
+    |> via_tuple()
+    |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer

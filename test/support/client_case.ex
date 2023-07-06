@@ -13,8 +13,6 @@ defmodule ConfigCat.ClientCase do
     end
   end
 
-  @cache_policy_id :cache_policy_id
-
   @spec start_client([Client.option()]) :: {:ok, GenServer.server()}
   def start_client(opts \\ []) do
     id = UUID.uuid4() |> String.to_atom()
@@ -22,7 +20,6 @@ defmodule ConfigCat.ClientCase do
     options =
       [
         cache_policy: MockCachePolicy,
-        cache_policy_id: @cache_policy_id,
         flag_overrides: NullDataSource.new(),
         id: id
       ]
@@ -38,7 +35,7 @@ defmodule ConfigCat.ClientCase do
   @spec stub_cached_config({:ok, Config.t()} | {:error, :not_found}) :: :ok
   def stub_cached_config(response) do
     MockCachePolicy
-    |> Mox.stub(:get, fn @cache_policy_id -> response end)
+    |> Mox.stub(:get, fn _id -> response end)
 
     :ok
   end

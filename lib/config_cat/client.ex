@@ -15,7 +15,6 @@ defmodule ConfigCat.Client do
   @type id :: ConfigCat.instance_id()
   @type option ::
           {:cache_policy, module()}
-          | {:cache_policy_id, CachePolicy.id()}
           | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
           | {:id, id()}
@@ -24,9 +23,8 @@ defmodule ConfigCat.Client do
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    with {id, options} <- Keyword.pop!(options, :id) do
-      GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(id))
-    end
+    id = Keyword.fetch!(options, :id)
+    GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(id))
   end
 
   @spec via_tuple(id()) :: {:via, module(), term()}
@@ -96,9 +94,9 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:force_refresh, _from, state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
+    %{cache_policy: policy, id: id} = state
 
-    result = policy.force_refresh(policy_id)
+    result = policy.force_refresh(id)
     {:reply, result, state}
   end
 
@@ -114,27 +112,27 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:set_online, _from, state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
+    %{cache_policy: policy, id: id} = state
 
-    result = policy.set_online(policy_id)
+    result = policy.set_online(id)
     Logger.info("Switched to ONLINE mode.")
     {:reply, result, state}
   end
 
   @impl GenServer
   def handle_call(:set_offline, _from, state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
+    %{cache_policy: policy, id: id} = state
 
-    result = policy.set_offline(policy_id)
+    result = policy.set_offline(id)
     Logger.info("Switched to OFFLINE mode.")
     {:reply, result, state}
   end
 
   @impl GenServer
   def handle_call(:is_offline, _from, state) do
-    %{cache_policy: policy, cache_policy_id: policy_id} = state
+    %{cache_policy: policy, id: id} = state
 
-    result = policy.is_offline(policy_id)
+    result = policy.is_offline(id)
     {:reply, result, state}
   end
 
@@ -197,8 +195,8 @@ defmodule ConfigCat.Client do
 
   defp cached_config(%{
          cache_policy: policy,
-         cache_policy_id: policy_id,
-         flag_overrides: override_data_source
+         flag_overrides: override_data_source,
+         id: id
        }) do
     with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
       case OverrideDataSource.behaviour(override_data_source) do
@@ -206,12 +204,12 @@ defmodule ConfigCat.Client do
           {:ok, local_settings}
 
         :local_over_remote ->
-          with {:ok, remote_settings} <- policy.get(policy_id) do
+          with {:ok, remote_settings} <- policy.get(id) do
             {:ok, merge_settings(remote_settings, local_settings)}
           end
 
         :remote_over_local ->
-          with {:ok, remote_settings} <- policy.get(policy_id) do
+          with {:ok, remote_settings} <- policy.get(id) do
             {:ok, merge_settings(local_settings, remote_settings)}
           end
       end
