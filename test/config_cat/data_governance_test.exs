@@ -22,14 +22,14 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   @fetcher_options %{mode: @mode, sdk_key: @sdk_key}
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
-    id = UUID.uuid4() |> String.to_atom()
-    default_options = [api: MockAPI, id: id, mode: mode, sdk_key: sdk_key]
+    instance_id = UUID.uuid4() |> String.to_atom()
+    default_options = [api: MockAPI, instance_id: instance_id, mode: mode, sdk_key: sdk_key]
 
     {:ok, pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
 
     allow(MockAPI, self(), pid)
 
-    {:ok, id}
+    {:ok, instance_id}
   end
 
   test "test_sdk_global_organization_global" do

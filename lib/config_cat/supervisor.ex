@@ -25,11 +25,11 @@ defmodule ConfigCat.Supervisor do
       |> Keyword.merge(options)
       |> generate_cache_key(sdk_key)
 
-    # Rename name -> id for everything downstream
-    {id, options} = Keyword.pop!(options, :name)
-    options = Keyword.put(options, :id, id)
+    # Rename name -> instance_id for everything downstream
+    {instance_id, options} = Keyword.pop!(options, :name)
+    options = Keyword.put(options, :instance_id, instance_id)
 
-    Supervisor.start_link(__MODULE__, options, name: :"#{id}.Supervisor")
+    Supervisor.start_link(__MODULE__, options, name: :"#{instance_id}.Supervisor")
   end
 
   defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
@@ -103,7 +103,7 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp cache_policy_options(options) do
-    Keyword.take(options, [:cache, :cache_key, :cache_policy, :id, :offline])
+    Keyword.take(options, [:cache, :cache_key, :cache_policy, :instance_id, :offline])
   end
 
   defp client_options(options) do
@@ -113,7 +113,7 @@ defmodule ConfigCat.Supervisor do
       :cache_policy,
       :default_user,
       :flag_overrides,
-      :id
+      :instance_id
     ])
   end
 
@@ -126,7 +126,7 @@ defmodule ConfigCat.Supervisor do
       :connect_timeout_milliseconds,
       :read_timeout_milliseconds,
       :data_governance,
-      :id,
+      :instance_id,
       :mode,
       :sdk_key
     ])

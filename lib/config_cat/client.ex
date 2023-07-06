@@ -12,24 +12,23 @@ defmodule ConfigCat.Client do
   require Constants
   require Logger
 
-  @type id :: ConfigCat.instance_id()
   @type option ::
           {:cache_policy, module()}
           | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
-          | {:id, id()}
+          | {:instance_id, ConfigCat.instance_id()}
   @type options :: [option]
   @type refresh_result :: CachePolicy.refresh_result()
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    id = Keyword.fetch!(options, :id)
-    GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(id))
+    instance_id = Keyword.fetch!(options, :instance_id)
+    GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(instance_id))
   end
 
-  @spec via_tuple(id()) :: {:via, module(), term()}
-  def via_tuple(id) do
-    {:via, Registry, {ConfigCat.Registry, {__MODULE__, id}}}
+  @spec via_tuple(ConfigCat.instance_id()) :: {:via, module(), term()}
+  def via_tuple(instance_id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
   end
 
   @impl GenServer
@@ -94,9 +93,9 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:force_refresh, _from, state) do
-    %{cache_policy: policy, id: id} = state
+    %{cache_policy: policy, instance_id: instance_id} = state
 
-    result = policy.force_refresh(id)
+    result = policy.force_refresh(instance_id)
     {:reply, result, state}
   end
 
@@ -112,27 +111,27 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call(:set_online, _from, state) do
-    %{cache_policy: policy, id: id} = state
+    %{cache_policy: policy, instance_id: instance_id} = state
 
-    result = policy.set_online(id)
+    result = policy.set_online(instance_id)
     Logger.info("Switched to ONLINE mode.")
     {:reply, result, state}
   end
 
   @impl GenServer
   def handle_call(:set_offline, _from, state) do
-    %{cache_policy: policy, id: id} = state
+    %{cache_policy: policy, instance_id: instance_id} = state
 
-    result = policy.set_offline(id)
+    result = policy.set_offline(instance_id)
     Logger.info("Switched to OFFLINE mode.")
     {:reply, result, state}
   end
 
   @impl GenServer
   def handle_call(:is_offline, _from, state) do
-    %{cache_policy: policy, id: id} = state
+    %{cache_policy: policy, instance_id: instance_id} = state
 
-    result = policy.is_offline(id)
+    result = policy.is_offline(instance_id)
     {:reply, result, state}
   end
 
@@ -196,7 +195,7 @@ defmodule ConfigCat.Client do
   defp cached_config(%{
          cache_policy: policy,
          flag_overrides: override_data_source,
-         id: id
+         instance_id: instance_id
        }) do
     with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
       case OverrideDataSource.behaviour(override_data_source) do
@@ -204,12 +203,12 @@ defmodule ConfigCat.Client do
           {:ok, local_settings}
 
         :local_over_remote ->
-          with {:ok, remote_settings} <- policy.get(id) do
+          with {:ok, remote_settings} <- policy.get(instance_id) do
             {:ok, merge_settings(remote_settings, local_settings)}
           end
 
         :remote_over_local ->
-          with {:ok, remote_settings} <- policy.get(id) do
+          with {:ok, remote_settings} <- policy.get(instance_id) do
             {:ok, merge_settings(local_settings, remote_settings)}
           end
       end

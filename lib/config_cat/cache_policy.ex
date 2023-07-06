@@ -48,9 +48,6 @@ defmodule ConfigCat.CachePolicy do
           | {:poll_interval_seconds, pos_integer()}
         ]
 
-  @typedoc false
-  @type id :: atom()
-
   @typedoc "Options for lazy-polling mode."
   @type lazy_options :: [{:cache_expiry_seconds, non_neg_integer()}]
 
@@ -63,7 +60,7 @@ defmodule ConfigCat.CachePolicy do
           | {:cache_key, ConfigCache.key()}
           | {:cache_policy, t()}
           | {:fetcher, module()}
-          | {:id, ConfigCat.instance_id()}
+          | {:instance_id, ConfigCat.instance_id()}
           | {:offline, boolean()}
 
   @typedoc false

@@ -24,7 +24,7 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec start_cache_policy(CachePolicy.t()) :: {:ok, atom()}
   def start_cache_policy(policy) do
-    id = UUID.uuid4() |> String.to_atom()
+    instance_id = UUID.uuid4() |> String.to_atom()
 
     {:ok, cache_key} = start_cache()
 
@@ -36,14 +36,14 @@ defmodule ConfigCat.CachePolicyCase do
            cache_key: cache_key,
            cache_policy: policy,
            fetcher: MockFetcher,
-           id: id,
+           instance_id: instance_id,
            offline: false
          ]}
       )
 
     allow(MockFetcher, self(), pid)
 
-    {:ok, id}
+    {:ok, instance_id}
   end
 
   defp start_cache do

@@ -32,8 +32,8 @@ defmodule ConfigCat.CachePolicy.Lazy do
     Helpers.start_link(__MODULE__, options, %{last_update: nil})
   end
 
-  defp via_tuple(id) do
-    Helpers.via_tuple(__MODULE__, id)
+  defp via_tuple(instance_id) do
+    Helpers.via_tuple(__MODULE__, instance_id)
   end
 
   @impl GenServer
@@ -42,36 +42,36 @@ defmodule ConfigCat.CachePolicy.Lazy do
   end
 
   @impl Behaviour
-  def get(id) do
-    id
+  def get(instance_id) do
+    instance_id
     |> via_tuple()
     |> GenServer.call(:get, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def is_offline(id) do
-    id
+  def is_offline(instance_id) do
+    instance_id
     |> via_tuple()
     |> GenServer.call(:is_offline, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def set_offline(id) do
-    id
+  def set_offline(instance_id) do
+    instance_id
     |> via_tuple()
     |> GenServer.call(:set_offline, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def set_online(id) do
-    id
+  def set_online(instance_id) do
+    instance_id
     |> via_tuple()
     |> GenServer.call(:set_online, Constants.fetch_timeout())
   end
 
   @impl Behaviour
-  def force_refresh(id) do
-    id
+  def force_refresh(instance_id) do
+    instance_id
     |> via_tuple()
     |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
