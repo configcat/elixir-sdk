@@ -1,14 +1,11 @@
 defmodule ConfigCat.CachePolicy.Lazy do
   @moduledoc false
 
+  use ConfigCat.CachePolicy.Behaviour
   use GenServer
 
-  alias ConfigCat.CachePolicy
-  alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Helpers
-  alias ConfigCat.Constants
 
-  require Constants
   require Logger
 
   @enforce_keys [:cache_expiry_seconds]
@@ -20,60 +17,15 @@ defmodule ConfigCat.CachePolicy.Lazy do
           mode: String.t()
         }
 
-  @behaviour Behaviour
-
   @spec new(options()) :: t()
   def new(options) do
     struct(__MODULE__, options)
   end
 
-  @spec start_link(CachePolicy.options()) :: GenServer.on_start()
-  def start_link(options) do
-    Helpers.start_link(__MODULE__, options, %{last_update: nil})
-  end
-
-  defp via_tuple(instance_id) do
-    Helpers.via_tuple(__MODULE__, instance_id)
-  end
-
   @impl GenServer
   def init(state) do
+    state = Map.put(state, :last_update, nil)
     {:ok, state}
-  end
-
-  @impl Behaviour
-  def get(instance_id) do
-    instance_id
-    |> via_tuple()
-    |> GenServer.call(:get, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def is_offline(instance_id) do
-    instance_id
-    |> via_tuple()
-    |> GenServer.call(:is_offline, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def set_offline(instance_id) do
-    instance_id
-    |> via_tuple()
-    |> GenServer.call(:set_offline, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def set_online(instance_id) do
-    instance_id
-    |> via_tuple()
-    |> GenServer.call(:set_online, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def force_refresh(instance_id) do
-    instance_id
-    |> via_tuple()
-    |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer

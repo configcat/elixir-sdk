@@ -13,10 +13,10 @@ defmodule ConfigCat.CachePolicy.Helpers do
           optional(atom()) => any()
         }
 
-  @spec start_link(module(), CachePolicy.options(), map()) :: GenServer.on_start()
-  def start_link(module, options, additional_state \\ %{}) do
+  @spec start_link(module(), CachePolicy.options()) :: GenServer.on_start()
+  def start_link(module, options) do
     instance_id = Keyword.fetch!(options, :instance_id)
-    initial_state = make_initial_state(options, additional_state)
+    initial_state = make_initial_state(options)
 
     GenServer.start_link(module, initial_state, name: via_tuple(module, instance_id))
   end
@@ -26,7 +26,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
     {:via, Registry, {ConfigCat.Registry, {module, instance_id}}}
   end
 
-  defp make_initial_state(options, additional_state) do
+  defp make_initial_state(options) do
     policy_options =
       options
       |> Keyword.fetch!(:cache_policy)
@@ -38,7 +38,6 @@ defmodule ConfigCat.CachePolicy.Helpers do
     |> Keyword.take([:cache, :cache_key, :fetcher, :instance_id, :offline])
     |> Map.new()
     |> Map.merge(policy_options)
-    |> Map.merge(additional_state)
   end
 
   defp default_options, do: [fetcher: ConfigCat.CacheControlConfigFetcher]
