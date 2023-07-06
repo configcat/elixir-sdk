@@ -4,11 +4,10 @@ defmodule ConfigCat.ConfigFetcherTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
-  alias ConfigCat.Constants
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
-  require ConfigCat.{Constants}
+  require ConfigCat.Constants, as: Constants
 
   setup :verify_on_exit!
 

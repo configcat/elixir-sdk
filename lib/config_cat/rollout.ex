@@ -2,12 +2,11 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
-  alias ConfigCat.Constants
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
   require Logger
-  require ConfigCat.Constants
+  require ConfigCat.Constants, as: Constants
 
   @spec evaluate(Config.key(), User.t() | nil, Config.value(), Config.variation_id(), Config.t()) ::
           {Config.value(), Config.variation_id()}

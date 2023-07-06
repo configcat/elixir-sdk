@@ -6,12 +6,11 @@ defmodule ConfigCat.Supervisor do
   alias ConfigCat.CacheControlConfigFetcher
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
-  alias ConfigCat.Constants
   alias ConfigCat.InMemoryCache
   alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
 
   @default_cache InMemoryCache
 
@@ -92,7 +91,7 @@ defmodule ConfigCat.Supervisor do
       end
 
     cache_key =
-      :crypto.hash(:sha, "#{prefix}_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
+      :crypto.hash(:sha, "#{prefix}_#{Constants.config_filename()}_#{sdk_key}")
       |> Base.encode16()
 
     Keyword.put(options, :cache_key, cache_key)

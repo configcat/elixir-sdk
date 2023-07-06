@@ -4,12 +4,11 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
   require Logger
 
   @type option ::

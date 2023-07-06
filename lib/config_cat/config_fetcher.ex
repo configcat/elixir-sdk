@@ -25,11 +25,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
   alias ConfigCat.ConfigFetcher
-  alias ConfigCat.Constants
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
   require RedirectMode
   require Logger
 
