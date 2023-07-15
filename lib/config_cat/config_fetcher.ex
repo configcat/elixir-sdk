@@ -6,10 +6,9 @@ defmodule ConfigCat.ConfigFetcher do
   alias HTTPoison.Response
 
   @type fetch_error :: {:error, Error.t() | Response.t()}
-  @type id :: atom()
   @type result :: {:ok, Config.t()} | {:ok, :unchanged} | fetch_error()
 
-  @callback fetch(id()) :: result()
+  @callback fetch(ConfigCat.instance_id()) :: result()
 
   defmodule RedirectMode do
     @moduledoc false
@@ -26,22 +25,21 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
   alias ConfigCat.ConfigFetcher
-  alias ConfigCat.Constants
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
   require RedirectMode
   require Logger
 
   @type option ::
           {:base_url, String.t()}
+          | {:connect_timeout_milliseconds, non_neg_integer()}
           | {:data_governance, ConfigCat.data_governance()}
           | {:http_proxy, String.t()}
-          | {:connect_timeout_milliseconds, non_neg_integer()}
-          | {:read_timeout_milliseconds, non_neg_integer()}
+          | {:instance_id, ConfigCat.instance_id()}
           | {:mode, String.t()}
-          | {:name, ConfigFetcher.id()}
+          | {:read_timeout_milliseconds, non_neg_integer()}
           | {:sdk_key, String.t()}
   @type options :: [option]
 
@@ -49,7 +47,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    {name, options} = Keyword.pop!(options, :name)
+    {instance_id, options} = Keyword.pop!(options, :instance_id)
 
     initial_state =
       default_options()
@@ -58,7 +56,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       |> Map.new()
       |> Map.merge(%{etag: nil, redirects: %{}})
 
-    GenServer.start_link(__MODULE__, initial_state, name: name)
+    GenServer.start_link(__MODULE__, initial_state, name: via_tuple(instance_id))
+  end
+
+  defp via_tuple(instance_id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
   end
 
   defp default_options,
@@ -84,8 +86,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher
-  def fetch(fetcher) do
-    GenServer.call(fetcher, :fetch, Constants.fetch_timeout())
+  def fetch(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:fetch, Constants.fetch_timeout())
   end
 
   @impl GenServer

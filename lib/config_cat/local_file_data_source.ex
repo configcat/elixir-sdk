@@ -66,10 +66,9 @@ defmodule ConfigCat.LocalFileDataSource do
   end
 
   defimpl OverrideDataSource do
-    alias ConfigCat.Constants
     alias ConfigCat.LocalFileDataSource
 
-    require ConfigCat.Constants
+    require ConfigCat.Constants, as: Constants
 
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour

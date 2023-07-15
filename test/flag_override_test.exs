@@ -1,31 +1,26 @@
 defmodule ConfigCat.FlagOverrideTest do
-  use ExUnit.Case, async: true
+  use ConfigCat.ClientCase, async: true
 
-  import Mox
+  import Jason.Sigil
 
-  alias ConfigCat.Client
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
-  alias ConfigCat.MockCachePolicy
 
   @moduletag capture_log: true
 
-  @cache_policy_id :cache_policy_id
-
   setup do
-    config = Jason.decode!(~s(
+    config = ~J"""
       {
         "p": {"u": "https://cdn-global.configcat.com", "r": 0},
         "f": {
           "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
         }
       }
-    ))
+    """
 
-    MockCachePolicy
-    |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
+    stub_cached_config({:ok, config})
 
-    {:ok, config: config}
+    :ok
   end
 
   describe "local-only mode" do
@@ -33,7 +28,7 @@ defmodule ConfigCat.FlagOverrideTest do
       filename = fixture_file("test.json")
       overrides = LocalFileDataSource.new(filename, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("enabledFeature", false, client: client) == true
       assert ConfigCat.get_value("disabledFeature", true, client: client) == false
@@ -46,7 +41,7 @@ defmodule ConfigCat.FlagOverrideTest do
       filename = fixture_file("test_simple.json")
       overrides = LocalFileDataSource.new(filename, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("enabledFeature", false, client: client) == true
       assert ConfigCat.get_value("disabledFeature", true, client: client) == false
@@ -60,7 +55,7 @@ defmodule ConfigCat.FlagOverrideTest do
       filename = temporary_file("simple")
       overrides = LocalFileDataSource.new(filename, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       File.open(filename, [:write], fn file ->
         IO.write(file, Jason.encode!(flags))
@@ -86,7 +81,7 @@ defmodule ConfigCat.FlagOverrideTest do
       filename = fixture_file("non_existent.json")
       overrides = LocalFileDataSource.new(filename, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("enabledFeature", false, client: client) == false
     end
@@ -96,7 +91,7 @@ defmodule ConfigCat.FlagOverrideTest do
       filename = temporary_file("invalid.json")
       overrides = LocalFileDataSource.new(filename, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       File.open(filename, [:write], fn file ->
         IO.write(file, invalid_contents)
@@ -116,7 +111,7 @@ defmodule ConfigCat.FlagOverrideTest do
 
       overrides = LocalMapDataSource.new(map, :local_only)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("enabledFeature", false, client: client) == true
       assert ConfigCat.get_value("disabledFeature", true, client: client) == false
@@ -135,7 +130,7 @@ defmodule ConfigCat.FlagOverrideTest do
 
       overrides = LocalMapDataSource.new(map, :local_over_remote)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("fakeKey", false, client: client) == true
       assert ConfigCat.get_value("nonexisting", false, client: client) == true
@@ -151,7 +146,7 @@ defmodule ConfigCat.FlagOverrideTest do
 
       overrides = LocalMapDataSource.new(map, :remote_over_local)
 
-      {:ok, client} = start_client(overrides)
+      {:ok, client} = start_client(flag_overrides: overrides)
 
       assert ConfigCat.get_value("fakeKey", true, client: client) == false
       assert ConfigCat.get_value("nonexisting", false, client: client) == true
@@ -170,23 +165,5 @@ defmodule ConfigCat.FlagOverrideTest do
     on_exit(fn -> File.rm!(filename) end)
 
     filename
-  end
-
-  defp start_client(flag_overrides) do
-    base_name = UUID.uuid4() |> String.to_atom()
-    name = ConfigCat.Supervisor.client_name(base_name)
-
-    options = [
-      cache_policy: MockCachePolicy,
-      cache_policy_id: @cache_policy_id,
-      flag_overrides: flag_overrides,
-      name: name
-    ]
-
-    {:ok, _pid} = start_supervised({Client, options})
-
-    allow(MockCachePolicy, self(), name)
-
-    {:ok, base_name}
   end
 end

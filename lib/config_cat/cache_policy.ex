@@ -48,9 +48,6 @@ defmodule ConfigCat.CachePolicy do
           | {:poll_interval_seconds, pos_integer()}
         ]
 
-  @typedoc false
-  @type id :: atom()
-
   @typedoc "Options for lazy-polling mode."
   @type lazy_options :: [{:cache_expiry_seconds, non_neg_integer()}]
 
@@ -63,8 +60,7 @@ defmodule ConfigCat.CachePolicy do
           | {:cache_key, ConfigCache.key()}
           | {:cache_policy, t()}
           | {:fetcher, module()}
-          | {:fetcher_id, ConfigFetcher.id()}
-          | {:name, id()}
+          | {:instance_id, ConfigCat.instance_id()}
           | {:offline, boolean()}
 
   @typedoc false
@@ -157,11 +153,5 @@ defmodule ConfigCat.CachePolicy do
   @spec child_spec(options()) :: Supervisor.child_spec()
   def child_spec(options) do
     policy_name(options).child_spec(options)
-  end
-
-  @doc false
-  @spec start_link(options()) :: GenServer.on_start()
-  def start_link(options) do
-    policy_name(options).start_link(options)
   end
 end

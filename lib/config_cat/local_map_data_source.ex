@@ -6,10 +6,9 @@ defmodule ConfigCat.LocalMapDataSource do
   """
 
   alias ConfigCat.Config
-  alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
 
-  require ConfigCat.Constants
+  require ConfigCat.Constants, as: Constants
   require Logger
 
   defstruct [:override_behaviour, :settings]

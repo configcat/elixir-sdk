@@ -1,40 +1,30 @@
 defmodule ConfigCatTest do
-  use ExUnit.Case, async: true
+  use ConfigCat.ClientCase, async: true
 
+  import Jason.Sigil
   import Mox
-
-  alias ConfigCat.Client
-  alias ConfigCat.MockCachePolicy
-  alias ConfigCat.NullDataSource
-
-  @cache_policy_id :cache_policy_id
 
   setup :verify_on_exit!
 
-  setup do
-    config = Jason.decode!(~s(
-      {
-        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-        "f": {
-          "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-          "testStringKey": {"v": "testValue","t": 1, "p": [],"r": []},
-          "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
-          "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
-          "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
-          "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
-        }
-      }
-    ))
-
-    {:ok, config: config}
-  end
-
   describe "when the configuration has been fetched" do
-    setup %{config: config} do
+    setup do
+      config = ~J"""
+        {
+          "p": {"u": "https://cdn-global.configcat.com", "r": 0},
+          "f": {
+            "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
+            "testStringKey": {"v": "testValue","t": 1, "p": [],"r": []},
+            "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
+            "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
+            "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
+            "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
+          }
+        }
+      """
+
       {:ok, client} = start_client()
 
-      MockCachePolicy
-      |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
+      stub_cached_config({:ok, config})
 
       {:ok, client: client}
     end
@@ -111,8 +101,7 @@ defmodule ConfigCatTest do
     setup do
       {:ok, client} = start_client()
 
-      MockCachePolicy
-      |> stub(:get, fn @cache_policy_id -> {:error, :not_found} end)
+      stub_cached_config({:error, :not_found})
 
       {:ok, client: client}
     end
@@ -141,23 +130,5 @@ defmodule ConfigCatTest do
     test "get_all_values/1 returns an empty map", %{client: client} do
       assert ConfigCat.get_all_values(nil, client: client) == %{}
     end
-  end
-
-  defp start_client do
-    base_name = UUID.uuid4() |> String.to_atom()
-    name = ConfigCat.Supervisor.client_name(base_name)
-
-    options = [
-      cache_policy: MockCachePolicy,
-      cache_policy_id: @cache_policy_id,
-      flag_overrides: NullDataSource.new(),
-      name: name
-    ]
-
-    {:ok, _pid} = start_supervised({Client, options})
-
-    allow(MockCachePolicy, self(), name)
-
-    {:ok, base_name}
   end
 end

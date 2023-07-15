@@ -1,14 +1,12 @@
 defmodule ConfigCat.CachePolicy.Auto do
   @moduledoc false
 
+  use ConfigCat.CachePolicy.Behaviour
   use GenServer
 
   alias ConfigCat.CachePolicy
-  alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Helpers
-  alias ConfigCat.Constants
 
-  require Constants
   require Logger
 
   defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
@@ -21,17 +19,10 @@ defmodule ConfigCat.CachePolicy.Auto do
           poll_interval_seconds: pos_integer()
         }
 
-  @behaviour Behaviour
-
   @spec new(options()) :: t()
   def new(options \\ []) do
     struct(__MODULE__, options)
     |> Map.update!(:poll_interval_seconds, &max(&1, 1))
-  end
-
-  @spec start_link(CachePolicy.options()) :: GenServer.on_start()
-  def start_link(options) do
-    Helpers.start_link(__MODULE__, options)
   end
 
   @impl GenServer
@@ -61,31 +52,6 @@ defmodule ConfigCat.CachePolicy.Auto do
     end
 
     {:noreply, state}
-  end
-
-  @impl Behaviour
-  def get(policy_id) do
-    GenServer.call(policy_id, :get, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def is_offline(policy_id) do
-    GenServer.call(policy_id, :is_offline, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def set_offline(policy_id) do
-    GenServer.call(policy_id, :set_offline, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def set_online(policy_id) do
-    GenServer.call(policy_id, :set_online, Constants.fetch_timeout())
-  end
-
-  @impl Behaviour
-  def force_refresh(policy_id) do
-    GenServer.call(policy_id, :force_refresh, Constants.fetch_timeout())
   end
 
   @impl GenServer

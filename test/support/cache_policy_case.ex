@@ -10,8 +10,6 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
 
-  @fetcher_id :fetcher_id
-
   using do
     quote do
       import unquote(__MODULE__)
@@ -26,11 +24,11 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec start_cache_policy(CachePolicy.t()) :: {:ok, atom()}
   def start_cache_policy(policy) do
-    policy_id = UUID.uuid4() |> String.to_atom()
+    instance_id = UUID.uuid4() |> String.to_atom()
 
     {:ok, cache_key} = start_cache()
 
-    {:ok, _pid} =
+    {:ok, pid} =
       start_supervised(
         {CachePolicy,
          [
@@ -38,15 +36,14 @@ defmodule ConfigCat.CachePolicyCase do
            cache_key: cache_key,
            cache_policy: policy,
            fetcher: MockFetcher,
-           fetcher_id: @fetcher_id,
-           name: policy_id,
+           instance_id: instance_id,
            offline: false
          ]}
       )
 
-    allow(MockFetcher, self(), policy_id)
+    allow(MockFetcher, self(), pid)
 
-    {:ok, policy_id}
+    {:ok, instance_id}
   end
 
   defp start_cache do
@@ -59,19 +56,19 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
-    |> expect(:fetch, fn @fetcher_id -> {:ok, config} end)
+    |> expect(:fetch, fn _id -> {:ok, config} end)
   end
 
   @spec expect_unchanged :: Mox.t()
   def expect_unchanged do
     MockFetcher
-    |> expect(:fetch, fn @fetcher_id -> {:ok, :unchanged} end)
+    |> expect(:fetch, fn _id -> {:ok, :unchanged} end)
   end
 
   @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
     MockFetcher
-    |> expect(:fetch, 0, fn @fetcher_id -> {:ok, %{}} end)
+    |> expect(:fetch, 0, fn _id -> {:ok, %{}} end)
   end
 
   @spec assert_returns_error(function()) :: true
@@ -79,7 +76,7 @@ defmodule ConfigCat.CachePolicyCase do
     response = %Response{status_code: 503}
 
     MockFetcher
-    |> stub(:fetch, fn @fetcher_id -> {:error, response} end)
+    |> stub(:fetch, fn _id -> {:error, response} end)
 
     assert {:error, ^response} = force_refresh_fn.()
   end

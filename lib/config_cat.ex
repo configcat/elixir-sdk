@@ -170,12 +170,12 @@ defmodule ConfigCat do
   """
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Client
   alias ConfigCat.Config
-  alias ConfigCat.Constants
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.User
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
 
   @typedoc "Options that can be passed to all API functions."
   @type api_option :: {:client, instance_id()}
@@ -504,6 +504,6 @@ defmodule ConfigCat do
   defp client(options) do
     options
     |> Keyword.get(:client, __MODULE__)
-    |> ConfigCat.Supervisor.client_name()
+    |> Client.via_tuple()
   end
 end

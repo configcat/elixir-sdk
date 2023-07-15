@@ -1,19 +1,14 @@
 defmodule ConfigCat.DefaultUserTest do
-  use ExUnit.Case, async: true
+  use ConfigCat.ClientCase, async: true
 
-  import Mox
+  import Jason.Sigil
 
-  alias ConfigCat.Client
-  alias ConfigCat.MockCachePolicy
-  alias ConfigCat.NullDataSource
   alias ConfigCat.User
 
   @moduletag capture_log: true
 
-  @cache_policy_id :cache_policy_id
-
   setup do
-    config = Jason.decode!(~s(
+    config = ~J"""
       {
         "p": {"u": "https://cdn-global.configcat.com", "r": 0},
         "f": {
@@ -26,17 +21,16 @@ defmodule ConfigCat.DefaultUserTest do
           }
         }
       }
-    ))
+    """
 
-    MockCachePolicy
-    |> stub(:get, fn @cache_policy_id -> {:ok, config} end)
+    stub_cached_config({:ok, config})
 
-    {:ok, config: config}
+    :ok
   end
 
   describe "when the default user is defined in the options" do
     setup do
-      {:ok, client} = start_client(User.new("test@test1.com"))
+      {:ok, client} = start_client(default_user: User.new("test@test1.com"))
       {:ok, client: client}
     end
 
@@ -124,24 +118,5 @@ defmodule ConfigCat.DefaultUserTest do
       actual = ConfigCat.get_all_values(user, client: client) |> Enum.sort()
       assert actual == expected
     end
-  end
-
-  defp start_client(default_user \\ nil) do
-    base_name = UUID.uuid4() |> String.to_atom()
-    name = ConfigCat.Supervisor.client_name(base_name)
-
-    options = [
-      cache_policy: MockCachePolicy,
-      cache_policy_id: @cache_policy_id,
-      default_user: default_user,
-      flag_overrides: NullDataSource.new(),
-      name: name
-    ]
-
-    {:ok, _pid} = start_supervised({Client, options})
-
-    allow(MockCachePolicy, self(), name)
-
-    {:ok, base_name}
   end
 end

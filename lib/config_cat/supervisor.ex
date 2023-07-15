@@ -6,12 +6,11 @@ defmodule ConfigCat.Supervisor do
   alias ConfigCat.CacheControlConfigFetcher
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
-  alias ConfigCat.Constants
   alias ConfigCat.InMemoryCache
   alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
 
-  require Constants
+  require ConfigCat.Constants, as: Constants
 
   @default_cache InMemoryCache
 
@@ -25,8 +24,11 @@ defmodule ConfigCat.Supervisor do
       |> Keyword.merge(options)
       |> generate_cache_key(sdk_key)
 
-    name = Keyword.fetch!(options, :name)
-    Supervisor.start_link(__MODULE__, options, name: name)
+    # Rename name -> instance_id for everything downstream
+    {instance_id, options} = Keyword.pop!(options, :name)
+    options = Keyword.put(options, :instance_id, instance_id)
+
+    Supervisor.start_link(__MODULE__, options, name: :"#{instance_id}.Supervisor")
   end
 
   defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
@@ -45,16 +47,8 @@ defmodule ConfigCat.Supervisor do
   @impl Supervisor
   def init(options) do
     fetcher_options = fetcher_options(options)
-
-    policy_options =
-      options
-      |> Keyword.put(:fetcher_id, fetcher_options[:name])
-      |> cache_policy_options()
-
-    client_options =
-      options
-      |> Keyword.put(:cache_policy_id, policy_options[:name])
-      |> client_options()
+    policy_options = cache_policy_options(options)
+    client_options = client_options(options)
 
     override_behaviour = OverrideDataSource.behaviour(options[:flag_overrides])
 
@@ -89,12 +83,6 @@ defmodule ConfigCat.Supervisor do
     {CachePolicy, options}
   end
 
-  @spec client_name(atom()) :: atom()
-  def client_name(name), do: :"#{name}.Client"
-
-  defp cache_policy_name(name), do: :"#{name}.CachePolicy"
-  defp fetcher_name(name), do: :"#{name}.ConfigFetcher"
-
   defp generate_cache_key(options, sdk_key) do
     prefix =
       case Keyword.get(options, :cache) do
@@ -103,7 +91,7 @@ defmodule ConfigCat.Supervisor do
       end
 
     cache_key =
-      :crypto.hash(:sha, "#{prefix}_#{ConfigCat.Constants.config_filename()}_#{sdk_key}")
+      :crypto.hash(:sha, "#{prefix}_#{Constants.config_filename()}_#{sdk_key}")
       |> Base.encode16()
 
     Keyword.put(options, :cache_key, cache_key)
@@ -114,27 +102,22 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp cache_policy_options(options) do
-    options
-    |> Keyword.update!(:name, &cache_policy_name/1)
-    |> Keyword.take([:cache, :cache_key, :cache_policy, :fetcher_id, :name, :offline])
+    Keyword.take(options, [:cache, :cache_key, :cache_policy, :instance_id, :offline])
   end
 
   defp client_options(options) do
     options
-    |> Keyword.update!(:name, &client_name/1)
     |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
     |> Keyword.take([
       :cache_policy,
-      :cache_policy_id,
       :default_user,
       :flag_overrides,
-      :name
+      :instance_id
     ])
   end
 
   defp fetcher_options(options) do
     options
-    |> Keyword.update!(:name, &fetcher_name/1)
     |> Keyword.put(:mode, options[:cache_policy].mode)
     |> Keyword.take([
       :base_url,
@@ -142,8 +125,8 @@ defmodule ConfigCat.Supervisor do
       :connect_timeout_milliseconds,
       :read_timeout_milliseconds,
       :data_governance,
+      :instance_id,
       :mode,
-      :name,
       :sdk_key
     ])
   end

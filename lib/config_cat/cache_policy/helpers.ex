@@ -3,27 +3,30 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.ConfigCache
-  alias ConfigCat.ConfigFetcher
 
   @type state :: %{
           :cache => module(),
           :cache_key => ConfigCache.key(),
           :fetcher => module(),
-          :fetcher_id => ConfigFetcher.id(),
-          :name => CachePolicy.id(),
+          :instance_id => ConfigCat.instance_id(),
           :offline => false,
           optional(atom()) => any()
         }
 
-  @spec start_link(module(), CachePolicy.options(), map()) :: GenServer.on_start()
-  def start_link(module, options, additional_state \\ %{}) do
-    name = Keyword.fetch!(options, :name)
-    initial_state = make_initial_state(options, additional_state)
+  @spec start_link(module(), CachePolicy.options()) :: GenServer.on_start()
+  def start_link(module, options) do
+    instance_id = Keyword.fetch!(options, :instance_id)
+    initial_state = make_initial_state(options)
 
-    GenServer.start_link(module, initial_state, name: name)
+    GenServer.start_link(module, initial_state, name: via_tuple(module, instance_id))
   end
 
-  defp make_initial_state(options, additional_state) do
+  @spec via_tuple(module(), ConfigCat.instance_id()) :: {:via, module(), term()}
+  def via_tuple(module, instance_id) do
+    {:via, Registry, {ConfigCat.Registry, {module, instance_id}}}
+  end
+
+  defp make_initial_state(options) do
     policy_options =
       options
       |> Keyword.fetch!(:cache_policy)
@@ -32,10 +35,9 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
     default_options()
     |> Keyword.merge(options)
-    |> Keyword.take([:cache, :cache_key, :fetcher, :fetcher_id, :offline])
+    |> Keyword.take([:cache, :cache_key, :fetcher, :instance_id, :offline])
     |> Map.new()
     |> Map.merge(policy_options)
-    |> Map.merge(additional_state)
   end
 
   defp default_options, do: [fetcher: ConfigCat.CacheControlConfigFetcher]
@@ -51,9 +53,8 @@ defmodule ConfigCat.CachePolicy.Helpers do
   @spec refresh_config(state()) :: CachePolicy.refresh_result()
   def refresh_config(state) do
     fetcher = Map.fetch!(state, :fetcher)
-    fetcher_id = Map.fetch!(state, :fetcher_id)
 
-    case fetcher.fetch(fetcher_id) do
+    case fetcher.fetch(state.instance_id) do
       {:ok, :unchanged} ->
         :ok
 
