@@ -3,6 +3,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.ConfigCache
+  alias ConfigCat.ConfigEntry
 
   @type state :: %{
           :cache => module(),
@@ -58,8 +59,8 @@ defmodule ConfigCat.CachePolicy.Helpers do
       {:ok, :unchanged} ->
         :ok
 
-      {:ok, config} ->
-        update_cache(state, config)
+      {:ok, %ConfigEntry{} = entry} ->
+        update_cache(state, entry)
         :ok
 
       error ->
@@ -67,9 +68,9 @@ defmodule ConfigCat.CachePolicy.Helpers do
     end
   end
 
-  defp update_cache(state, config) do
+  defp update_cache(state, %ConfigEntry{} = entry) do
     cache = Map.fetch!(state, :cache)
     cache_key = Map.fetch!(state, :cache_key)
-    cache.set(cache_key, config)
+    cache.set(cache_key, entry.config)
   end
 end

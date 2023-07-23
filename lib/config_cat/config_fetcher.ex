@@ -1,12 +1,12 @@
 defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
-  alias ConfigCat.Config
+  alias ConfigCat.ConfigEntry
   alias HTTPoison.Error
   alias HTTPoison.Response
 
   @type fetch_error :: {:error, Error.t() | Response.t()}
-  @type result :: {:ok, Config.t()} | {:ok, :unchanged} | fetch_error()
+  @type result :: {:ok, ConfigEntry.t()} | {:ok, :unchanged} | fetch_error()
 
   @callback fetch(ConfigCat.instance_id()) :: result()
 
@@ -24,6 +24,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   use GenServer
 
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
@@ -160,9 +161,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status_code: code, body: config, headers: headers}, state)
+  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, state)
        when code >= 200 and code < 300 do
-    with etag <- extract_etag(headers),
+    with {:ok, config} <- Jason.decode(raw_config),
+         etag <- extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state,
          p <- Map.get(config, Constants.preferences(), %{}),
@@ -209,7 +211,9 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         """)
       end
 
-      {:reply, {:ok, config}, %{new_state | etag: etag}}
+      entry = ConfigEntry.new(config, etag, raw_config)
+
+      {:reply, {:ok, entry}, %{new_state | etag: etag}}
     end
   end
 

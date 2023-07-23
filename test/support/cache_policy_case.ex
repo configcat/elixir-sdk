@@ -6,6 +6,7 @@ defmodule ConfigCat.CachePolicyCase do
   import Mox
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
@@ -56,7 +57,7 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
-    |> expect(:fetch, fn _id -> {:ok, config} end)
+    |> expect(:fetch, fn _id -> {:ok, ConfigEntry.new(config, "ETAG")} end)
   end
 
   @spec expect_unchanged :: Mox.t()
@@ -68,7 +69,7 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
     MockFetcher
-    |> expect(:fetch, 0, fn _id -> {:ok, %{}} end)
+    |> expect(:fetch, 0, fn _id -> :not_called end)
   end
 
   @spec assert_returns_error(function()) :: true

@@ -4,6 +4,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher.RedirectMode
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
@@ -36,23 +37,24 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     eu_url = eu_config_url()
     redirect_url = config_url(@redirect_base_url)
 
-    config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
+    raw_config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
+    config = Jason.decode!(raw_config)
 
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :global)
 
     MockAPI
     |> expect(:get, 2, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
     |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
   end
 
   test "test_sdk_eu_organization_global" do
@@ -60,23 +62,24 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     eu_url = eu_config_url()
     redirect_url = config_url(@redirect_base_url)
 
-    config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
+    raw_config = stub_response(@redirect_base_url, RedirectMode.no_redirect())
+    config = Jason.decode!(raw_config)
 
     {:ok, fetcher} = start_fetcher(@fetcher_options, data_governance: :eu_only)
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
     |> expect(:get, 2, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
     |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config}}
+      {:ok, %Response{status_code: 200, body: raw_config}}
     end)
 
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, ^config} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
   end
 
   test "test_sdk_global_organization_eu_only" do
@@ -191,10 +194,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
     |> expect(:get, 2, fn ^forced_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %Response{status_code: 200, body: "{}"}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      :not_called
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher)
@@ -270,6 +273,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
         Constants.redirect() => redirect
       }
     }
+    |> Jason.encode!()
   end
 
   defp global_config_url(sdk_key \\ @sdk_key) do
