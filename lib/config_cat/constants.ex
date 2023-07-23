@@ -6,6 +6,7 @@ defmodule ConfigCat.Constants do
 
   defmacro base_path, do: "configuration-files"
   defmacro config_filename, do: "config_v5.json"
+  defmacro serialization_format_version, do: "v2"
 
   defmacro feature_flags, do: "f"
   defmacro preferences, do: "p"

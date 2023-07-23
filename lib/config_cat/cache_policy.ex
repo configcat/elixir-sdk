@@ -42,6 +42,8 @@ defmodule ConfigCat.CachePolicy do
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigFetcher
 
+  require ConfigCat.Constants, as: Constants
+
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
           {:on_changed, on_changed_callback()}
@@ -136,6 +138,15 @@ defmodule ConfigCat.CachePolicy do
   @spec manual :: t()
   def manual do
     Manual.new()
+  end
+
+  @doc false
+  @spec generate_cache_key(String.t()) :: String.t()
+  def generate_cache_key(sdk_key) do
+    key = "#{sdk_key}_#{Constants.config_filename()}_#{Constants.serialization_format_version()}"
+
+    :crypto.hash(:sha, key)
+    |> Base.encode16(case: :lower)
   end
 
   @doc false

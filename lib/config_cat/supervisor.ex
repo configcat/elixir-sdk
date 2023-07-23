@@ -10,8 +10,6 @@ defmodule ConfigCat.Supervisor do
   alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
 
-  require ConfigCat.Constants, as: Constants
-
   @default_cache InMemoryCache
 
   @spec start_link(keyword()) :: Supervisor.on_start()
@@ -22,7 +20,7 @@ defmodule ConfigCat.Supervisor do
     options =
       default_options()
       |> Keyword.merge(options)
-      |> generate_cache_key(sdk_key)
+      |> put_cache_key(sdk_key)
 
     # Rename name -> instance_id for everything downstream
     {instance_id, options} = Keyword.pop!(options, :name)
@@ -83,18 +81,8 @@ defmodule ConfigCat.Supervisor do
     {CachePolicy, options}
   end
 
-  defp generate_cache_key(options, sdk_key) do
-    prefix =
-      case Keyword.get(options, :cache) do
-        @default_cache -> options[:name]
-        _ -> "elixir_"
-      end
-
-    cache_key =
-      :crypto.hash(:sha, "#{prefix}_#{Constants.config_filename()}_#{sdk_key}")
-      |> Base.encode16()
-
-    Keyword.put(options, :cache_key, cache_key)
+  defp put_cache_key(options, sdk_key) do
+    Keyword.put(options, :cache_key, CachePolicy.generate_cache_key(sdk_key))
   end
 
   defp cache_options(options) do
