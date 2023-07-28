@@ -3,6 +3,7 @@ defmodule ConfigCat.Supervisor do
 
   use Supervisor
 
+  alias ConfigCat.Cache
   alias ConfigCat.CacheControlConfigFetcher
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
@@ -34,7 +35,7 @@ defmodule ConfigCat.Supervisor do
   defp validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
 
   defp put_cache_key(options, sdk_key) do
-    Keyword.put(options, :cache_key, CachePolicy.generate_cache_key(sdk_key))
+    Keyword.put(options, :cache_key, Cache.generate_key(sdk_key))
   end
 
   defp default_options,
@@ -53,6 +54,7 @@ defmodule ConfigCat.Supervisor do
     children =
       [
         default_cache(options),
+        cache(options),
         config_fetcher(options, override_behaviour),
         cache_policy(options, override_behaviour),
         client(options)
@@ -67,6 +69,11 @@ defmodule ConfigCat.Supervisor do
       @default_cache -> {@default_cache, Keyword.take(options, [:cache_key])}
       _ -> nil
     end
+  end
+
+  defp cache(options) do
+    cache_options = Keyword.take(options, [:cache, :cache_key, :instance_id])
+    {Cache, cache_options}
   end
 
   defp config_fetcher(_options, :local_only), do: nil
@@ -92,8 +99,7 @@ defmodule ConfigCat.Supervisor do
   defp cache_policy(_options, :local_only), do: nil
 
   defp cache_policy(options, _override_behaviour) do
-    policy_options =
-      Keyword.take(options, [:cache, :cache_key, :cache_policy, :instance_id, :offline])
+    policy_options = Keyword.take(options, [:cache_policy, :instance_id, :offline])
 
     {CachePolicy, policy_options}
   end
