@@ -7,8 +7,8 @@ defmodule ConfigCat.CacheTest do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.MockConfigCache
 
-  @config %{"some" => "config"}
-  @entry ConfigEntry.new(@config, "ETAG")
+  @entry ConfigEntry.new(%{"some" => "config"}, "ETAG")
+  @serialized ConfigEntry.serialize(@entry)
 
   describe "generating a cache key" do
     test "generates platform-independent cache keys" do
@@ -37,12 +37,9 @@ defmodule ConfigCat.CacheTest do
       instance_id: instance_id
     } do
       MockConfigCache
-      |> expect(:get, fn ^cache_key -> {:ok, @config} end)
+      |> expect(:get, fn ^cache_key -> {:ok, @serialized} end)
 
-      assert {:ok,
-              %ConfigEntry{
-                config: @config
-              }} = Cache.get(instance_id)
+      assert {:ok, @entry} = Cache.get(instance_id)
     end
 
     test "does not fetch from ConfigCache on subsequent get requests", %{
@@ -50,11 +47,11 @@ defmodule ConfigCat.CacheTest do
       instance_id: instance_id
     } do
       MockConfigCache
-      |> expect(:get, 1, fn ^cache_key -> {:ok, @config} end)
+      |> expect(:get, 1, fn ^cache_key -> {:ok, @serialized} end)
 
-      {:ok, entry} = Cache.get(instance_id)
+      {:ok, @entry} = Cache.get(instance_id)
 
-      assert {:ok, ^entry} = Cache.get(instance_id)
+      assert {:ok, @entry} = Cache.get(instance_id)
     end
 
     test "writes to ConfigCache when caching a new entry", %{
@@ -62,7 +59,7 @@ defmodule ConfigCat.CacheTest do
       instance_id: instance_id
     } do
       MockConfigCache
-      |> expect(:set, fn ^cache_key, @config -> :ok end)
+      |> expect(:set, fn ^cache_key, @serialized -> :ok end)
 
       assert :ok = Cache.set(instance_id, @entry)
     end
@@ -72,7 +69,7 @@ defmodule ConfigCat.CacheTest do
       instance_id: instance_id
     } do
       MockConfigCache
-      |> expect(:set, fn ^cache_key, @config -> :ok end)
+      |> stub(:set, fn ^cache_key, @serialized -> :ok end)
       |> expect(:get, 0, fn _cache_key -> :not_called end)
 
       :ok = Cache.set(instance_id, @entry)

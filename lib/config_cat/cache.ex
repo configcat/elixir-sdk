@@ -7,6 +7,7 @@ defmodule ConfigCat.Cache do
   alias ConfigCat.ConfigEntry
 
   require ConfigCat.Constants, as: Constants
+  require Logger
 
   defmodule State do
     @moduledoc false
@@ -75,23 +76,34 @@ defmodule ConfigCat.Cache do
   end
 
   @impl GenServer
-  def handle_call(:get, _from, %State{} = state) do
-    if state.latest_entry do
-      {:reply, {:ok, state.latest_entry}, state}
+  def handle_call(:get, _from, %State{latest_entry: nil} = state) do
+    with {:ok, serialized} <- state.cache.get(state.cache_key),
+         {:ok, entry} <- deserialize(serialized) do
+      {:reply, {:ok, entry}, State.with_entry(state, entry)}
     else
-      case state.cache.get(state.cache_key) do
-        {:ok, config} ->
-          entry = ConfigEntry.new(config, "temp-etag")
-          {:reply, {:ok, entry}, State.with_entry(state, entry)}
-
-        error ->
-          {:reply, error, state}
-      end
+      error ->
+        {:reply, error, state}
     end
+  end
+
+  def handle_call(:get, _from, %State{} = state) do
+    {:reply, {:ok, state.latest_entry}, state}
   end
 
   @impl GenServer
   def handle_call({:set, %ConfigEntry{} = entry}, _from, %State{} = state) do
-    {:reply, state.cache.set(state.cache_key, entry.config), State.with_entry(state, entry)}
+    result = state.cache.set(state.cache_key, ConfigEntry.serialize(entry))
+    {:reply, result, State.with_entry(state, entry)}
+  end
+
+  defp deserialize(str) do
+    case ConfigEntry.deserialize(str) do
+      {:ok, entry} ->
+        {:ok, entry}
+
+      {:error, message} ->
+        Logger.error("Error occurred while reading the cache. #{message}")
+        {:error, :not_found}
+    end
   end
 end

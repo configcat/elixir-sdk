@@ -3,12 +3,12 @@ defmodule ConfigCat.ConfigEntry do
 
   alias ConfigCat.Config
 
-  defstruct config: %{}, etag: "", fetch_time: 0, raw_config: "{}"
+  defstruct config: %{}, etag: "", fetch_time_ms: 0, raw_config: "{}"
 
   @type t :: %__MODULE__{
           config: Config.t(),
           etag: String.t(),
-          fetch_time: number(),
+          fetch_time_ms: non_neg_integer(),
           raw_config: String.t()
         }
 
@@ -17,7 +17,7 @@ defmodule ConfigCat.ConfigEntry do
     %__MODULE__{
       config: config,
       etag: etag,
-      fetch_time: now(),
+      fetch_time_ms: now(),
       raw_config: raw_config
     }
   end
@@ -27,25 +27,25 @@ defmodule ConfigCat.ConfigEntry do
     %__MODULE__{
       config: config,
       etag: etag,
-      fetch_time: now(),
+      fetch_time_ms: now(),
       raw_config: Jason.encode!(config)
     }
   end
 
   @spec now() :: non_neg_integer()
-  def now, do: DateTime.utc_now() |> DateTime.to_unix()
+  def now, do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
   @spec deserialize(String.t()) :: {:ok, t()} | {:error, String.t()}
   def deserialize(str) do
     with {:ok, [fetch_time_str, etag, raw_config]} <- parse(str),
-         {:ok, fetch_time} <- parse_fetch_time(fetch_time_str),
+         {:ok, fetch_time_ms} <- parse_fetch_time(fetch_time_str),
          :ok <- validate_etag(etag),
          {:ok, config} <- parse_config(raw_config) do
       {:ok,
        %__MODULE__{
          config: config,
          etag: etag,
-         fetch_time: fetch_time,
+         fetch_time_ms: fetch_time_ms,
          raw_config: raw_config
        }}
     end
@@ -60,7 +60,7 @@ defmodule ConfigCat.ConfigEntry do
 
   defp parse_fetch_time(str) do
     case Integer.parse(str) do
-      {ms, ""} -> {:ok, ms / 1000.0}
+      {ms, ""} -> {:ok, ms}
       _ -> {:error, "Invalid fetch time: #{str}"}
     end
   end
@@ -80,7 +80,6 @@ defmodule ConfigCat.ConfigEntry do
 
   @spec serialize(t()) :: String.t()
   def serialize(%__MODULE__{} = entry) do
-    fetch_time_ms = trunc(entry.fetch_time * 1000)
-    "#{fetch_time_ms}\n#{entry.etag}\n#{entry.raw_config}"
+    "#{trunc(entry.fetch_time_ms)}\n#{entry.etag}\n#{entry.raw_config}"
   end
 end

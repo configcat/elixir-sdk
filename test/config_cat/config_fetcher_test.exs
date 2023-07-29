@@ -46,11 +46,11 @@ defmodule ConfigCat.ConfigFetcherTest do
             %ConfigEntry{
               config: @config,
               etag: @etag,
-              fetch_time: fetch_time,
+              fetch_time_ms: fetch_time_ms,
               raw_config: @raw_config
             }} = ConfigFetcher.fetch(fetcher)
 
-    assert before <= fetch_time && fetch_time <= ConfigEntry.now()
+    assert before <= fetch_time_ms && fetch_time_ms <= ConfigEntry.now()
   end
 
   test "user agent header that includes the fetch mode" do

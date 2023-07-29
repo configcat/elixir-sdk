@@ -24,7 +24,7 @@ defmodule ConfigCat.ConfigEntryTest do
       entry = %ConfigEntry{
         config: @config,
         etag: etag,
-        fetch_time: now_seconds,
+        fetch_time_ms: now_seconds * 1000.0,
         raw_config: @config_json
       }
 
@@ -38,9 +38,18 @@ defmodule ConfigCat.ConfigEntryTest do
               %ConfigEntry{
                 config: @config,
                 etag: "test-etag",
-                fetch_time: 1_686_756_435.844,
+                fetch_time_ms: 1_686_756_435_844,
                 raw_config: @config_json
               }} = ConfigEntry.deserialize(str)
+    end
+
+    test "round trips" do
+      entry = ConfigEntry.new(@config, "ETAG", @config_json)
+
+      assert {:ok, ^entry} =
+               entry
+               |> ConfigEntry.serialize()
+               |> ConfigEntry.deserialize()
     end
 
     test "fails to deserialize an empty string" do
