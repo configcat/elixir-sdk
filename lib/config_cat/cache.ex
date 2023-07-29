@@ -3,7 +3,6 @@ defmodule ConfigCat.Cache do
 
   use GenServer
 
-  alias ConfigCat.Config
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
 
@@ -12,16 +11,22 @@ defmodule ConfigCat.Cache do
   defmodule State do
     @moduledoc false
 
-    defstruct [:cache, :cache_key, :instance_id]
+    defstruct [:cache, :cache_key, :latest_entry]
 
     @type t :: %__MODULE__{
             cache: module(),
-            cache_key: ConfigCache.key()
+            cache_key: ConfigCache.key(),
+            latest_entry: ConfigEntry.t() | nil
           }
 
     @spec new(Keyword.t()) :: t()
     def new(options) do
       struct!(__MODULE__, options)
+    end
+
+    @spec with_entry(t(), ConfigEntry.t()) :: t()
+    def with_entry(%__MODULE__{} = state, %ConfigEntry{} = entry) do
+      %{state | latest_entry: entry}
     end
   end
 
@@ -50,7 +55,7 @@ defmodule ConfigCat.Cache do
   end
 
   @spec get(ConfigCat.instance_id()) ::
-          {:ok, Config.t()} | {:error, :not_found}
+          {:ok, ConfigEntry.t()} | {:error, :not_found}
   def get(instance_id) do
     instance_id
     |> via_tuple()
@@ -71,11 +76,22 @@ defmodule ConfigCat.Cache do
 
   @impl GenServer
   def handle_call(:get, _from, %State{} = state) do
-    {:reply, state.cache.get(state.cache_key), state}
+    if state.latest_entry do
+      {:reply, {:ok, state.latest_entry}, state}
+    else
+      case state.cache.get(state.cache_key) do
+        {:ok, config} ->
+          entry = ConfigEntry.new(config, "temp-etag")
+          {:reply, {:ok, entry}, State.with_entry(state, entry)}
+
+        error ->
+          {:reply, error, state}
+      end
+    end
   end
 
   @impl GenServer
   def handle_call({:set, %ConfigEntry{} = entry}, _from, %State{} = state) do
-    {:reply, state.cache.set(state.cache_key, entry.config), state}
+    {:reply, state.cache.set(state.cache_key, entry.config), State.with_entry(state, entry)}
   end
 end

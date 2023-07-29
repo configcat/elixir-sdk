@@ -44,9 +44,10 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   @spec cached_config(state()) :: ConfigCache.result()
   def cached_config(state) do
-    instance_id = Map.fetch!(state, :instance_id)
-
-    Cache.get(instance_id)
+    with instance_id <- Map.fetch!(state, :instance_id),
+         {:ok, entry} <- Cache.get(instance_id) do
+      {:ok, entry.config}
+    end
   end
 
   @spec refresh_config(state()) :: CachePolicy.refresh_result()
