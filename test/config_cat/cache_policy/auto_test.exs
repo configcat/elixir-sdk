@@ -16,17 +16,17 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       seconds = 123
       policy = CachePolicy.auto(poll_interval_seconds: seconds)
 
-      assert policy == %Auto{poll_interval_seconds: seconds, mode: "a"}
+      assert policy == %Auto{poll_interval_ms: seconds * 1000, mode: "a"}
     end
 
     test "provides a default poll interval" do
       policy = CachePolicy.auto()
-      assert policy.poll_interval_seconds == 60
+      assert policy.poll_interval_ms == 60_000
     end
 
     test "enforces a minimum poll interval" do
       policy = CachePolicy.auto(poll_interval_seconds: -1)
-      assert policy.poll_interval_seconds == 1
+      assert policy.poll_interval_ms == 1000
     end
 
     test "does not have a change callback by default" do
@@ -212,7 +212,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   end
 
   defp wait_for_poll(policy) do
-    (policy.poll_interval_seconds * 1000 + 50)
+    (policy.poll_interval_ms + 50)
     |> Process.sleep()
   end
 end
