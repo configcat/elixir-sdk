@@ -5,26 +5,28 @@ defmodule ConfigCat.CachePolicy.Lazy do
   use GenServer
 
   alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.ConfigEntry
 
   require Logger
 
-  @enforce_keys [:cache_expiry_seconds]
-  defstruct [:cache_expiry_seconds, mode: "l"]
+  @enforce_keys [:cache_expiry_ms]
+  defstruct [:cache_expiry_ms, mode: "l"]
 
   @type options :: keyword() | map()
   @type t :: %__MODULE__{
-          cache_expiry_seconds: non_neg_integer(),
+          cache_expiry_ms: non_neg_integer(),
           mode: String.t()
         }
 
   @spec new(options()) :: t()
   def new(options) do
+    {expiry_seconds, options} = Keyword.pop!(options, :cache_expiry_seconds)
+    options = Keyword.put(options, :cache_expiry_ms, expiry_seconds * 1000)
     struct(__MODULE__, options)
   end
 
   @impl GenServer
   def init(state) do
-    state = Map.put(state, :last_update, nil)
     {:ok, state}
   end
 
@@ -74,21 +76,20 @@ defmodule ConfigCat.CachePolicy.Lazy do
     end
   end
 
-  defp needs_fetch?(%{last_update: nil}), do: true
+  defp needs_fetch?(%{cache_expiry_ms: expiry_ms} = state) do
+    case Helpers.cached_entry(state) do
+      {:ok, %ConfigEntry{} = entry} ->
+        entry.fetch_time_ms + expiry_ms <= ConfigEntry.now()
 
-  defp needs_fetch?(%{cache_expiry_seconds: expiry_seconds, last_update: last_update}) do
-    :gt !==
-      last_update
-      |> DateTime.add(expiry_seconds, :second)
-      |> DateTime.compare(now())
+      _ ->
+        true
+    end
   end
 
   defp refresh(state) do
     case Helpers.refresh_config(state) do
-      :ok -> {:ok, %{state | last_update: now()}}
+      :ok -> {:ok, state}
       error -> error
     end
   end
-
-  defp now, do: DateTime.utc_now()
 end
