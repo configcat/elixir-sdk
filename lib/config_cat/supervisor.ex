@@ -53,7 +53,6 @@ defmodule ConfigCat.Supervisor do
 
     children =
       [
-        default_cache(options),
         cache(options),
         config_fetcher(options, override_behaviour),
         cache_policy(options, override_behaviour),
@@ -62,13 +61,6 @@ defmodule ConfigCat.Supervisor do
       |> Enum.reject(&is_nil/1)
 
     Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  defp default_cache(options) do
-    case Keyword.get(options, :cache) do
-      @default_cache -> {@default_cache, Keyword.take(options, [:cache_key])}
-      _ -> nil
-    end
   end
 
   defp cache(options) do
