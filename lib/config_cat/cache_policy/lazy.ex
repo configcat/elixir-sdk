@@ -3,20 +3,19 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   use ConfigCat.CachePolicy.Behaviour
   use GenServer
+  use TypedStruct
 
   alias ConfigCat.CachePolicy.Helpers
   alias ConfigCat.ConfigEntry
 
   require Logger
 
-  @enforce_keys [:cache_expiry_ms]
-  defstruct [:cache_expiry_ms, mode: "l"]
+  typedstruct enforce: true do
+    field :cache_expiry_ms, non_neg_integer()
+    field :mode, String.t(), default: "l"
+  end
 
   @type options :: keyword() | map()
-  @type t :: %__MODULE__{
-          cache_expiry_ms: non_neg_integer(),
-          mode: String.t()
-        }
 
   @spec new(options()) :: t()
   def new(options) do

@@ -3,6 +3,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   use ConfigCat.CachePolicy.Behaviour
   use GenServer
+  use TypedStruct
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Helpers
@@ -12,15 +13,14 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @default_poll_interval_seconds 60
 
-  defstruct mode: "a", on_changed: nil, poll_interval_ms: @default_poll_interval_seconds * 1000
+  typedstruct enforce: true do
+    field :mode, String.t(), default: "a"
+    field :on_changed, on_changed_callback(), enforce: false
+    field :poll_interval_ms, pos_integer(), default: @default_poll_interval_seconds * 1000
+  end
 
   @type on_changed_callback :: CachePolicy.on_changed_callback()
   @type options :: keyword() | map()
-  @type t :: %__MODULE__{
-          mode: String.t(),
-          on_changed: on_changed_callback(),
-          poll_interval_ms: pos_integer()
-        }
 
   @spec new(options()) :: t()
   def new(options \\ []) do

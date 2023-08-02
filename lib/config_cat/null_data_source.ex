@@ -6,12 +6,13 @@ defmodule ConfigCat.NullDataSource do
 
   See `ConfigCat.OverrideDataSource` for more details.
   """
+  use TypedStruct
 
   alias ConfigCat.OverrideDataSource
 
-  defstruct []
-
-  @type t :: %__MODULE__{}
+  typedstruct do
+    # No fields
+  end
 
   @doc """
   Create a `ConfigCat.OverrideDataSource` that does nothing.

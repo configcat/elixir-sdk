@@ -3,14 +3,15 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   use ConfigCat.CachePolicy.Behaviour
   use GenServer
+  use TypedStruct
 
   alias ConfigCat.CachePolicy.Helpers
 
   require Logger
 
-  defstruct mode: "m"
-
-  @type t :: %__MODULE__{mode: String.t()}
+  typedstruct enforce: true do
+    field :mode, String.t(), default: "m"
+  end
 
   @spec new :: t()
   def new do
