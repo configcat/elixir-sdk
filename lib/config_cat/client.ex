@@ -11,6 +11,33 @@ defmodule ConfigCat.Client do
   require ConfigCat.Constants, as: Constants
   require Logger
 
+  defmodule State do
+    @moduledoc false
+    use TypedStruct
+
+    typedstruct enforce: true do
+      field :cache_policy, module()
+      field :default_user, User.t(), enforce: false
+      field :flag_overrides, OverrideDataSource.t()
+      field :instance_id, ConfigCat.instance_id()
+    end
+
+    @spec new(keyword()) :: t()
+    def new(options) do
+      struct!(__MODULE__, options)
+    end
+
+    @spec clear_default_user(t()) :: t()
+    def clear_default_user(%__MODULE__{} = state) do
+      %{state | default_user: nil}
+    end
+
+    @spec with_default_user(t(), User.t()) :: t()
+    def with_default_user(%__MODULE__{} = state, %User{} = user) do
+      %{state | default_user: user}
+    end
+  end
+
   @type option ::
           {:cache_policy, module()}
           | {:default_user, User.t()}
@@ -22,7 +49,7 @@ defmodule ConfigCat.Client do
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
     instance_id = Keyword.fetch!(options, :instance_id)
-    GenServer.start_link(__MODULE__, Map.new(options), name: via_tuple(instance_id))
+    GenServer.start_link(__MODULE__, State.new(options), name: via_tuple(instance_id))
   end
 
   @spec via_tuple(ConfigCat.instance_id()) :: {:via, module(), term()}
@@ -31,30 +58,30 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def init(state) do
+  def init(%State{} = state) do
     {:ok, state}
   end
 
   @impl GenServer
-  def handle_call(:get_all_keys, _from, state) do
+  def handle_call(:get_all_keys, _from, %State{} = state) do
     result = do_get_all_keys(state)
     {:reply, result, state}
   end
 
   @impl GenServer
-  def handle_call({:get_value, key, default_value, user}, _from, state) do
+  def handle_call({:get_value, key, default_value, user}, _from, %State{} = state) do
     result = do_get_value(key, default_value, user, state)
     {:reply, result, state}
   end
 
   @impl GenServer
-  def handle_call({:get_variation_id, key, default_variation_id, user}, _from, state) do
+  def handle_call({:get_variation_id, key, default_variation_id, user}, _from, %State{} = state) do
     result = do_get_variation_id(key, default_variation_id, user, state)
     {:reply, result, state}
   end
 
   @impl GenServer
-  def handle_call({:get_all_variation_ids, user}, _from, state) do
+  def handle_call({:get_all_variation_ids, user}, _from, %State{} = state) do
     result =
       state
       |> do_get_all_keys()
@@ -65,7 +92,7 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call({:get_key_and_value, variation_id}, _from, state) do
+  def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
     with {:ok, config} <- cached_config(state),
          {:ok, feature_flags} <- Map.fetch(config, Constants.feature_flags()),
          result <- Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id)) do
@@ -81,7 +108,7 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call({:get_all_values, user}, _from, state) do
+  def handle_call({:get_all_values, user}, _from, %State{} = state) do
     result =
       state
       |> do_get_all_keys()
@@ -91,7 +118,7 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call(:force_refresh, _from, state) do
+  def handle_call(:force_refresh, _from, %State{} = state) do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.force_refresh(instance_id)
@@ -99,17 +126,17 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call({:set_default_user, user}, _from, state) do
-    {:reply, :ok, Map.put(state, :default_user, user)}
+  def handle_call({:set_default_user, user}, _from, %State{} = state) do
+    {:reply, :ok, State.with_default_user(state, user)}
   end
 
   @impl GenServer
-  def handle_call(:clear_default_user, _from, state) do
-    {:reply, :ok, Map.delete(state, :default_user)}
+  def handle_call(:clear_default_user, _from, %State{} = state) do
+    {:reply, :ok, State.clear_default_user(state)}
   end
 
   @impl GenServer
-  def handle_call(:set_online, _from, state) do
+  def handle_call(:set_online, _from, %State{} = state) do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_online(instance_id)
@@ -118,7 +145,7 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call(:set_offline, _from, state) do
+  def handle_call(:set_offline, _from, %State{} = state) do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_offline(instance_id)
@@ -127,21 +154,21 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call(:is_offline, _from, state) do
+  def handle_call(:is_offline, _from, %State{} = state) do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.is_offline(instance_id)
     {:reply, result, state}
   end
 
-  defp do_get_value(key, default_value, user, state) do
+  defp do_get_value(key, default_value, user, %State{} = state) do
     with {:ok, result} <- evaluate(key, user, default_value, nil, state),
          {value, _variation} <- result do
       value
     end
   end
 
-  defp do_get_all_keys(state) do
+  defp do_get_all_keys(%State{} = state) do
     with {:ok, config} <- cached_config(state),
          feature_flags <- Map.get(config, Constants.feature_flags(), %{}) do
       Map.keys(feature_flags)
@@ -151,7 +178,7 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp do_get_variation_id(key, default_variation_id, user, state) do
+  defp do_get_variation_id(key, default_variation_id, user, %State{} = state) do
     with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
          {_value, variation} <- result do
       variation
@@ -176,8 +203,8 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp evaluate(key, user, default_value, default_variation_id, state) do
-    user = if user != nil, do: user, else: Map.get(state, :default_user)
+  defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
+    user = if user != nil, do: user, else: state.default_user
 
     case cached_config(state) do
       {:ok, config} ->
@@ -191,11 +218,13 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp cached_config(%{
-         cache_policy: policy,
-         flag_overrides: override_data_source,
-         instance_id: instance_id
-       }) do
+  defp cached_config(%State{} = state) do
+    %{
+      cache_policy: policy,
+      flag_overrides: override_data_source,
+      instance_id: instance_id
+    } = state
+
     with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
       case OverrideDataSource.behaviour(override_data_source) do
         :local_only ->

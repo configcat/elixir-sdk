@@ -6,6 +6,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   use TypedStruct
 
   alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.CachePolicy.Helpers.State
   alias ConfigCat.ConfigEntry
 
   require Logger
@@ -30,29 +31,29 @@ defmodule ConfigCat.CachePolicy.Lazy do
   end
 
   @impl GenServer
-  def handle_call(:get, _from, state) do
+  def handle_call(:get, _from, %State{} = state) do
     with {:ok, new_state} <- maybe_refresh(state) do
       {:reply, Helpers.cached_config(new_state), new_state}
     end
   end
 
   @impl GenServer
-  def handle_call(:is_offline, _from, state) do
+  def handle_call(:is_offline, _from, %State{} = state) do
     {:reply, state.offline, state}
   end
 
   @impl GenServer
-  def handle_call(:set_offline, _from, state) do
-    {:reply, :ok, Map.put(state, :offline, true)}
+  def handle_call(:set_offline, _from, %State{} = state) do
+    {:reply, :ok, State.set_offline(state)}
   end
 
   @impl GenServer
-  def handle_call(:set_online, _from, state) do
-    {:reply, :ok, Map.put(state, :offline, false)}
+  def handle_call(:set_online, _from, %State{} = state) do
+    {:reply, :ok, State.set_online(state)}
   end
 
   @impl GenServer
-  def handle_call(:force_refresh, _from, state) do
+  def handle_call(:force_refresh, _from, %State{} = state) do
     if state.offline do
       Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       {:reply, :ok, state}
@@ -67,7 +68,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
     end
   end
 
-  defp maybe_refresh(state) do
+  defp maybe_refresh(%State{} = state) do
     if !state.offline && needs_fetch?(state) do
       refresh(state)
     else
@@ -75,7 +76,9 @@ defmodule ConfigCat.CachePolicy.Lazy do
     end
   end
 
-  defp needs_fetch?(%{cache_expiry_ms: expiry_ms} = state) do
+  defp needs_fetch?(%State{} = state) do
+    expiry_ms = state.policy_options.cache_expiry_ms
+
     case Helpers.cached_entry(state) do
       {:ok, %ConfigEntry{} = entry} ->
         entry.fetch_time_ms + expiry_ms <= ConfigEntry.now()
@@ -85,7 +88,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
     end
   end
 
-  defp refresh(state) do
+  defp refresh(%State{} = state) do
     case Helpers.refresh_config(state) do
       :ok -> {:ok, state}
       error -> error
