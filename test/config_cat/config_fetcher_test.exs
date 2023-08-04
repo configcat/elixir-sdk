@@ -48,7 +48,7 @@ defmodule ConfigCat.ConfigFetcherTest do
               etag: @etag,
               fetch_time_ms: fetch_time_ms,
               raw_config: @raw_config
-            }} = ConfigFetcher.fetch(fetcher)
+            }} = ConfigFetcher.fetch(fetcher, nil)
 
     assert before <= fetch_time_ms && fetch_time_ms <= ConfigEntry.now()
   end
@@ -65,7 +65,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, response}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "sends proper cache control header on later requests" do
@@ -83,7 +83,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, initial_response}
     end)
 
-    {:ok, _} = ConfigFetcher.fetch(fetcher)
+    {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
 
     not_modified_response = %Response{
       status_code: 304,
@@ -96,7 +96,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, not_modified_response}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, @etag)
   end
 
   test "returns unchanged response when server responds that the config hasn't changed" do
@@ -110,7 +110,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-    assert {:ok, :unchanged} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, :unchanged} = ConfigFetcher.fetch(fetcher, @etag)
   end
 
   @tag capture_log: true
@@ -122,7 +122,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-    assert {:error, ^response} = ConfigFetcher.fetch(fetcher)
+    assert {:error, ^response} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   @tag capture_log: true
@@ -134,7 +134,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
-    assert {:error, ^error} = ConfigFetcher.fetch(fetcher)
+    assert {:error, ^error} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "allows base URL to be configured" do
@@ -149,7 +149,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, %Response{status_code: 200, body: @raw_config}}
     end)
 
-    {:ok, _} = ConfigFetcher.fetch(fetcher)
+    {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "uses default timeouts if none provided" do
@@ -164,7 +164,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, response}
     end)
 
-    {:ok, _} = ConfigFetcher.fetch(fetcher)
+    {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "uses specified timeouts when provided" do
@@ -186,7 +186,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, response}
     end)
 
-    {:ok, _} = ConfigFetcher.fetch(fetcher)
+    {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "sends http proxy options when provided" do
@@ -201,7 +201,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, response}
     end)
 
-    {:ok, _} = ConfigFetcher.fetch(fetcher)
+    {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   defp global_config_url(sdk_key \\ @sdk_key) do

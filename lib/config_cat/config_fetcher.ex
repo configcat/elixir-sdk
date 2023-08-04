@@ -8,7 +8,7 @@ defmodule ConfigCat.ConfigFetcher do
   @type fetch_error :: {:error, Error.t() | Response.t()}
   @type result :: {:ok, ConfigEntry.t()} | {:ok, :unchanged} | fetch_error()
 
-  @callback fetch(ConfigCat.instance_id()) :: result()
+  @callback fetch(ConfigCat.instance_id(), String.t()) :: result()
 
   defmodule RedirectMode do
     @moduledoc false
@@ -43,7 +43,6 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
       field :custom_endpoint?, boolean()
       field :data_governance, ConfigCat.data_governance(), default: :global
-      field :etag, String.t(), enforce: false
       field :http_proxy, String.t(), enforce: false
       field :mode, String.t()
       field :read_timeout_milliseconds, non_neg_integer, default: 5_000
@@ -98,10 +97,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   @impl ConfigFetcher
-  def fetch(instance_id) do
+  def fetch(instance_id, etag) do
     instance_id
     |> via_tuple()
-    |> GenServer.call(:fetch, Constants.fetch_timeout())
+    |> GenServer.call({:fetch, etag}, Constants.fetch_timeout())
   end
 
   @impl GenServer
@@ -110,19 +109,19 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   @impl GenServer
-  def handle_call(:fetch, _from, %State{} = state) do
-    do_fetch(state)
+  def handle_call({:fetch, etag}, _from, %State{} = state) do
+    do_fetch(state, etag)
   end
 
-  defp do_fetch(%State{} = state) do
+  defp do_fetch(%State{} = state, etag) do
     Logger.info("Fetching configuration from ConfigCat")
 
     with api <- state.api,
          {:ok, response} <-
-           api.get(url(state), headers(state), http_options(state)) do
+           api.get(url(state), headers(state, etag), http_options(state)) do
       response
       |> log_response()
-      |> handle_response(state)
+      |> handle_response(state, etag)
     else
       error ->
         log_error(error, state)
@@ -137,8 +136,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     |> URI.to_string()
   end
 
-  defp headers(state) do
-    base_headers(state) ++ cache_headers(state)
+  defp headers(state, etag) do
+    base_headers(state) ++ cache_headers(etag)
   end
 
   defp base_headers(%State{mode: mode}) do
@@ -151,11 +150,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     ]
   end
 
-  defp cache_headers(%State{} = state) do
-    case state.etag do
-      nil -> []
-      etag -> [{"If-None-Match", etag}]
-    end
+  defp cache_headers(etag) do
+    if is_nil(etag), do: [], else: [{"If-None-Match", etag}]
   end
 
   defp http_options(%State{} = state) do
@@ -174,11 +170,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp handle_response(
          %Response{status_code: code, body: raw_config, headers: headers},
-         %State{} = state
+         %State{} = state,
+         etag
        )
        when code >= 200 and code < 300 do
     with {:ok, config} <- Jason.decode(raw_config),
-         etag <- extract_etag(headers),
+         new_etag <- extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state,
          p <- Map.get(config, Constants.preferences(), %{}),
@@ -195,14 +192,15 @@ defmodule ConfigCat.CacheControlConfigFetcher do
             state
 
           base_url && !followed? ->
-            {_, _, state} =
-              do_fetch(%{
-                state
-                | base_url: base_url,
-                  redirects: Map.put(redirects, base_url, 1)
-              })
+            state = %{
+              state
+              | base_url: base_url,
+                redirects: Map.put(redirects, base_url, 1)
+            }
 
-            state
+            {_, _, next_state} = do_fetch(state, etag)
+
+            next_state
 
           followed? ->
             Logger.warn(
@@ -225,17 +223,17 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         """)
       end
 
-      entry = ConfigEntry.new(config, etag, raw_config)
+      entry = ConfigEntry.new(config, new_etag, raw_config)
 
-      {:reply, {:ok, entry}, %{new_state | etag: etag}}
+      {:reply, {:ok, entry}, new_state}
     end
   end
 
-  defp handle_response(%Response{status_code: 304}, %State{} = state) do
+  defp handle_response(%Response{status_code: 304}, %State{} = state, _etag) do
     {:reply, {:ok, :unchanged}, state}
   end
 
-  defp handle_response(response, %State{} = state) do
+  defp handle_response(response, %State{} = state, _etag) do
     {:reply, {:error, response}, state}
   end
 

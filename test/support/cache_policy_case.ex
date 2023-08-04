@@ -63,19 +63,19 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
-    |> expect(:fetch, fn _id -> {:ok, ConfigEntry.new(config, "ETAG")} end)
+    |> expect(:fetch, fn _id, _etag -> {:ok, ConfigEntry.new(config, "ETAG")} end)
   end
 
   @spec expect_unchanged :: Mox.t()
   def expect_unchanged do
     MockFetcher
-    |> expect(:fetch, fn _id -> {:ok, :unchanged} end)
+    |> expect(:fetch, fn _id, _etag -> {:ok, :unchanged} end)
   end
 
   @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
     MockFetcher
-    |> expect(:fetch, 0, fn _id -> :not_called end)
+    |> expect(:fetch, 0, fn _id, _etag -> :not_called end)
   end
 
   @spec assert_returns_error(function()) :: true
@@ -83,7 +83,7 @@ defmodule ConfigCat.CachePolicyCase do
     response = %Response{status_code: 503}
 
     MockFetcher
-    |> stub(:fetch, fn _id -> {:error, response} end)
+    |> stub(:fetch, fn _id, _etag -> {:error, response} end)
 
     assert {:error, ^response} = force_refresh_fn.()
   end
