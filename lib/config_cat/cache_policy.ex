@@ -37,9 +37,14 @@ defmodule ConfigCat.CachePolicy do
   """
 
   alias ConfigCat.CachePolicy.Auto
+  alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.CachePolicy.Manual
   alias ConfigCat.ConfigFetcher
+
+  require ConfigCat.Constants, as: Constants
+
+  @behaviour Behaviour
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
@@ -136,19 +141,50 @@ defmodule ConfigCat.CachePolicy do
   end
 
   @doc false
-  @spec policy_name(t()) :: module()
-  def policy_name(%policy{}), do: policy
+  @spec child_spec(options()) :: Supervisor.child_spec()
+  def child_spec(options) do
+    %policy_module{} = Keyword.fetch!(options, :cache_policy)
+    policy_module.child_spec(options)
+  end
 
-  @spec policy_name(options()) :: module()
-  def policy_name(options) when is_list(options) do
-    options
-    |> Keyword.fetch!(:cache_policy)
-    |> policy_name()
+  @impl Behaviour
+  def get(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:get, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def is_offline(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:is_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_offline(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:set_offline, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def set_online(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:set_online, Constants.fetch_timeout())
+  end
+
+  @impl Behaviour
+  def force_refresh(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call(:force_refresh, Constants.fetch_timeout())
   end
 
   @doc false
-  @spec child_spec(options()) :: Supervisor.child_spec()
-  def child_spec(options) do
-    policy_name(options).child_spec(options)
+  @spec via_tuple(ConfigCat.instance_id()) :: {:via, module(), term()}
+  def via_tuple(instance_id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
   end
 end

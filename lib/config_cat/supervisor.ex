@@ -99,9 +99,7 @@ defmodule ConfigCat.Supervisor do
   defp client(options) do
     client_options =
       options
-      |> Keyword.update!(:cache_policy, &CachePolicy.policy_name/1)
       |> Keyword.take([
-        :cache_policy,
         :default_user,
         :flag_overrides,
         :instance_id

@@ -24,6 +24,7 @@ defmodule ConfigCat.Client do
 
     @spec new(keyword()) :: t()
     def new(options) do
+      options = Keyword.merge([cache_policy: CachePolicy], options)
       struct!(__MODULE__, options)
     end
 

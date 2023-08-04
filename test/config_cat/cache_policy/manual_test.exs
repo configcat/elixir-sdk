@@ -24,7 +24,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
       expect_not_refreshed()
 
-      assert {:error, :not_found} = Manual.get(policy_id)
+      assert {:error, :not_found} = CachePolicy.get(policy_id)
     end
   end
 
@@ -34,8 +34,8 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
       expect_refresh(config)
 
-      assert :ok = Manual.force_refresh(policy_id)
-      assert {:ok, ^config} = Manual.get(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
     end
 
     test "does not update config when server responds that the config hasn't changed" do
@@ -43,14 +43,14 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
       expect_unchanged()
 
-      assert :ok = Manual.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
     end
 
     @tag capture_log: true
     test "handles error responses" do
       {:ok, policy_id} = start_cache_policy(@policy)
 
-      assert_returns_error(fn -> Manual.force_refresh(policy_id) end)
+      assert_returns_error(fn -> CachePolicy.force_refresh(policy_id) end)
     end
   end
 
@@ -58,22 +58,22 @@ defmodule ConfigCat.CachePolicy.ManualTest do
     @tag capture_log: true
     test "does not fetch config when offline mode is set", %{config: config} do
       {:ok, policy_id} = start_cache_policy(@policy)
-      assert Manual.is_offline(policy_id) == false
+      assert CachePolicy.is_offline(policy_id) == false
 
       expect_refresh(config)
-      assert :ok = Manual.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
 
-      assert :ok = Manual.set_offline(policy_id)
-      assert Manual.is_offline(policy_id) == true
+      assert :ok = CachePolicy.set_offline(policy_id)
+      assert CachePolicy.is_offline(policy_id) == true
 
       expect_not_refreshed()
-      assert :ok = Manual.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
 
-      assert :ok = Manual.set_online(policy_id)
-      assert Manual.is_offline(policy_id) == false
+      assert :ok = CachePolicy.set_online(policy_id)
+      assert CachePolicy.is_offline(policy_id) == false
 
       expect_refresh(config)
-      assert :ok = Manual.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
     end
   end
 end
