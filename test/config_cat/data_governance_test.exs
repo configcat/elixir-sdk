@@ -53,8 +53,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: raw_config}}
     end)
 
-    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_eu_organization_global" do
@@ -78,8 +78,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: raw_config}}
     end)
 
-    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_global_organization_eu_only" do
@@ -99,8 +99,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_eu}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_eu_organization_eu_only" do
@@ -120,8 +120,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_eu}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_global_custom_base_url" do
@@ -148,8 +148,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_eu_custom_base_url" do
@@ -176,8 +176,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: %{}}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_global_forced" do
@@ -200,8 +200,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       :not_called
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_base_url_forced" do
@@ -232,8 +232,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_to_forced}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "test_sdk_redirect_loop" do
@@ -253,7 +253,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_to_global}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
 
     MockAPI
     |> expect(:get, 1, fn ^eu_url, _headers, _options ->
@@ -263,7 +263,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
       {:ok, %Response{status_code: 200, body: config_to_eu}}
     end)
 
-    assert {:ok, _} = ConfigFetcher.fetch(fetcher)
+    assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   defp stub_response(response_uri, redirect) do
