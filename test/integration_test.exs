@@ -2,6 +2,7 @@ defmodule ConfigCat.IntegrationTest do
   use ExUnit.Case, async: true
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.InMemoryCache
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
@@ -106,6 +107,8 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   defp start_config_cat(sdk_key, options \\ []) do
+    InMemoryCache.clear()
+
     name = UUID.uuid4() |> String.to_atom()
     default_options = [name: name, sdk_key: sdk_key]
 
