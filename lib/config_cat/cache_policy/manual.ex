@@ -3,14 +3,16 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   use ConfigCat.CachePolicy.Behaviour
   use GenServer
+  use TypedStruct
 
   alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.CachePolicy.Helpers.State
 
   require Logger
 
-  defstruct mode: "m"
-
-  @type t :: %__MODULE__{mode: String.t()}
+  typedstruct enforce: true do
+    field :mode, String.t(), default: "m"
+  end
 
   @spec new :: t()
   def new do
@@ -23,27 +25,27 @@ defmodule ConfigCat.CachePolicy.Manual do
   end
 
   @impl GenServer
-  def handle_call(:get, _from, state) do
+  def handle_call(:get, _from, %State{} = state) do
     {:reply, Helpers.cached_config(state), state}
   end
 
   @impl GenServer
-  def handle_call(:is_offline, _from, state) do
+  def handle_call(:is_offline, _from, %State{} = state) do
     {:reply, state.offline, state}
   end
 
   @impl GenServer
-  def handle_call(:set_offline, _from, state) do
-    {:reply, :ok, Map.put(state, :offline, true)}
+  def handle_call(:set_offline, _from, %State{} = state) do
+    {:reply, :ok, State.set_offline(state)}
   end
 
   @impl GenServer
-  def handle_call(:set_online, _from, state) do
-    {:reply, :ok, Map.put(state, :offline, false)}
+  def handle_call(:set_online, _from, %State{} = state) do
+    {:reply, :ok, State.set_online(state)}
   end
 
   @impl GenServer
-  def handle_call(:force_refresh, _from, state) do
+  def handle_call(:force_refresh, _from, %State{} = state) do
     if state.offline do
       Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       {:reply, :ok, state}

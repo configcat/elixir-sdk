@@ -11,14 +11,13 @@ defmodule ConfigCat.Cache do
 
   defmodule State do
     @moduledoc false
+    use TypedStruct
 
-    defstruct [:cache, :cache_key, :latest_entry]
-
-    @type t :: %__MODULE__{
-            cache: module(),
-            cache_key: ConfigCache.key(),
-            latest_entry: ConfigEntry.t() | nil
-          }
+    typedstruct do
+      field :cache, module(), enforce: true
+      field :cache_key, ConfigCache.key(), enforce: true
+      field :latest_entry, ConfigEntry.t()
+    end
 
     @spec new(Keyword.t()) :: t()
     def new(options) do

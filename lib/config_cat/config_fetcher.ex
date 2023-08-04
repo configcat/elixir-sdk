@@ -33,6 +33,46 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   require RedirectMode
   require Logger
 
+  defmodule State do
+    @moduledoc false
+    use TypedStruct
+
+    typedstruct enforce: true do
+      field :api, module(), default: ConfigCat.API
+      field :base_url, String.t()
+      field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
+      field :custom_endpoint?, boolean()
+      field :data_governance, ConfigCat.data_governance(), default: :global
+      field :etag, String.t(), enforce: false
+      field :http_proxy, String.t(), enforce: false
+      field :mode, String.t()
+      field :read_timeout_milliseconds, non_neg_integer, default: 5_000
+      field :redirects, map(), default: %{}
+      field :sdk_key, String.t()
+    end
+
+    @spec new(Keyword.t()) :: t()
+    def new(options) do
+      options = choose_base_url(options)
+
+      struct!(__MODULE__, options)
+    end
+
+    defp choose_base_url(options) do
+      case Keyword.get(options, :base_url) do
+        nil ->
+          base_url = options |> Keyword.get(:data_governance) |> default_url()
+          Keyword.merge(options, base_url: base_url, custom_endpoint?: false)
+
+        _ ->
+          Keyword.put(options, :custom_endpoint?, true)
+      end
+    end
+
+    defp default_url(:eu_only), do: Constants.base_url_eu_only()
+    defp default_url(_), do: Constants.base_url_global()
+  end
+
   @type option ::
           {:base_url, String.t()}
           | {:connect_timeout_milliseconds, non_neg_integer()}
@@ -50,41 +90,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   def start_link(options) do
     {instance_id, options} = Keyword.pop!(options, :instance_id)
 
-    initial_state =
-      default_options()
-      |> Keyword.merge(options)
-      |> choose_base_url()
-      |> Map.new()
-      |> Map.merge(%{etag: nil, redirects: %{}})
-
-    GenServer.start_link(__MODULE__, initial_state, name: via_tuple(instance_id))
+    GenServer.start_link(__MODULE__, State.new(options), name: via_tuple(instance_id))
   end
 
   defp via_tuple(instance_id) do
     {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
   end
-
-  defp default_options,
-    do: [
-      api: ConfigCat.API,
-      data_governance: :global,
-      connect_timeout_milliseconds: 8000,
-      read_timeout_milliseconds: 5000
-    ]
-
-  defp choose_base_url(options) do
-    case Keyword.get(options, :base_url) do
-      nil ->
-        base_url = options |> Keyword.get(:data_governance) |> default_url()
-        Keyword.merge(options, base_url: base_url, custom_endpoint?: false)
-
-      _ ->
-        Keyword.put(options, :custom_endpoint?, true)
-    end
-  end
-
-  defp default_url(:eu_only), do: Constants.base_url_eu_only()
-  defp default_url(_), do: Constants.base_url_global()
 
   @impl ConfigFetcher
   def fetch(instance_id) do
@@ -94,19 +105,19 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   @impl GenServer
-  def init(state) do
+  def init(%State{} = state) do
     {:ok, state}
   end
 
   @impl GenServer
-  def handle_call(:fetch, _from, state) do
+  def handle_call(:fetch, _from, %State{} = state) do
     do_fetch(state)
   end
 
-  defp do_fetch(state) do
+  defp do_fetch(%State{} = state) do
     Logger.info("Fetching configuration from ConfigCat")
 
-    with api <- Map.get(state, :api),
+    with api <- state.api,
          {:ok, response} <-
            api.get(url(state), headers(state), http_options(state)) do
       response
@@ -119,7 +130,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp url(%{base_url: base_url, sdk_key: sdk_key}) do
+  defp url(%State{base_url: base_url, sdk_key: sdk_key}) do
     base_url
     |> URI.parse()
     |> URI.merge("#{Constants.base_path()}/#{sdk_key}/#{Constants.config_filename()}")
@@ -130,7 +141,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     base_headers(state) ++ cache_headers(state)
   end
 
-  defp base_headers(%{mode: mode}) do
+  defp base_headers(%State{mode: mode}) do
     version = Application.spec(:configcat, :vsn) |> to_string()
     user_agent = "ConfigCat-Elixir/#{mode}-#{version}"
 
@@ -140,14 +151,14 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     ]
   end
 
-  defp cache_headers(state) do
-    case Map.get(state, :etag) do
+  defp cache_headers(%State{} = state) do
+    case state.etag do
       nil -> []
       etag -> [{"If-None-Match", etag}]
     end
   end
 
-  defp http_options(state) do
+  defp http_options(%State{} = state) do
     options =
       Map.take(state, [:http_proxy, :connect_timeout_milliseconds, :read_timeout_milliseconds])
 
@@ -161,7 +172,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, state)
+  defp handle_response(
+         %Response{status_code: code, body: raw_config, headers: headers},
+         %State{} = state
+       )
        when code >= 200 and code < 300 do
     with {:ok, config} <- Jason.decode(raw_config),
          etag <- extract_etag(headers),
@@ -217,11 +231,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp handle_response(%Response{status_code: 304}, state) do
+  defp handle_response(%Response{status_code: 304}, %State{} = state) do
     {:reply, {:ok, :unchanged}, state}
   end
 
-  defp handle_response(response, state) do
+  defp handle_response(response, %State{} = state) do
     {:reply, {:error, response}, state}
   end
 
@@ -240,7 +254,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     response
   end
 
-  defp log_error(error, state) do
+  defp log_error(error, %State{} = state) do
     Logger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
     Logger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
 
@@ -258,5 +272,5 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   @impl GenServer
   # Work around leaking messages from hackney (see https://github.com/benoitc/hackney/issues/464#issuecomment-495731612)
   # Seems to be an issue in OTP 21 and later.
-  def handle_info({:ssl_closed, _msg}, state), do: {:noreply, state}
+  def handle_info({:ssl_closed, _msg}, %State{} = state), do: {:noreply, state}
 end

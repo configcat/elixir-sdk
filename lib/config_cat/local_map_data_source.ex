@@ -4,6 +4,7 @@ defmodule ConfigCat.LocalMapDataSource do
 
   See `ConfigCat.OverrideDataSource` for more details.
   """
+  use TypedStruct
 
   alias ConfigCat.Config
   alias ConfigCat.OverrideDataSource
@@ -11,12 +12,10 @@ defmodule ConfigCat.LocalMapDataSource do
   require ConfigCat.Constants, as: Constants
   require Logger
 
-  defstruct [:override_behaviour, :settings]
-
-  @type t :: %__MODULE__{
-          override_behaviour: OverrideDataSource.behaviour(),
-          settings: Config.t()
-        }
+  typedstruct enforce: true do
+    field :override_behaviour, OverrideDataSource.behaviour()
+    field :settings, Config.t()
+  end
 
   @doc """
   Create a `ConfigCat.OverrideDataSource` from a map of flag/value pairs.

@@ -34,9 +34,16 @@ defmodule ConfigCat.User do
 
   e.g. `ConfigCat.User.new("IDENTIFIER", email: "user@example.com")`
   """
+  use TypedStruct
 
-  @enforce_keys :identifier
-  defstruct [:identifier, country: nil, email: nil, custom: %{}]
+  typedstruct do
+    @typedoc "The ConfigCat user object."
+
+    field :country, String.t()
+    field :custom, custom(), default: %{}
+    field :email, String.t()
+    field :identifier, String.t(), enforce: true
+  end
 
   @typedoc """
   Custom properties for additional targeting options.
@@ -53,14 +60,6 @@ defmodule ConfigCat.User do
   match the field names of `t:t()` will be ignored.
   """
   @type options :: keyword() | map()
-
-  @typedoc "The ConfigCat user object."
-  @type t :: %__MODULE__{
-          identifier: String.t(),
-          country: String.t() | nil,
-          email: String.t() | nil,
-          custom: custom()
-        }
 
   @doc """
   Creates a new ConfigCat.User struct.

@@ -4,6 +4,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
   See `ConfigCat.OverrideDataSource` for more details.
   """
+  use TypedStruct
 
   alias ConfigCat.Config
   alias ConfigCat.OverrideDataSource
@@ -14,8 +15,12 @@ defmodule ConfigCat.LocalFileDataSource do
     @moduledoc false
 
     use Agent
+    use TypedStruct
 
-    defstruct cached_timestamp: 0, settings: nil
+    typedstruct do
+      field :cached_timestamp, non_neg_integer(), default: 0
+      field :settings, Config.t()
+    end
 
     @spec start_link(GenServer.options()) :: Agent.on_start()
     def start_link(_opts) do
@@ -43,13 +48,11 @@ defmodule ConfigCat.LocalFileDataSource do
     end
   end
 
-  defstruct [:cache, :filename, :override_behaviour]
-
-  @type t :: %__MODULE__{
-          cache: pid,
-          filename: String.t(),
-          override_behaviour: OverrideDataSource.behaviour()
-        }
+  typedstruct enforce: true do
+    field :cache, pid()
+    field :filename, String.t()
+    field :override_behaviour, OverrideDataSource.behaviour()
+  end
 
   @doc """
   Create a `ConfigCat.OverrideDataSource` that loads overrides from a file.

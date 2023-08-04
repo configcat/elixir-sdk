@@ -1,16 +1,16 @@
 defmodule ConfigCat.ConfigEntry do
   @moduledoc false
 
+  use TypedStruct
+
   alias ConfigCat.Config
 
-  defstruct config: %{}, etag: "", fetch_time_ms: 0, raw_config: "{}"
-
-  @type t :: %__MODULE__{
-          config: Config.t(),
-          etag: String.t(),
-          fetch_time_ms: non_neg_integer(),
-          raw_config: String.t()
-        }
+  typedstruct enforce: true do
+    field :config, Config.t(), default: %{}
+    field :etag, String.t(), default: ""
+    field :fetch_time_ms, non_neg_integer(), default: 0
+    field :raw_config, String.t(), default: "{}"
+  end
 
   @spec new(Config.t(), String.t(), String.t()) :: t()
   def new(config, etag, raw_config) do
