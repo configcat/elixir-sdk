@@ -6,23 +6,29 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Helpers
+  alias ConfigCat.ConfigEntry
 
   require Logger
 
-  defstruct mode: "a", on_changed: nil, poll_interval_seconds: 60
+  @default_poll_interval_seconds 60
+
+  defstruct mode: "a", on_changed: nil, poll_interval_ms: @default_poll_interval_seconds * 1000
 
   @type on_changed_callback :: CachePolicy.on_changed_callback()
   @type options :: keyword() | map()
   @type t :: %__MODULE__{
           mode: String.t(),
           on_changed: on_changed_callback(),
-          poll_interval_seconds: pos_integer()
+          poll_interval_ms: pos_integer()
         }
 
   @spec new(options()) :: t()
   def new(options \\ []) do
+    {seconds, options} =
+      Keyword.pop(options, :poll_interval_seconds, @default_poll_interval_seconds)
+
+    options = Keyword.put(options, :poll_interval_ms, max(seconds, 1) * 1000)
     struct(__MODULE__, options)
-    |> Map.update!(:poll_interval_seconds, &max(&1, 1))
   end
 
   @impl GenServer
@@ -33,8 +39,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   @impl GenServer
   def handle_continue(:initial_fetch, state) do
     unless state.offline do
-      refresh(state)
-      schedule_next_refresh(state)
+      initial_refresh(state)
     end
 
     {:noreply, state}
@@ -71,7 +76,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:set_online, _from, state) do
-    schedule_next_refresh(state)
+    initial_refresh(state)
     {:reply, :ok, Map.put(state, :offline, false)}
   end
 
@@ -86,8 +91,21 @@ defmodule ConfigCat.CachePolicy.Auto do
     end
   end
 
-  defp schedule_next_refresh(%{poll_interval_seconds: seconds}, pid \\ self()) do
-    Process.send_after(pid, :polled_refresh, seconds * 1000)
+  defp initial_refresh(%{poll_interval_ms: interval_ms} = state) do
+    case Helpers.cached_entry(state) do
+      {:ok, %ConfigEntry{} = entry} ->
+        next_fetch_ms = entry.fetch_time_ms + interval_ms
+        delay_ms = max(0, ConfigEntry.now() - next_fetch_ms)
+        Process.send_after(self(), :polled_refresh, delay_ms)
+
+      _ ->
+        refresh(state)
+        schedule_next_refresh(state)
+    end
+  end
+
+  defp schedule_next_refresh(%{poll_interval_ms: interval_ms}, pid \\ self()) do
+    Process.send_after(pid, :polled_refresh, interval_ms)
   end
 
   defp refresh(state) do
