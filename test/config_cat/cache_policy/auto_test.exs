@@ -47,7 +47,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       {:ok, policy_id} = start_cache_policy(@policy)
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
     end
 
     test "doesn't refresh between poll intervals", %{config: config} do
@@ -55,7 +55,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       {:ok, policy_id} = start_cache_policy(@policy)
 
       expect_not_refreshed()
-      Auto.get(policy_id)
+      CachePolicy.get(policy_id)
     end
 
     test "refreshes automatically after poll interval", %{config: config} do
@@ -69,7 +69,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(config)
       wait_for_poll(policy)
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
     end
 
     test "calls the change callback after refreshing", %{config: config} do
@@ -124,11 +124,11 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(old_config)
 
       {:ok, policy_id} = start_cache_policy(@policy)
-      assert {:ok, ^old_config} = Auto.get(policy_id)
+      assert {:ok, ^old_config} = CachePolicy.get(policy_id)
 
       expect_refresh(config)
-      assert :ok = Auto.force_refresh(policy_id)
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
     end
 
     test "calls the change callback", %{config: config} do
@@ -142,7 +142,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert_receive(:callback)
 
       expect_refresh(config)
-      :ok = Auto.force_refresh(policy_id)
+      :ok = CachePolicy.force_refresh(policy_id)
 
       assert_receive(:callback)
     end
@@ -160,7 +160,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       policy = CachePolicy.auto(on_changed: callback)
       {:ok, policy_id} = start_cache_policy(policy)
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
       assert_receive(:callback)
     end
 
@@ -172,7 +172,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       expect_unchanged()
 
-      assert :ok = Auto.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(policy_id)
     end
 
     @tag capture_log: true
@@ -180,7 +180,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(config)
       {:ok, policy_id} = start_cache_policy(@policy)
 
-      assert_returns_error(fn -> Auto.force_refresh(policy_id) end)
+      assert_returns_error(fn -> CachePolicy.force_refresh(policy_id) end)
     end
   end
 
@@ -189,25 +189,25 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(config)
       policy = CachePolicy.auto(poll_interval_seconds: 1)
       {:ok, policy_id} = start_cache_policy(policy)
-      assert Auto.is_offline(policy_id) == false
+      assert CachePolicy.is_offline(policy_id) == false
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
 
-      assert :ok = Auto.set_offline(policy_id)
-      assert Auto.is_offline(policy_id) == true
+      assert :ok = CachePolicy.set_offline(policy_id)
+      assert CachePolicy.is_offline(policy_id) == true
 
       expect_not_refreshed()
       wait_for_poll(policy)
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
 
-      assert :ok = Auto.set_online(policy_id)
-      assert Auto.is_offline(policy_id) == false
+      assert :ok = CachePolicy.set_online(policy_id)
+      assert CachePolicy.is_offline(policy_id) == false
 
       expect_refresh(config)
       wait_for_poll(policy)
 
-      assert {:ok, ^config} = Auto.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(policy_id)
     end
   end
 

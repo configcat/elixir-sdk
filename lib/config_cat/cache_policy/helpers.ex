@@ -48,12 +48,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
   def start_link(module, options) do
     instance_id = Keyword.fetch!(options, :instance_id)
 
-    GenServer.start_link(module, State.new(options), name: via_tuple(module, instance_id))
-  end
-
-  @spec via_tuple(module(), ConfigCat.instance_id()) :: {:via, module(), term()}
-  def via_tuple(module, instance_id) do
-    {:via, Registry, {ConfigCat.Registry, {module, instance_id}}}
+    GenServer.start_link(module, State.new(options), name: CachePolicy.via_tuple(instance_id))
   end
 
   @spec cached_config(State.t()) :: ConfigCache.result()
