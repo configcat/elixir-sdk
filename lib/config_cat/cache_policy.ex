@@ -39,7 +39,6 @@ defmodule ConfigCat.CachePolicy do
   alias ConfigCat.CachePolicy.Auto
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.CachePolicy.Manual
-  alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigFetcher
 
   @typedoc "Options for auto-polling mode."
@@ -56,9 +55,7 @@ defmodule ConfigCat.CachePolicy do
 
   @typedoc false
   @type option ::
-          {:cache, module()}
-          | {:cache_key, ConfigCache.key()}
-          | {:cache_policy, t()}
+          {:cache_policy, t()}
           | {:fetcher, module()}
           | {:instance_id, ConfigCat.instance_id()}
           | {:offline, boolean()}

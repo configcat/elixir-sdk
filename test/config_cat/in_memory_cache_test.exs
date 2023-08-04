@@ -16,10 +16,10 @@ defmodule ConfigCat.InMemoryCacheTest do
   end
 
   test "returns cached value" do
-    config = %{"some" => "config"}
+    entry = "serialized-cache-entry"
 
-    :ok = Cache.set(@cache_key, config)
+    :ok = Cache.set(@cache_key, entry)
 
-    assert {:ok, ^config} = Cache.get(@cache_key)
+    assert {:ok, ^entry} = Cache.get(@cache_key)
   end
 end

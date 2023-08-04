@@ -1,12 +1,12 @@
 defmodule ConfigCat.CachePolicy.Helpers do
   @moduledoc false
 
+  alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.ConfigCache
+  alias ConfigCat.ConfigEntry
 
   @type state :: %{
-          :cache => module(),
-          :cache_key => ConfigCache.key(),
           :fetcher => module(),
           :instance_id => ConfigCat.instance_id(),
           :offline => false,
@@ -35,7 +35,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
     default_options()
     |> Keyword.merge(options)
-    |> Keyword.take([:cache, :cache_key, :fetcher, :instance_id, :offline])
+    |> Keyword.take([:fetcher, :instance_id, :offline])
     |> Map.new()
     |> Map.merge(policy_options)
   end
@@ -44,10 +44,10 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   @spec cached_config(state()) :: ConfigCache.result()
   def cached_config(state) do
-    cache = Map.fetch!(state, :cache)
-    cache_key = Map.fetch!(state, :cache_key)
-
-    cache.get(cache_key)
+    with instance_id <- Map.fetch!(state, :instance_id),
+         {:ok, entry} <- Cache.get(instance_id) do
+      {:ok, entry.config}
+    end
   end
 
   @spec refresh_config(state()) :: CachePolicy.refresh_result()
@@ -58,8 +58,8 @@ defmodule ConfigCat.CachePolicy.Helpers do
       {:ok, :unchanged} ->
         :ok
 
-      {:ok, config} ->
-        update_cache(state, config)
+      {:ok, %ConfigEntry{} = entry} ->
+        update_cache(state, entry)
         :ok
 
       error ->
@@ -67,9 +67,9 @@ defmodule ConfigCat.CachePolicy.Helpers do
     end
   end
 
-  defp update_cache(state, config) do
-    cache = Map.fetch!(state, :cache)
-    cache_key = Map.fetch!(state, :cache_key)
-    cache.set(cache_key, config)
+  defp update_cache(state, %ConfigEntry{} = entry) do
+    instance_id = Map.fetch!(state, :instance_id)
+
+    Cache.set(instance_id, entry)
   end
 end

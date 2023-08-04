@@ -5,7 +5,9 @@ defmodule ConfigCat.CachePolicyCase do
 
   import Mox
 
+  alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
@@ -26,7 +28,7 @@ defmodule ConfigCat.CachePolicyCase do
   def start_cache_policy(policy) do
     instance_id = UUID.uuid4() |> String.to_atom()
 
-    {:ok, cache_key} = start_cache()
+    {:ok, cache_key} = start_cache(instance_id)
 
     {:ok, pid} =
       start_supervised(
@@ -46,9 +48,15 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, instance_id}
   end
 
-  defp start_cache do
+  defp start_cache(instance_id) do
     cache_key = UUID.uuid4()
+
     {:ok, _pid} = start_supervised({InMemoryCache, [cache_key: cache_key]})
+
+    {:ok, _pid} =
+      start_supervised(
+        {Cache, cache: InMemoryCache, cache_key: cache_key, instance_id: instance_id}
+      )
 
     {:ok, cache_key}
   end
@@ -56,7 +64,7 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
-    |> expect(:fetch, fn _id -> {:ok, config} end)
+    |> expect(:fetch, fn _id -> {:ok, ConfigEntry.new(config, "ETAG")} end)
   end
 
   @spec expect_unchanged :: Mox.t()
@@ -68,7 +76,7 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
     MockFetcher
-    |> expect(:fetch, 0, fn _id -> {:ok, %{}} end)
+    |> expect(:fetch, 0, fn _id -> :not_called end)
   end
 
   @spec assert_returns_error(function()) :: true
