@@ -12,6 +12,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   require ConfigCat.Constants, as: Constants
   require ConfigCat.ConfigFetcher.RedirectMode
 
+  @moduletag capture_log: true
+
   setup :verify_on_exit!
 
   @redirect_base_url "https://redirect.configcat.com"
