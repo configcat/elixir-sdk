@@ -163,10 +163,8 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_value(key, default_value, user, %State{} = state) do
-    with {:ok, result} <- evaluate(key, user, default_value, nil, state),
-         {value, _variation} <- result do
-      value
-    end
+    {value, _variation} = evaluate(key, user, default_value, nil, state)
+    value
   end
 
   defp do_get_all_keys(%State{} = state) do
@@ -180,10 +178,8 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_variation_id(key, default_variation_id, user, %State{} = state) do
-    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
-         {_value, variation} <- result do
-      variation
-    end
+    {_value, variation} = evaluate(key, user, nil, default_variation_id, state)
+    variation
   end
 
   defp entry_matching({key, setting}, variation_id) do
@@ -209,13 +205,10 @@ defmodule ConfigCat.Client do
 
     case cached_config(state) do
       {:ok, config} ->
-        {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config)}
+        Rollout.evaluate(key, user, default_value, default_variation_id, config)
 
       {:error, :not_found} ->
-        {:ok, {default_value, default_variation_id}}
-
-      error ->
-        error
+        {default_value, default_variation_id}
     end
   end
 
