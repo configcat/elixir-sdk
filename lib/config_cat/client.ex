@@ -4,6 +4,7 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.EvaluationDetails
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
@@ -72,6 +73,12 @@ defmodule ConfigCat.Client do
   @impl GenServer
   def handle_call({:get_value, key, default_value, user}, _from, %State{} = state) do
     result = do_get_value(key, default_value, user, state)
+    {:reply, result, state}
+  end
+
+  @impl GenServer
+  def handle_call({:get_value_details, key, default_value, user}, _from, %State{} = state) do
+    result = do_get_value_details(key, default_value, user, state)
     {:reply, result, state}
   end
 
@@ -163,8 +170,12 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_value(key, default_value, user, %State{} = state) do
-    {value, _variation} = evaluate(key, user, default_value, nil, state)
+    %EvaluationDetails{value: value} = evaluate(key, user, default_value, nil, state)
     value
+  end
+
+  defp do_get_value_details(key, default_value, user, %State{} = state) do
+    evaluate(key, user, default_value, nil, state)
   end
 
   defp do_get_all_keys(%State{} = state) do
@@ -178,7 +189,9 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_variation_id(key, default_variation_id, user, %State{} = state) do
-    {_value, variation} = evaluate(key, user, nil, default_variation_id, state)
+    %EvaluationDetails{variation_id: variation} =
+      evaluate(key, user, nil, default_variation_id, state)
+
     variation
   end
 
@@ -208,7 +221,16 @@ defmodule ConfigCat.Client do
         Rollout.evaluate(key, user, default_value, default_variation_id, config)
 
       {:error, :not_found} ->
-        {default_value, default_variation_id}
+        message =
+          "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
+
+        EvaluationDetails.new(
+          default_value?: true,
+          error: message,
+          key: key,
+          value: default_value,
+          variation_id: default_variation_id
+        )
     end
   end
 
