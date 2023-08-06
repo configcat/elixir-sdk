@@ -101,9 +101,8 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    with {:ok, config} <- cached_config(state),
-         {:ok, feature_flags} <- Map.fetch(config, Constants.feature_flags()),
-         result <- Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id)) do
+    with {:ok, settings} <- cached_settings(state),
+         result <- Enum.find_value(settings, nil, &entry_matching(&1, variation_id)) do
       {:reply, result, state}
     else
       _ ->
@@ -179,12 +178,12 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_all_keys(%State{} = state) do
-    with {:ok, config} <- cached_config(state),
-         feature_flags <- Map.get(config, Constants.feature_flags(), %{}) do
-      Map.keys(feature_flags)
-    else
-      {:error, :not_found} -> []
-      error -> error
+    case cached_settings(state) do
+      {:ok, settings} ->
+        Map.keys(settings)
+
+      _ ->
+        []
     end
   end
 
@@ -216,11 +215,11 @@ defmodule ConfigCat.Client do
   defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
     user = if user != nil, do: user, else: state.default_user
 
-    case cached_config(state) do
-      {:ok, config} ->
-        Rollout.evaluate(key, user, default_value, default_variation_id, config)
+    case cached_settings(state) do
+      {:ok, settings} ->
+        Rollout.evaluate(key, user, default_value, default_variation_id, settings)
 
-      {:error, :not_found} ->
+      _ ->
         message =
           "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
 
@@ -234,36 +233,33 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp cached_config(%State{} = state) do
-    %{
-      cache_policy: policy,
-      flag_overrides: override_data_source,
-      instance_id: instance_id
-    } = state
+  defp cached_settings(%State{} = state) do
+    local_settings = OverrideDataSource.overrides(state.flag_overrides)
 
-    with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
-      case OverrideDataSource.behaviour(override_data_source) do
-        :local_only ->
-          {:ok, local_settings}
+    case OverrideDataSource.behaviour(state.flag_overrides) do
+      :local_only ->
+        {:ok, local_settings}
 
-        :local_over_remote ->
-          with {:ok, remote_settings} <- policy.get(instance_id) do
-            {:ok, merge_settings(remote_settings, local_settings)}
-          end
+      :local_over_remote ->
+        with {:ok, remote_settings} <- remote_settings(state) do
+          {:ok, Map.merge(remote_settings, local_settings)}
+        end
 
-        :remote_over_local ->
-          with {:ok, remote_settings} <- policy.get(instance_id) do
-            {:ok, merge_settings(local_settings, remote_settings)}
-          end
-      end
+      :remote_over_local ->
+        with {:ok, remote_settings} <- remote_settings(state) do
+          {:ok, Map.merge(local_settings, remote_settings)}
+        end
     end
   end
 
-  defp merge_settings(%{Constants.feature_flags() => left_flags} = target, %{
-         Constants.feature_flags() => right_flags
-       }) do
-    Map.put(target, Constants.feature_flags(), Map.merge(left_flags, right_flags))
-  end
+  defp remote_settings(%State{} = state) do
+    %{cache_policy: policy, instance_id: instance_id} = state
 
-  defp merge_settings(target, _overrides), do: target
+    with {:ok, config} <- policy.get(instance_id),
+         {:ok, settings} <- Map.fetch(config, Constants.feature_flags()) do
+      {:ok, settings}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
 end

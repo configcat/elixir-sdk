@@ -43,6 +43,6 @@ defprotocol ConfigCat.OverrideDataSource do
   @doc """
   Return the local flag overrides from the data source.
   """
-  @spec overrides(data_source :: t) :: {:ok, Config.t()} | {:error, term}
+  @spec overrides(data_source :: t) :: Config.settings()
   def overrides(data_source)
 end

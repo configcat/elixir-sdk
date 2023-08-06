@@ -14,14 +14,13 @@ defmodule ConfigCat.Rollout do
           User.t() | nil,
           Config.value(),
           Config.variation_id() | nil,
-          Config.t()
+          Config.settings()
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, config) do
+  def evaluate(key, user, default_value, default_variation_id, settings) do
     log_evaluating(key)
 
     with {:ok, valid_user} <- validate_user(user),
-         {:ok, feature_flags} = Map.fetch(config, Constants.feature_flags()),
-         {:ok, setting_descriptor} <- setting_descriptor(feature_flags, key, default_value),
+         {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
          setting_variation <-
            Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
          rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
@@ -48,7 +47,7 @@ defmodule ConfigCat.Rollout do
     else
       {:error, :invalid_user} ->
         log_invalid_user(key)
-        evaluate(key, nil, default_value, default_variation_id, config)
+        evaluate(key, nil, default_value, default_variation_id, settings)
 
       {:error, message} ->
         Logger.error(message)

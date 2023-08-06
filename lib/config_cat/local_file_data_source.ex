@@ -19,7 +19,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
     typedstruct do
       field :cached_timestamp, non_neg_integer(), default: 0
-      field :settings, Config.t()
+      field :settings, Config.settings()
     end
 
     @spec start_link(GenServer.options()) :: Agent.on_start()
@@ -76,10 +76,14 @@ defmodule ConfigCat.LocalFileDataSource do
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour
 
-    @spec overrides(LocalFileDataSource.t()) :: {:ok, Config.t()} | {:error, :not_found}
+    @spec overrides(LocalFileDataSource.t()) :: Config.settings()
     def overrides(%{cache: cache} = data_source) do
       refresh_cache(cache, data_source.filename)
-      FileCache.cached_settings(cache)
+
+      case FileCache.cached_settings(cache) do
+        {:ok, settings} -> settings
+        _ -> %{}
+      end
     end
 
     defp refresh_cache(cache, filename) do
@@ -109,14 +113,13 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(%{"flags" => source} = _data) do
-      flags =
-        source
-        |> Enum.map(fn {key, value} -> {key, %{Constants.value() => value}} end)
-        |> Map.new()
-
-      %{Constants.feature_flags() => flags}
+      source
+      |> Enum.map(fn {key, value} -> {key, %{Constants.value() => value}} end)
+      |> Map.new()
     end
 
-    defp normalize(source), do: source
+    defp normalize(source) do
+      Map.get(source, Constants.feature_flags(), %{})
+    end
   end
 end
