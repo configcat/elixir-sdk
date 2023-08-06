@@ -8,8 +8,6 @@ defmodule ConfigCat.CachePolicy.Helpers do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
 
-  require ConfigCat.Constants, as: Constants
-
   defmodule State do
     @moduledoc false
     use TypedStruct
@@ -59,7 +57,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
           {:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}
   def cached_settings(%State{} = state) do
     with {:ok, %ConfigEntry{} = entry} <- cached_entry(state),
-         {:ok, settings} <- Map.fetch(entry.config, Constants.feature_flags()) do
+         {:ok, settings} <- Config.fetch_settings(entry.config) do
       {:ok, settings, entry.fetch_time_ms}
     else
       :error ->

@@ -4,13 +4,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   import Mox
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
-  alias ConfigCat.ConfigFetcher.RedirectMode
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
-  require ConfigCat.ConfigFetcher.RedirectMode
+  require ConfigCat.RedirectMode, as: RedirectMode
 
   @moduletag capture_log: true
 
@@ -268,13 +268,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
-  defp stub_response(response_uri, redirect) do
-    %{
-      Constants.preferences() => %{
-        Constants.preferences_base_url() => response_uri,
-        Constants.redirect() => redirect
-      }
-    }
+  defp stub_response(response_uri, redirect_mode) do
+    Config.new_with_preferences(response_uri, redirect_mode)
     |> Jason.encode!()
   end
 

@@ -6,9 +6,8 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Auto
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
-
-  require ConfigCat.Constants, as: Constants
 
   @policy CachePolicy.auto()
 
@@ -100,7 +99,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "calls the change callback after refreshing", %{config: config} do
       test_pid = self()
       interval = 1
-      old_config = %{Constants.feature_flags() => %{"old" => "config"}}
+      old_config = Config.new_with_settings(%{"old" => "config"})
 
       expect_refresh(old_config)
 
@@ -146,7 +145,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   describe "refreshing the config" do
     test "stores new config in the cache", %{config: config, settings: settings} do
       old_settings = %{"old" => "config"}
-      old_config = %{Constants.feature_flags() => old_settings}
+      old_config = Config.new_with_settings(old_settings)
 
       expect_refresh(old_config)
 
@@ -230,7 +229,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert {:ok, ^settings, _fetch_time_ms} = CachePolicy.get(instance_id)
 
       new_settings = %{"new" => "config"}
-      new_config = %{Constants.feature_flags() => new_settings}
+      new_config = Config.new_with_settings(new_settings)
       expect_refresh(new_config)
 
       assert :ok = CachePolicy.set_online(instance_id)

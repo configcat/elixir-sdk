@@ -119,7 +119,10 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(source) do
-      Map.get(source, Constants.feature_flags(), %{})
+      case Config.fetch_settings(source) do
+        {:ok, settings} -> settings
+        _ -> %{}
+      end
     end
   end
 end

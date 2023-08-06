@@ -8,10 +8,6 @@ defmodule ConfigCat.Constants do
   defmacro config_filename, do: "config_v5.json"
   defmacro serialization_format_version, do: "v2"
 
-  defmacro feature_flags, do: "f"
-  defmacro preferences, do: "p"
-  defmacro preferences_base_url, do: "u"
-  defmacro redirect, do: "r"
   defmacro comparator, do: "t"
   defmacro comparison_attribute, do: "a"
   defmacro comparison_value, do: "c"

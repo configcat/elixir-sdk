@@ -7,12 +7,11 @@ defmodule ConfigCat.CachePolicyCase do
 
   alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
-
-  require ConfigCat.Constants, as: Constants
 
   using do
     quote do
@@ -22,7 +21,7 @@ defmodule ConfigCat.CachePolicyCase do
 
   setup do
     settings = %{"some" => "config"}
-    config = %{Constants.feature_flags() => settings}
+    config = Config.new_with_settings(settings)
 
     %{config: config, settings: settings}
   end
