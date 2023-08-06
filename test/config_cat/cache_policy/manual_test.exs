@@ -29,13 +29,13 @@ defmodule ConfigCat.CachePolicy.ManualTest do
   end
 
   describe "refreshing the config" do
-    test "stores new config in the cache", %{config: config, settings: settings} do
+    test "stores new config in the cache", %{entry: entry, settings: settings} do
       {:ok, policy_id} = start_cache_policy(@policy)
 
-      expect_refresh(config)
+      expect_refresh(entry)
 
       assert :ok = CachePolicy.force_refresh(policy_id)
-      assert {:ok, ^settings, _fetch_time_ms} = CachePolicy.get(policy_id)
+      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(policy_id)
     end
 
     test "does not update config when server responds that the config hasn't changed" do
@@ -56,11 +56,11 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
   describe "offline" do
     @tag capture_log: true
-    test "does not fetch config when offline mode is set", %{config: config} do
+    test "does not fetch config when offline mode is set", %{entry: entry} do
       {:ok, policy_id} = start_cache_policy(@policy)
       assert CachePolicy.is_offline(policy_id) == false
 
-      expect_refresh(config)
+      expect_refresh(entry)
       assert :ok = CachePolicy.force_refresh(policy_id)
 
       assert :ok = CachePolicy.set_offline(policy_id)
@@ -72,7 +72,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
       assert :ok = CachePolicy.set_online(policy_id)
       assert CachePolicy.is_offline(policy_id) == false
 
-      expect_refresh(config)
+      expect_refresh(entry)
       assert :ok = CachePolicy.force_refresh(policy_id)
     end
   end

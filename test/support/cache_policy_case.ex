@@ -20,10 +20,26 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   setup do
-    settings = %{"some" => "config"}
-    config = Config.new_with_settings(settings)
+    settings = %{"some" => "settings"}
 
-    %{config: config, settings: settings}
+    entry =
+      settings
+      |> Config.new_with_settings()
+      |> ConfigEntry.new("ETag")
+
+    %{entry: entry, settings: settings}
+  end
+
+  @spec make_old_entry :: %{entry: ConfigEntry.t(), settings: Config.settings()}
+  def make_old_entry do
+    settings = %{"old" => "settings"}
+
+    entry =
+      settings
+      |> Config.new_with_settings()
+      |> ConfigEntry.new("OldETag")
+
+    %{entry: entry, settings: settings}
   end
 
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}
@@ -66,11 +82,11 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, cache_key}
   end
 
-  @spec expect_refresh(Config.t()) :: Mox.t()
-  def expect_refresh(config) do
+  @spec expect_refresh(ConfigEntry.t()) :: Mox.t()
+  def expect_refresh(entry) do
     MockFetcher
     |> expect(:fetch, fn _id, _etag ->
-      {:ok, ConfigEntry.new(config, "ETAG")}
+      {:ok, entry}
     end)
   end
 
