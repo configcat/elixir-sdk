@@ -29,13 +29,13 @@ defmodule ConfigCat.CachePolicy.ManualTest do
   end
 
   describe "refreshing the config" do
-    test "stores new config in the cache", %{config: config} do
+    test "stores new config in the cache", %{config: config, settings: settings} do
       {:ok, policy_id} = start_cache_policy(@policy)
 
       expect_refresh(config)
 
       assert :ok = CachePolicy.force_refresh(policy_id)
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^settings, _fetch_time_ms} = CachePolicy.get(policy_id)
     end
 
     test "does not update config when server responds that the config hasn't changed" do

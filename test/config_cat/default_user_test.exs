@@ -3,27 +3,25 @@ defmodule ConfigCat.DefaultUserTest do
 
   import Jason.Sigil
 
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.User
 
   @moduletag capture_log: true
 
   setup do
-    config = ~J"""
+    settings = ~J"""
       {
-        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-        "f": {
-          "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-          "testStringKey": {
-            "v": "testValue", "i": "id", "t": 1, "p": [], "r": [
-              {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-              {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-            ]
-          }
+        "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
+        "testStringKey": {
+          "v": "testValue", "i": "id", "t": 1, "p": [], "r": [
+            {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
+            {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
+          ]
         }
       }
     """
 
-    stub_cached_config({:ok, config})
+    stub_cached_settings({:ok, settings, ConfigEntry.now()})
 
     :ok
   end

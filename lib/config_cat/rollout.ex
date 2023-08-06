@@ -216,12 +216,6 @@ defmodule ConfigCat.Rollout do
     )
   end
 
-  defp log_no_value_found(key, default_value) do
-    Logger.error(
-      "Evaluating get_value('#{key}') failed. Value not found for key '#{key}'. Return default_value: [#{default_value}]."
-    )
-  end
-
   defp log_valid_user(user) do
     Logger.debug("User object: #{inspect(user)}")
   end

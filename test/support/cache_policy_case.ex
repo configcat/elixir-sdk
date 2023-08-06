@@ -12,6 +12,8 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
 
+  require ConfigCat.Constants, as: Constants
+
   using do
     quote do
       import unquote(__MODULE__)
@@ -19,9 +21,10 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   setup do
-    config = %{"some" => "config"}
+    settings = %{"some" => "config"}
+    config = %{Constants.feature_flags() => settings}
 
-    {:ok, config: config}
+    %{config: config, settings: settings}
   end
 
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}

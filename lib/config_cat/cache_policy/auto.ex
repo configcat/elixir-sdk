@@ -62,7 +62,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:get, _from, %State{} = state) do
-    {:reply, Helpers.cached_config(state), state}
+    {:reply, Helpers.cached_settings(state), state}
   end
 
   @impl GenServer

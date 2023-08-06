@@ -4,7 +4,7 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
-  # alias ConfigCat.ConfigEntry
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.User
 
@@ -14,28 +14,26 @@ defmodule ConfigCatTest do
 
   describe "when the configuration has been fetched" do
     setup do
-      config = ~J"""
+      settings = ~J"""
         {
-          "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-          "f": {
-            "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-            "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
-              {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-              {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-            ]},
-            "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
-            "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
-            "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
-            "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
-          }
+          "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
+          "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
+            {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
+            {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
+          ]},
+          "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
+          "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
+          "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
+          "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
         }
       """
 
       {:ok, client} = start_client()
 
-      stub_cached_config({:ok, config})
+      fetch_time_ms = ConfigEntry.now()
+      stub_cached_settings({:ok, settings, fetch_time_ms})
 
-      {:ok, client: client}
+      {:ok, client: client, fetch_time_ms: fetch_time_ms}
     end
 
     test "get_all_keys/1 returns all known keys", %{client: client} do
@@ -108,14 +106,18 @@ defmodule ConfigCatTest do
       assert actual == expected
     end
 
-    test "get_value_details/2 returns evaluation details", %{client: client} do
+    test "get_value_details/2 returns evaluation details", %{
+      client: client,
+      fetch_time_ms: fetch_time_ms
+    } do
       user = User.new("test@test1.com")
-      # before = ConfigEntry.now()
+
+      fetch_time = DateTime.from_unix!(fetch_time_ms, :millisecond)
 
       assert %EvaluationDetails{
                default_value?: false,
                error: nil,
-               fetch_time: _fetch_time,
+               fetch_time: ^fetch_time,
                key: "testStringKey",
                matched_evaluation_rule: %{
                  Constants.comparator() => 2,
@@ -128,9 +130,6 @@ defmodule ConfigCatTest do
                value: "fake1",
                variation_id: "id1"
              } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
-
-      # fetch_time_ms = DateTime.to_unix(fetch_time, :millisecond)
-      # assert before <= fetch_time_ms && fetch_time_ms <= ConfigEntry.now()
     end
   end
 
@@ -138,7 +137,7 @@ defmodule ConfigCatTest do
     setup do
       {:ok, client} = start_client()
 
-      stub_cached_config({:error, :not_found})
+      stub_cached_settings({:error, :not_found})
 
       {:ok, client: client}
     end

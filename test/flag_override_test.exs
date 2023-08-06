@@ -3,22 +3,20 @@ defmodule ConfigCat.FlagOverrideTest do
 
   import Jason.Sigil
 
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
 
   @moduletag capture_log: true
 
   setup do
-    config = ~J"""
+    settings = ~J"""
       {
-        "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-        "f": {
-          "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
-        }
+        "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
       }
     """
 
-    stub_cached_config({:ok, config})
+    stub_cached_settings({:ok, settings, ConfigEntry.now()})
 
     :ok
   end

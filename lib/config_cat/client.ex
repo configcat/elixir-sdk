@@ -101,7 +101,7 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    with {:ok, settings} <- cached_settings(state),
+    with {:ok, settings, _fetch_time_ms} <- cached_settings(state),
          result <- Enum.find_value(settings, nil, &entry_matching(&1, variation_id)) do
       {:reply, result, state}
     else
@@ -179,7 +179,7 @@ defmodule ConfigCat.Client do
 
   defp do_get_all_keys(%State{} = state) do
     case cached_settings(state) do
-      {:ok, settings} ->
+      {:ok, settings, _fetch_time_ms} ->
         Map.keys(settings)
 
       _ ->
@@ -216,8 +216,17 @@ defmodule ConfigCat.Client do
     user = if user != nil, do: user, else: state.default_user
 
     case cached_settings(state) do
-      {:ok, settings} ->
-        Rollout.evaluate(key, user, default_value, default_variation_id, settings)
+      {:ok, settings, fetch_time_ms} ->
+        %EvaluationDetails{} =
+          details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
+
+        fetch_time =
+          case DateTime.from_unix(fetch_time_ms, :millisecond) do
+            {:ok, %DateTime{} = dt} -> dt
+            _ -> nil
+          end
+
+        %{details | fetch_time: fetch_time}
 
       _ ->
         message =
@@ -234,32 +243,22 @@ defmodule ConfigCat.Client do
   end
 
   defp cached_settings(%State{} = state) do
-    local_settings = OverrideDataSource.overrides(state.flag_overrides)
+    %{cache_policy: policy, flag_overrides: flag_overrides, instance_id: instance_id} = state
+    local_settings = OverrideDataSource.overrides(flag_overrides)
 
-    case OverrideDataSource.behaviour(state.flag_overrides) do
+    case OverrideDataSource.behaviour(flag_overrides) do
       :local_only ->
-        {:ok, local_settings}
+        {:ok, local_settings, 0}
 
       :local_over_remote ->
-        with {:ok, remote_settings} <- remote_settings(state) do
-          {:ok, Map.merge(remote_settings, local_settings)}
+        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(remote_settings, local_settings), fetch_time_ms}
         end
 
       :remote_over_local ->
-        with {:ok, remote_settings} <- remote_settings(state) do
-          {:ok, Map.merge(local_settings, remote_settings)}
+        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(local_settings, remote_settings), fetch_time_ms}
         end
-    end
-  end
-
-  defp remote_settings(%State{} = state) do
-    %{cache_policy: policy, instance_id: instance_id} = state
-
-    with {:ok, config} <- policy.get(instance_id),
-         {:ok, settings} <- Map.fetch(config, Constants.feature_flags()) do
-      {:ok, settings}
-    else
-      _ -> {:error, :not_found}
     end
   end
 end
