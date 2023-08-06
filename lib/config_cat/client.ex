@@ -5,6 +5,7 @@ defmodule ConfigCat.Client do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.FetchTime
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
@@ -221,7 +222,7 @@ defmodule ConfigCat.Client do
           details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
 
         fetch_time =
-          case DateTime.from_unix(fetch_time_ms, :millisecond) do
+          case FetchTime.to_datetime(fetch_time_ms) do
             {:ok, %DateTime{} = dt} -> dt
             _ -> nil
           end

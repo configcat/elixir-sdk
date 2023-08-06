@@ -3,7 +3,7 @@ defmodule ConfigCat.DefaultUserTest do
 
   import Jason.Sigil
 
-  alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
   alias ConfigCat.User
 
   @moduletag capture_log: true
@@ -21,7 +21,7 @@ defmodule ConfigCat.DefaultUserTest do
       }
     """
 
-    stub_cached_settings({:ok, settings, ConfigEntry.now()})
+    stub_cached_settings({:ok, settings, FetchTime.now_ms()})
 
     :ok
   end

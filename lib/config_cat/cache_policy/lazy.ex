@@ -8,6 +8,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   alias ConfigCat.CachePolicy.Helpers
   alias ConfigCat.CachePolicy.Helpers.State
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
 
   require Logger
 
@@ -81,7 +82,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
     case Helpers.cached_entry(state) do
       {:ok, %ConfigEntry{} = entry} ->
-        entry.fetch_time_ms + expiry_ms <= ConfigEntry.now()
+        entry.fetch_time_ms + expiry_ms <= FetchTime.now_ms()
 
       _ ->
         true

@@ -5,6 +5,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
@@ -40,7 +41,7 @@ defmodule ConfigCat.ConfigFetcherTest do
       {:ok, %Response{status_code: 200, body: @raw_config, headers: [{"ETag", @etag}]}}
     end)
 
-    before = ConfigEntry.now()
+    before = FetchTime.now_ms()
 
     assert {:ok,
             %ConfigEntry{
@@ -50,7 +51,7 @@ defmodule ConfigCat.ConfigFetcherTest do
               raw_config: @raw_config
             }} = ConfigFetcher.fetch(fetcher, nil)
 
-    assert before <= fetch_time_ms && fetch_time_ms <= ConfigEntry.now()
+    assert before <= fetch_time_ms && fetch_time_ms <= FetchTime.now_ms()
   end
 
   test "user agent header that includes the fetch mode" do

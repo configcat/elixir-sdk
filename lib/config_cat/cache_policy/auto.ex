@@ -9,6 +9,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   alias ConfigCat.CachePolicy.Helpers
   alias ConfigCat.CachePolicy.Helpers.State
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
 
   require Logger
 
@@ -100,7 +101,7 @@ defmodule ConfigCat.CachePolicy.Auto do
       case Helpers.cached_entry(state) do
         {:ok, %ConfigEntry{} = entry} ->
           next_fetch_ms = entry.fetch_time_ms + interval_ms
-          max(0, next_fetch_ms - ConfigEntry.now())
+          max(0, next_fetch_ms - FetchTime.now_ms())
 
         _ ->
           0

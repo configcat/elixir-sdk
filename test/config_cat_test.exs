@@ -4,8 +4,8 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
-  alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.FetchTime
   alias ConfigCat.User
 
   require ConfigCat.Constants, as: Constants
@@ -30,7 +30,7 @@ defmodule ConfigCatTest do
 
       {:ok, client} = start_client()
 
-      fetch_time_ms = ConfigEntry.now()
+      fetch_time_ms = FetchTime.now_ms()
       stub_cached_settings({:ok, settings, fetch_time_ms})
 
       {:ok, client: client, fetch_time_ms: fetch_time_ms}
@@ -112,7 +112,7 @@ defmodule ConfigCatTest do
     } do
       user = User.new("test@test1.com")
 
-      fetch_time = DateTime.from_unix!(fetch_time_ms, :millisecond)
+      {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
 
       assert %EvaluationDetails{
                default_value?: false,
