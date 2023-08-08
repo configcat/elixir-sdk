@@ -84,6 +84,16 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
+  def handle_call({:get_all_value_details, user}, _from, %State{} = state) do
+    result =
+      state
+      |> do_get_all_keys()
+      |> Enum.map(&do_get_value_details(&1, nil, user, state))
+
+    {:reply, result, state}
+  end
+
+  @impl GenServer
   def handle_call({:get_variation_id, key, default_variation_id, user}, _from, %State{} = state) do
     result = do_get_variation_id(key, default_variation_id, user, state)
     {:reply, result, state}

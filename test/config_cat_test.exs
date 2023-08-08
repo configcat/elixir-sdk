@@ -106,7 +106,7 @@ defmodule ConfigCatTest do
       assert actual == expected
     end
 
-    test "get_value_details/2 returns evaluation details", %{
+    test "get_value_details/4 returns evaluation details", %{
       client: client,
       fetch_time_ms: fetch_time_ms
     } do
@@ -130,6 +130,23 @@ defmodule ConfigCatTest do
                value: "fake1",
                variation_id: "id1"
              } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
+    end
+
+    test "get_all_value_details/2 returns evaluation details for all keys", %{client: client} do
+      all_details = ConfigCat.get_all_value_details(client: client)
+      details_by_key = fn key -> Enum.find(all_details, &(&1.key == key)) end
+
+      assert length(all_details) == 6
+
+      assert %{key: "testBoolKey", value: true} = details_by_key.("testBoolKey")
+
+      assert %{key: "testStringKey", value: "testValue", variation_id: "id"} =
+               details_by_key.("testStringKey")
+
+      assert %{key: "testIntKey", value: 1} = details_by_key.("testIntKey")
+      assert %{key: "testDoubleKey", value: 1.1} = details_by_key.("testDoubleKey")
+      assert %{key: "key1", value: true, variation_id: "fakeId1"} = details_by_key.("key1")
+      assert %{key: "key2", value: false, variation_id: "fakeId2"} = details_by_key.("key2")
     end
   end
 
