@@ -64,24 +64,6 @@ defmodule ConfigCatTest do
       assert ConfigCat.get_value("testUnknownKey", "default", client: client) == "default"
     end
 
-    test "get_variation_id/4 looks up the variation id for a key", %{client: client} do
-      assert ConfigCat.get_variation_id("key1", nil, client: client) == "fakeId1"
-      assert ConfigCat.get_variation_id("key2", nil, client: client) == "fakeId2"
-    end
-
-    @tag capture_log: true
-    test "get_variation_id/4 returns default if variation id not found", %{client: client} do
-      assert ConfigCat.get_variation_id("nonexisting", "default_variation_id", client: client) ==
-               "default_variation_id"
-    end
-
-    @tag capture_log: true
-    test "get_all_variation_ids/1 returns all known variation ids", %{client: client} do
-      expected = ~w(fakeId1 fakeId2 id) |> Enum.sort()
-      actual = ConfigCat.get_all_variation_ids(client: client) |> Enum.sort()
-      assert actual == expected
-    end
-
     test "get_key_and_value/2 returns matching key/value pair for a variation id", %{
       client: client
     } do
@@ -165,14 +147,6 @@ defmodule ConfigCatTest do
 
     test "get_value/4 returns default value", %{client: client} do
       assert ConfigCat.get_value("any_feature", "default", client: client) == "default"
-    end
-
-    test "get_variation_id/4 returns default variation", %{client: client} do
-      assert ConfigCat.get_variation_id("any_feature", "default", client: client) == "default"
-    end
-
-    test "get_all_variation_ids/2 returns an empty list of variation ids", %{client: client} do
-      assert ConfigCat.get_all_variation_ids(client: client) == []
     end
 
     @tag capture_log: true
