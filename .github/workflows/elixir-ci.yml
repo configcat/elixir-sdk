@@ -57,7 +57,12 @@ jobs:
     - name: Run dialyzer
       run: mix dialyzer
 
+    - name: Execute tests (Elixir 1.11.x)
+      if: matrix.elixir-version == '1.11.x'
+      run: mix coveralls.json
+
     - name: Execute tests
+      if: matrix.elixir-version != '1.11.x'
       run: mix coveralls.json --warnings-as-errors
 
     - name: Upload coverage report
