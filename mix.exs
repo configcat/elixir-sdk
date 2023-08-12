@@ -13,6 +13,7 @@ defmodule ConfigCat.MixProject do
       elixir: "~> 1.10",
       description: description(),
       package: package(),
+      elixirc_options: elixirc_options(Mix.env()),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -40,6 +41,28 @@ defmodule ConfigCat.MixProject do
     [
       extra_applications: [:logger],
       mod: {ConfigCat.Application, []}
+    ]
+  end
+
+  defp elixirc_options(:dev) do
+    [
+      all_warnings: true,
+      ignore_module_conflict: true,
+      warnings_as_errors: false
+    ]
+  end
+
+  defp elixirc_options(:test) do
+    [
+      all_warnings: true,
+      warnings_as_error: false
+    ]
+  end
+
+  defp elixirc_options(_) do
+    [
+      all_warnings: true,
+      warnings_as_errors: true
     ]
   end
 
