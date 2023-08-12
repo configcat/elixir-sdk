@@ -64,24 +64,6 @@ defmodule ConfigCatTest do
       assert ConfigCat.get_value("testUnknownKey", "default", client: client) == "default"
     end
 
-    test "get_variation_id/4 looks up the variation id for a key", %{client: client} do
-      assert ConfigCat.get_variation_id("key1", nil, client: client) == "fakeId1"
-      assert ConfigCat.get_variation_id("key2", nil, client: client) == "fakeId2"
-    end
-
-    @tag capture_log: true
-    test "get_variation_id/4 returns default if variation id not found", %{client: client} do
-      assert ConfigCat.get_variation_id("nonexisting", "default_variation_id", client: client) ==
-               "default_variation_id"
-    end
-
-    @tag capture_log: true
-    test "get_all_variation_ids/1 returns all known variation ids", %{client: client} do
-      expected = ~w(fakeId1 fakeId2 id) |> Enum.sort()
-      actual = ConfigCat.get_all_variation_ids(client: client) |> Enum.sort()
-      assert actual == expected
-    end
-
     test "get_key_and_value/2 returns matching key/value pair for a variation id", %{
       client: client
     } do
@@ -106,7 +88,7 @@ defmodule ConfigCatTest do
       assert actual == expected
     end
 
-    test "get_value_details/2 returns evaluation details", %{
+    test "get_value_details/4 returns evaluation details", %{
       client: client,
       fetch_time_ms: fetch_time_ms
     } do
@@ -131,6 +113,23 @@ defmodule ConfigCatTest do
                variation_id: "id1"
              } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
     end
+
+    test "get_all_value_details/2 returns evaluation details for all keys", %{client: client} do
+      all_details = ConfigCat.get_all_value_details(client: client)
+      details_by_key = fn key -> Enum.find(all_details, &(&1.key == key)) end
+
+      assert length(all_details) == 6
+
+      assert %{key: "testBoolKey", value: true} = details_by_key.("testBoolKey")
+
+      assert %{key: "testStringKey", value: "testValue", variation_id: "id"} =
+               details_by_key.("testStringKey")
+
+      assert %{key: "testIntKey", value: 1} = details_by_key.("testIntKey")
+      assert %{key: "testDoubleKey", value: 1.1} = details_by_key.("testDoubleKey")
+      assert %{key: "key1", value: true, variation_id: "fakeId1"} = details_by_key.("key1")
+      assert %{key: "key2", value: false, variation_id: "fakeId2"} = details_by_key.("key2")
+    end
   end
 
   describe "when the configuration has not been fetched" do
@@ -148,14 +147,6 @@ defmodule ConfigCatTest do
 
     test "get_value/4 returns default value", %{client: client} do
       assert ConfigCat.get_value("any_feature", "default", client: client) == "default"
-    end
-
-    test "get_variation_id/4 returns default variation", %{client: client} do
-      assert ConfigCat.get_variation_id("any_feature", "default", client: client) == "default"
-    end
-
-    test "get_all_variation_ids/2 returns an empty list of variation ids", %{client: client} do
-      assert ConfigCat.get_all_variation_ids(client: client) == []
     end
 
     @tag capture_log: true

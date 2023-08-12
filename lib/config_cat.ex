@@ -314,61 +314,27 @@ defmodule ConfigCat do
     |> GenServer.call({:get_value_details, key, default_value, user}, Constants.fetch_timeout())
   end
 
-  @doc "See `get_variation_id/4`."
-  @spec get_variation_id(key(), variation_id(), User.t() | [api_option()]) :: variation_id()
-  def get_variation_id(key, default_variation_id, user_or_options \\ []) do
+  @doc "See `get_all_value_details/2`."
+  @spec get_all_value_details(User.t() | [api_option()]) :: [EvaluationDetails.t()]
+  def get_all_value_details(user_or_options \\ []) do
     if Keyword.keyword?(user_or_options) do
-      get_variation_id(key, default_variation_id, nil, user_or_options)
+      get_all_value_details(nil, user_or_options)
     else
-      get_variation_id(key, default_variation_id, user_or_options, [])
+      get_all_value_details(user_or_options, [])
     end
   end
 
   @doc """
-  Retrieves the variation id for a setting from your configuration.
-
-  Retrieves the setting named `key` from your configuration. To use ConfigCat's
-  [targeting](https://configcat.com/docs/advanced/targeting) feature, provide a
-  `ConfigCat.User` struct containing the information used by the targeting
-  rules.
-
-  Returns the variation id of the setting, or `default_variation_id` if an error
-  occurs.
-
-  ### Options
-
-  - `client`: If you are running multiple instances of `ConfigCat`, provide the
-    `client: :unique_name` option, specifying the name you configured for the
-    instance you want to access.
-  """
-  @spec get_variation_id(key(), variation_id(), User.t() | nil, [api_option()]) :: variation_id()
-  def get_variation_id(key, default_variation_id, user, options) do
-    options
-    |> client()
-    |> GenServer.call(
-      {:get_variation_id, key, default_variation_id, user},
-      Constants.fetch_timeout()
-    )
-  end
-
-  @doc "See `get_all_variation_ids/2`."
-  @spec get_all_variation_ids(User.t() | [api_option()]) :: [variation_id()]
-  def get_all_variation_ids(user_or_options \\ []) do
-    if Keyword.keyword?(user_or_options) do
-      get_all_variation_ids(nil, user_or_options)
-    else
-      get_all_variation_ids(user_or_options, [])
-    end
-  end
-
-  @doc """
-  Retrieves a list of all variation ids from your configuration.
+  Fetches the values and evaluation details of all feature flags and settings.
 
   To use ConfigCat's [targeting](https://configcat.com/docs/advanced/targeting)
   feature, provide a `ConfigCat.User` struct containing the information used by
   the targeting rules.
 
-  Returns a list of all variation ids.
+  Returns evaluation details for all settings and feature flags, including their
+  values. If an error occurs while performing the evaluation, it will be
+  captured in the `:error` field of the individual `ConfigCat.EvaluationDetails`
+  structs.
 
   ### Options
 
@@ -376,11 +342,11 @@ defmodule ConfigCat do
     `client: :unique_name` option, specifying the name you configured for the
     instance you want to access.
   """
-  @spec get_all_variation_ids(User.t() | nil, [api_option()]) :: [variation_id()]
-  def get_all_variation_ids(user, options) do
+  @spec get_all_value_details(User.t() | nil, [api_option()]) :: [EvaluationDetails.t()]
+  def get_all_value_details(user, options) do
     options
     |> client()
-    |> GenServer.call({:get_all_variation_ids, user}, Constants.fetch_timeout())
+    |> GenServer.call({:get_all_value_details, user}, Constants.fetch_timeout())
   end
 
   @doc """

@@ -140,8 +140,11 @@ defmodule ConfigCat.RolloutTest do
   defp run_test(setting_key, expected, user, client, type) do
     actual =
       case type do
-        @value_test_type -> ConfigCat.get_value(setting_key, nil, user, client: client)
-        @variation_test_type -> ConfigCat.get_variation_id(setting_key, nil, user, client: client)
+        @value_test_type ->
+          ConfigCat.get_value(setting_key, nil, user, client: client)
+
+        @variation_test_type ->
+          ConfigCat.get_value_details(setting_key, nil, user, client: client).variation_id
       end
 
     if to_string(actual) !== to_string(expected) do

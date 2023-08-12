@@ -25,15 +25,6 @@ defmodule ConfigCat.IntegrationTest do
              "This text came from ConfigCat"
   end
 
-  test "fetches variation_id" do
-    {:ok, client} = start_config_cat(@sdk_key)
-
-    :ok = ConfigCat.force_refresh(client: client)
-
-    assert ConfigCat.get_variation_id("keySampleText", "default", client: client) ==
-             "eda16475"
-  end
-
   test "maintains previous configuration when config has not changed between refreshes" do
     {:ok, client} = start_config_cat(@sdk_key)
 

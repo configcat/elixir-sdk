@@ -84,18 +84,11 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call({:get_variation_id, key, default_variation_id, user}, _from, %State{} = state) do
-    result = do_get_variation_id(key, default_variation_id, user, state)
-    {:reply, result, state}
-  end
-
-  @impl GenServer
-  def handle_call({:get_all_variation_ids, user}, _from, %State{} = state) do
+  def handle_call({:get_all_value_details, user}, _from, %State{} = state) do
     result =
       state
       |> do_get_all_keys()
-      |> Enum.map(&do_get_variation_id(&1, nil, user, state))
-      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&do_get_value_details(&1, nil, user, state))
 
     {:reply, result, state}
   end
@@ -186,13 +179,6 @@ defmodule ConfigCat.Client do
       _ ->
         []
     end
-  end
-
-  defp do_get_variation_id(key, default_variation_id, user, %State{} = state) do
-    %EvaluationDetails{variation_id: variation} =
-      evaluate(key, user, nil, default_variation_id, state)
-
-    variation
   end
 
   defp entry_matching({key, setting}, variation_id) do
