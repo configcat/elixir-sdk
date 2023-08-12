@@ -6,6 +6,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Auto
+  alias ConfigCat.ConfigEntry
 
   @policy CachePolicy.auto()
 
@@ -45,17 +46,39 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "refreshes automatically after initializing", %{config: config} do
       expect_refresh(config)
 
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
+    end
+
+    test "skips initial fetch if cache is already populated with a recent entry",
+         %{config: config} do
+      entry = ConfigEntry.new(config, "ETag")
+
+      expect_not_refreshed()
+      {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
+
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
+    end
+
+    test "performs initial fetch if cache is already populated with an older entry",
+         %{config: config} do
+      entry =
+        ConfigEntry.new(%{"old" => "config"}, "ETag")
+        |> Map.update!(:fetch_time_ms, &(&1 - @policy.poll_interval_ms - 1))
+
+      expect_refresh(config)
+      {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
+
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
     end
 
     test "doesn't refresh between poll intervals", %{config: config} do
       expect_refresh(config)
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_not_refreshed()
-      CachePolicy.get(policy_id)
+      CachePolicy.get(instance_id)
     end
 
     test "refreshes automatically after poll interval", %{config: config} do
@@ -64,12 +87,12 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(old_config)
 
       policy = CachePolicy.auto(poll_interval_seconds: 1)
-      {:ok, policy_id} = start_cache_policy(policy)
+      {:ok, instance_id} = start_cache_policy(policy)
 
       expect_refresh(config)
       wait_for_poll(policy)
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
     end
 
     test "calls the change callback after refreshing", %{config: config} do
@@ -123,12 +146,12 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       old_config = %{"old" => "config"}
       expect_refresh(old_config)
 
-      {:ok, policy_id} = start_cache_policy(@policy)
-      assert {:ok, ^old_config} = CachePolicy.get(policy_id)
+      {:ok, instance_id} = start_cache_policy(@policy)
+      assert {:ok, ^old_config} = CachePolicy.get(instance_id)
 
       expect_refresh(config)
-      assert :ok = CachePolicy.force_refresh(policy_id)
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
     end
 
     test "calls the change callback", %{config: config} do
@@ -137,12 +160,12 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(old_config)
 
       policy = CachePolicy.auto(on_changed: fn -> send(test_pid, :callback) end)
-      {:ok, policy_id} = start_cache_policy(policy)
+      {:ok, instance_id} = start_cache_policy(policy)
 
       assert_receive(:callback)
 
       expect_refresh(config)
-      :ok = CachePolicy.force_refresh(policy_id)
+      :ok = CachePolicy.force_refresh(instance_id)
 
       assert_receive(:callback)
     end
@@ -158,9 +181,9 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       end
 
       policy = CachePolicy.auto(on_changed: callback)
-      {:ok, policy_id} = start_cache_policy(policy)
+      {:ok, instance_id} = start_cache_policy(policy)
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
       assert_receive(:callback)
     end
 
@@ -168,46 +191,47 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       config: config
     } do
       expect_refresh(config)
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_unchanged()
 
-      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
     end
 
     @tag capture_log: true
     test "handles error responses", %{config: config} do
       expect_refresh(config)
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
-      assert_returns_error(fn -> CachePolicy.force_refresh(policy_id) end)
+      assert_returns_error(fn -> CachePolicy.force_refresh(instance_id) end)
     end
   end
 
   describe "offline" do
     test "does not fetch config when offline mode is set", %{config: config} do
-      expect_refresh(config)
       policy = CachePolicy.auto(poll_interval_seconds: 1)
-      {:ok, policy_id} = start_cache_policy(policy)
-      assert CachePolicy.is_offline(policy_id) == false
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      expect_refresh(config)
+      {:ok, instance_id} = start_cache_policy(policy)
 
-      assert :ok = CachePolicy.set_offline(policy_id)
-      assert CachePolicy.is_offline(policy_id) == true
+      refute CachePolicy.is_offline(instance_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
+
+      assert :ok = CachePolicy.set_offline(instance_id)
+      assert CachePolicy.is_offline(instance_id)
 
       expect_not_refreshed()
       wait_for_poll(policy)
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
 
-      assert :ok = CachePolicy.set_online(policy_id)
-      assert CachePolicy.is_offline(policy_id) == false
+      new_config = %{"new" => "config"}
+      expect_refresh(new_config)
 
-      expect_refresh(config)
-      wait_for_poll(policy)
+      assert :ok = CachePolicy.set_online(instance_id)
+      refute CachePolicy.is_offline(instance_id)
 
-      assert {:ok, ^config} = CachePolicy.get(policy_id)
+      assert {:ok, ^new_config} = CachePolicy.get(instance_id)
     end
   end
 

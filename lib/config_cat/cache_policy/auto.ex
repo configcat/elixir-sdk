@@ -77,8 +77,9 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:set_online, _from, %State{} = state) do
-    initial_refresh(state)
-    {:reply, :ok, State.set_online(state)}
+    new_state = State.set_online(state)
+    initial_refresh(new_state)
+    {:reply, :ok, new_state}
   end
 
   @impl GenServer
@@ -95,15 +96,21 @@ defmodule ConfigCat.CachePolicy.Auto do
   defp initial_refresh(%State{} = state) do
     interval_ms = state.policy_options.poll_interval_ms
 
-    case Helpers.cached_entry(state) do
-      {:ok, %ConfigEntry{} = entry} ->
-        next_fetch_ms = entry.fetch_time_ms + interval_ms
-        delay_ms = max(0, ConfigEntry.now() - next_fetch_ms)
-        Process.send_after(self(), :polled_refresh, delay_ms)
+    delay_ms =
+      case Helpers.cached_entry(state) do
+        {:ok, %ConfigEntry{} = entry} ->
+          next_fetch_ms = entry.fetch_time_ms + interval_ms
+          max(0, next_fetch_ms - ConfigEntry.now())
 
-      _ ->
-        refresh(state)
-        schedule_next_refresh(state)
+        _ ->
+          0
+      end
+
+    if delay_ms == 0 do
+      refresh(state)
+      schedule_next_refresh(state)
+    else
+      Process.send_after(self(), :polled_refresh, delay_ms)
     end
   end
 

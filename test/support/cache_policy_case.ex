@@ -24,11 +24,15 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, config: config}
   end
 
-  @spec start_cache_policy(CachePolicy.t()) :: {:ok, atom()}
-  def start_cache_policy(policy) do
+  @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}
+  def start_cache_policy(policy, options \\ []) do
     instance_id = UUID.uuid4() |> String.to_atom()
 
     {:ok, cache_key} = start_cache(instance_id)
+
+    if entry = options[:initial_entry] do
+      Cache.set(instance_id, entry)
+    end
 
     {:ok, pid} =
       start_supervised(
@@ -63,7 +67,9 @@ defmodule ConfigCat.CachePolicyCase do
   @spec expect_refresh(Config.t()) :: Mox.t()
   def expect_refresh(config) do
     MockFetcher
-    |> expect(:fetch, fn _id, _etag -> {:ok, ConfigEntry.new(config, "ETAG")} end)
+    |> expect(:fetch, fn _id, _etag ->
+      {:ok, ConfigEntry.new(config, "ETAG")}
+    end)
   end
 
   @spec expect_unchanged :: Mox.t()

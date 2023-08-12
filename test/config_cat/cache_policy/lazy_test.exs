@@ -5,6 +5,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Lazy
+  alias ConfigCat.ConfigEntry
 
   @policy CachePolicy.lazy(cache_expiry_seconds: 300)
 
@@ -25,6 +26,27 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
       expect_refresh(config)
 
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
+    end
+
+    test "skips initial fetch if cache is already populated with a recent entry",
+         %{config: config} do
+      entry = ConfigEntry.new(config, "ETag")
+      {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
+
+      expect_not_refreshed()
+      assert {:ok, ^config} = CachePolicy.get(instance_id)
+    end
+
+    test "performs initial fetch if cache is already populated with an older entry",
+         %{config: config} do
+      entry =
+        ConfigEntry.new(%{"old" => "config"}, "ETag")
+        |> Map.update!(:fetch_time_ms, &(&1 - @policy.cache_expiry_ms - 1))
+
+      {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
+
+      expect_refresh(config)
       assert {:ok, ^config} = CachePolicy.get(instance_id)
     end
 
