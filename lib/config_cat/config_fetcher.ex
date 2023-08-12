@@ -9,14 +9,6 @@ defmodule ConfigCat.ConfigFetcher do
   @type result :: {:ok, ConfigEntry.t()} | {:ok, :unchanged} | fetch_error()
 
   @callback fetch(ConfigCat.instance_id(), String.t()) :: result()
-
-  defmodule RedirectMode do
-    @moduledoc false
-
-    defmacro no_redirect, do: 0
-    defmacro should_redirect, do: 1
-    defmacro force_redirect, do: 2
-  end
 end
 
 defmodule ConfigCat.CacheControlConfigFetcher do
@@ -24,13 +16,13 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   use GenServer
 
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
-  alias ConfigFetcher.RedirectMode
   alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
-  require RedirectMode
+  require ConfigCat.RedirectMode, as: RedirectMode
   require Logger
 
   defmodule State do
@@ -178,17 +170,15 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          new_etag <- extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state,
-         p <- Map.get(config, Constants.preferences(), %{}),
-         base_url <- Map.get(p, Constants.preferences_base_url()),
-         redirect <- Map.get(p, Constants.redirect()) do
+         {base_url, redirect_mode} <- Config.preferences(config) do
       followed? = Map.has_key?(redirects, new_base_url)
 
       new_state =
         cond do
-          custom_endpoint? && redirect != RedirectMode.force_redirect() ->
+          custom_endpoint? && redirect_mode != RedirectMode.force_redirect() ->
             state
 
-          redirect == RedirectMode.no_redirect() ->
+          redirect_mode == RedirectMode.no_redirect() ->
             state
 
           base_url && !followed? ->
@@ -214,7 +204,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
             state
         end
 
-      if redirect == RedirectMode.should_redirect() do
+      if redirect_mode == RedirectMode.should_redirect() do
         Logger.warn("""
         Your data_governance parameter at ConfigCat client initialization
         is not in sync with your preferences on the ConfigCat Dashboard:

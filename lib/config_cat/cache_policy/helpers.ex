@@ -3,8 +3,10 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
 
   defmodule State do
     @moduledoc false
@@ -49,6 +51,21 @@ defmodule ConfigCat.CachePolicy.Helpers do
     instance_id = Keyword.fetch!(options, :instance_id)
 
     GenServer.start_link(module, State.new(options), name: CachePolicy.via_tuple(instance_id))
+  end
+
+  @spec cached_settings(State.t()) ::
+          {:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}
+  def cached_settings(%State{} = state) do
+    with {:ok, %ConfigEntry{} = entry} <- cached_entry(state),
+         {:ok, settings} <- Config.fetch_settings(entry.config) do
+      {:ok, settings, entry.fetch_time_ms}
+    else
+      :error ->
+        {:error, :not_found}
+
+      error ->
+        error
+    end
   end
 
   @spec cached_config(State.t()) :: ConfigCache.result()

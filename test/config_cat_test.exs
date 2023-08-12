@@ -4,29 +4,36 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
+  alias ConfigCat.EvaluationDetails
+  alias ConfigCat.FetchTime
+  alias ConfigCat.User
+
+  require ConfigCat.Constants, as: Constants
+
   setup :verify_on_exit!
 
   describe "when the configuration has been fetched" do
     setup do
-      config = ~J"""
+      settings = ~J"""
         {
-          "p": {"u": "https://cdn-global.configcat.com", "r": 0},
-          "f": {
-            "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-            "testStringKey": {"v": "testValue","t": 1, "p": [],"r": []},
-            "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
-            "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
-            "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
-            "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
-          }
+          "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
+          "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
+            {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
+            {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
+          ]},
+          "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
+          "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
+          "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
+          "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
         }
       """
 
       {:ok, client} = start_client()
 
-      stub_cached_config({:ok, config})
+      fetch_time_ms = FetchTime.now_ms()
+      stub_cached_settings({:ok, settings, fetch_time_ms})
 
-      {:ok, client: client}
+      {:ok, client: client, fetch_time_ms: fetch_time_ms}
     end
 
     test "get_all_keys/1 returns all known keys", %{client: client} do
@@ -39,6 +46,7 @@ defmodule ConfigCatTest do
       assert ConfigCat.get_value("testBoolKey", false, client: client) == true
     end
 
+    @tag capture_log: true
     test "get_value/4 returns a string value", %{client: client} do
       assert ConfigCat.get_value("testStringKey", "default", client: client) == "testValue"
     end
@@ -67,8 +75,9 @@ defmodule ConfigCatTest do
                "default_variation_id"
     end
 
+    @tag capture_log: true
     test "get_all_variation_ids/1 returns all known variation ids", %{client: client} do
-      expected = ~w(fakeId1 fakeId2) |> Enum.sort()
+      expected = ~w(fakeId1 fakeId2 id) |> Enum.sort()
       actual = ConfigCat.get_all_variation_ids(client: client) |> Enum.sort()
       assert actual == expected
     end
@@ -80,7 +89,8 @@ defmodule ConfigCatTest do
       assert {"key2", false} = ConfigCat.get_key_and_value("fakeId2", client: client)
     end
 
-    test "get_all_values/1 returns all key/value pairs", %{client: client} do
+    @tag capture_log: true
+    test "get_all_values/2 returns all key/value pairs", %{client: client} do
       expected =
         %{
           "testBoolKey" => true,
@@ -95,13 +105,39 @@ defmodule ConfigCatTest do
       actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
       assert actual == expected
     end
+
+    test "get_value_details/2 returns evaluation details", %{
+      client: client,
+      fetch_time_ms: fetch_time_ms
+    } do
+      user = User.new("test@test1.com")
+
+      {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
+
+      assert %EvaluationDetails{
+               default_value?: false,
+               error: nil,
+               fetch_time: ^fetch_time,
+               key: "testStringKey",
+               matched_evaluation_rule: %{
+                 Constants.comparator() => 2,
+                 Constants.comparison_attribute() => "Identifier",
+                 Constants.comparison_value() => "@test1.com",
+                 Constants.value() => "fake1"
+               },
+               matched_evaluation_percentage_rule: nil,
+               user: ^user,
+               value: "fake1",
+               variation_id: "id1"
+             } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
+    end
   end
 
   describe "when the configuration has not been fetched" do
     setup do
       {:ok, client} = start_client()
 
-      stub_cached_config({:error, :not_found})
+      stub_cached_settings({:error, :not_found})
 
       {:ok, client: client}
     end

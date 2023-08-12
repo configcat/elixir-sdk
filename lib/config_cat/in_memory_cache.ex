@@ -33,7 +33,7 @@ defmodule ConfigCat.InMemoryCache do
   end
 
   @impl GenServer
-  def handle_call(:clear, _from, state) do
+  def handle_call(:clear, _from, _state) do
     {:reply, :ok, %{}}
   end
 

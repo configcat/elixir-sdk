@@ -29,7 +29,7 @@ defmodule ConfigCat.NullDataSource do
     @spec behaviour(NullDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(_data_source), do: :local_over_remote
 
-    @spec overrides(NullDataSource.t()) :: {:ok, Config.t()}
-    def overrides(_data_source), do: {:ok, %{}}
+    @spec overrides(NullDataSource.t()) :: Config.settings()
+    def overrides(_data_source), do: %{}
   end
 end

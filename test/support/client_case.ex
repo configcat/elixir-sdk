@@ -4,6 +4,7 @@ defmodule ConfigCat.ClientCase do
   use ExUnit.CaseTemplate
 
   alias ConfigCat.Client
+  alias ConfigCat.FetchTime
   alias ConfigCat.MockCachePolicy
   alias ConfigCat.NullDataSource
 
@@ -32,8 +33,9 @@ defmodule ConfigCat.ClientCase do
     {:ok, instance_id}
   end
 
-  @spec stub_cached_config({:ok, Config.t()} | {:error, :not_found}) :: :ok
-  def stub_cached_config(response) do
+  @spec stub_cached_settings({:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}) ::
+          :ok
+  def stub_cached_settings(response) do
     MockCachePolicy
     |> Mox.stub(:get, fn _id -> response end)
 

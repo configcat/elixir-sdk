@@ -4,11 +4,12 @@ defmodule ConfigCat.ConfigEntry do
   use TypedStruct
 
   alias ConfigCat.Config
+  alias ConfigCat.FetchTime
 
   typedstruct enforce: true do
     field :config, Config.t(), default: %{}
     field :etag, String.t(), default: ""
-    field :fetch_time_ms, non_neg_integer(), default: 0
+    field :fetch_time_ms, FetchTime.t(), default: 0
     field :raw_config, String.t(), default: "{}"
   end
 
@@ -17,7 +18,7 @@ defmodule ConfigCat.ConfigEntry do
     %__MODULE__{
       config: config,
       etag: etag,
-      fetch_time_ms: now(),
+      fetch_time_ms: FetchTime.now_ms(),
       raw_config: raw_config
     }
   end
@@ -27,13 +28,10 @@ defmodule ConfigCat.ConfigEntry do
     %__MODULE__{
       config: config,
       etag: etag,
-      fetch_time_ms: now(),
+      fetch_time_ms: FetchTime.now_ms(),
       raw_config: Jason.encode!(config)
     }
   end
-
-  @spec now() :: non_neg_integer()
-  def now, do: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
   @spec deserialize(String.t()) :: {:ok, t()} | {:error, String.t()}
   def deserialize(str) do

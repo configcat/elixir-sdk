@@ -4,6 +4,8 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.EvaluationDetails
+  alias ConfigCat.FetchTime
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
@@ -76,6 +78,12 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
+  def handle_call({:get_value_details, key, default_value, user}, _from, %State{} = state) do
+    result = do_get_value_details(key, default_value, user, state)
+    {:reply, result, state}
+  end
+
+  @impl GenServer
   def handle_call({:get_variation_id, key, default_variation_id, user}, _from, %State{} = state) do
     result = do_get_variation_id(key, default_variation_id, user, state)
     {:reply, result, state}
@@ -94,9 +102,8 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    with {:ok, config} <- cached_config(state),
-         {:ok, feature_flags} <- Map.fetch(config, Constants.feature_flags()),
-         result <- Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id)) do
+    with {:ok, settings, _fetch_time_ms} <- cached_settings(state),
+         result <- Enum.find_value(settings, nil, &entry_matching(&1, variation_id)) do
       {:reply, result, state}
     else
       _ ->
@@ -163,27 +170,29 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_value(key, default_value, user, %State{} = state) do
-    with {:ok, result} <- evaluate(key, user, default_value, nil, state),
-         {value, _variation} <- result do
-      value
-    end
+    %EvaluationDetails{value: value} = evaluate(key, user, default_value, nil, state)
+    value
+  end
+
+  defp do_get_value_details(key, default_value, user, %State{} = state) do
+    evaluate(key, user, default_value, nil, state)
   end
 
   defp do_get_all_keys(%State{} = state) do
-    with {:ok, config} <- cached_config(state),
-         feature_flags <- Map.get(config, Constants.feature_flags(), %{}) do
-      Map.keys(feature_flags)
-    else
-      {:error, :not_found} -> []
-      error -> error
+    case cached_settings(state) do
+      {:ok, settings, _fetch_time_ms} ->
+        Map.keys(settings)
+
+      _ ->
+        []
     end
   end
 
   defp do_get_variation_id(key, default_variation_id, user, %State{} = state) do
-    with {:ok, result} <- evaluate(key, user, nil, default_variation_id, state),
-         {_value, variation} <- result do
-      variation
-    end
+    %EvaluationDetails{variation_id: variation} =
+      evaluate(key, user, nil, default_variation_id, state)
+
+    variation
   end
 
   defp entry_matching({key, setting}, variation_id) do
@@ -207,48 +216,50 @@ defmodule ConfigCat.Client do
   defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
     user = if user != nil, do: user, else: state.default_user
 
-    case cached_config(state) do
-      {:ok, config} ->
-        {:ok, Rollout.evaluate(key, user, default_value, default_variation_id, config)}
+    case cached_settings(state) do
+      {:ok, settings, fetch_time_ms} ->
+        %EvaluationDetails{} =
+          details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
 
-      {:error, :not_found} ->
-        {:ok, {default_value, default_variation_id}}
+        fetch_time =
+          case FetchTime.to_datetime(fetch_time_ms) do
+            {:ok, %DateTime{} = dt} -> dt
+            _ -> nil
+          end
 
-      error ->
-        error
+        %{details | fetch_time: fetch_time}
+
+      _ ->
+        message =
+          "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
+
+        EvaluationDetails.new(
+          default_value?: true,
+          error: message,
+          key: key,
+          value: default_value,
+          variation_id: default_variation_id
+        )
     end
   end
 
-  defp cached_config(%State{} = state) do
-    %{
-      cache_policy: policy,
-      flag_overrides: override_data_source,
-      instance_id: instance_id
-    } = state
+  defp cached_settings(%State{} = state) do
+    %{cache_policy: policy, flag_overrides: flag_overrides, instance_id: instance_id} = state
+    local_settings = OverrideDataSource.overrides(flag_overrides)
 
-    with {:ok, local_settings} <- OverrideDataSource.overrides(override_data_source) do
-      case OverrideDataSource.behaviour(override_data_source) do
-        :local_only ->
-          {:ok, local_settings}
+    case OverrideDataSource.behaviour(flag_overrides) do
+      :local_only ->
+        {:ok, local_settings, 0}
 
-        :local_over_remote ->
-          with {:ok, remote_settings} <- policy.get(instance_id) do
-            {:ok, merge_settings(remote_settings, local_settings)}
-          end
+      :local_over_remote ->
+        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(remote_settings, local_settings), fetch_time_ms}
+        end
 
-        :remote_over_local ->
-          with {:ok, remote_settings} <- policy.get(instance_id) do
-            {:ok, merge_settings(local_settings, remote_settings)}
-          end
-      end
+      :remote_over_local ->
+        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(local_settings, remote_settings), fetch_time_ms}
+        end
     end
   end
-
-  defp merge_settings(%{Constants.feature_flags() => left_flags} = target, %{
-         Constants.feature_flags() => right_flags
-       }) do
-    Map.put(target, Constants.feature_flags(), Map.merge(left_flags, right_flags))
-  end
-
-  defp merge_settings(target, _overrides), do: target
 end

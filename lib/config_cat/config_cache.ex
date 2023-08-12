@@ -4,7 +4,7 @@ defmodule ConfigCat.ConfigCache do
 
   A calling application can optionally supply its own cache implementation to use
   in place of the default in-memory cache by providing the implementation's module name
-  as the `:cache` option in `ConfigCat.start_link/1`.
+  as the `:cache` option in `ConfigCat.child_spec/1`.
 
   The provided implementation must explicitly or implicitly implement this behaviour.
 

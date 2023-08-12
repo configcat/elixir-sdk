@@ -172,6 +172,7 @@ defmodule ConfigCat do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.Config
+  alias ConfigCat.EvaluationDetails
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.User
 
@@ -276,6 +277,41 @@ defmodule ConfigCat do
     options
     |> client()
     |> GenServer.call({:get_value, key, default_value, user}, Constants.fetch_timeout())
+  end
+
+  @doc "See `get_value_details/4`."
+  @spec get_value_details(key(), value(), User.t() | [api_option()]) :: EvaluationDetails.t()
+  def get_value_details(key, default_value, user_or_options \\ []) do
+    if Keyword.keyword?(user_or_options) do
+      get_value_details(key, default_value, nil, user_or_options)
+    else
+      get_value_details(key, default_value, user_or_options, [])
+    end
+  end
+
+  @doc """
+  Fetches the value and evaluation details of a feature flag or setting.
+
+  Retrieves the setting named `key` from your configuration. To use ConfigCat's
+  [targeting](https://configcat.com/docs/advanced/targeting) feature, provide a
+  `ConfigCat.User` struct containing the information used by the targeting
+  rules.
+
+  Returns the evaluation details for the setting, including the value. If an
+  error occurs while performing the evaluation, it will be captured in the
+  `:error` field of the `ConfigCat.EvaluationDetails` struct.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec get_value_details(key(), value(), User.t() | nil, [api_option()]) :: EvaluationDetails.t()
+  def get_value_details(key, default_value, user, options) do
+    options
+    |> client()
+    |> GenServer.call({:get_value_details, key, default_value, user}, Constants.fetch_timeout())
   end
 
   @doc "See `get_variation_id/4`."

@@ -2,40 +2,63 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
+  alias ConfigCat.EvaluationDetails
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
   require Logger
   require ConfigCat.Constants, as: Constants
 
-  @spec evaluate(Config.key(), User.t() | nil, Config.value(), Config.variation_id(), Config.t()) ::
-          {Config.value(), Config.variation_id()}
-  def evaluate(key, user, default_value, default_variation_id, config) do
+  @spec evaluate(
+          Config.key(),
+          User.t() | nil,
+          Config.value(),
+          Config.variation_id() | nil,
+          Config.settings()
+        ) :: EvaluationDetails.t()
+  def evaluate(key, user, default_value, default_variation_id, settings) do
     log_evaluating(key)
 
     with {:ok, valid_user} <- validate_user(user),
-         {:ok, feature_flags} = Map.fetch(config, Constants.feature_flags()),
-         {:ok, setting_descriptor} <- Map.fetch(feature_flags, key),
+         {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
          setting_variation <-
            Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
          rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
          percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules(), []),
-         {value, variation} <- evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
+         {value, variation, rule, percentage_rule} <-
+           evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
       variation = variation || setting_variation
 
-      if value == :none do
-        {base_value(setting_descriptor, default_value), variation}
-      else
-        {value, variation}
-      end
+      value =
+        if value == :none do
+          base_value(setting_descriptor, default_value)
+        else
+          value
+        end
+
+      EvaluationDetails.new(
+        key: key,
+        matched_evaluation_rule: rule,
+        matched_evaluation_percentage_rule: percentage_rule,
+        user: user,
+        value: value,
+        variation_id: variation
+      )
     else
       {:error, :invalid_user} ->
         log_invalid_user(key)
-        evaluate(key, nil, default_value, default_variation_id, config)
+        evaluate(key, nil, default_value, default_variation_id, settings)
 
-      :error ->
-        log_no_value_found(key, default_value)
-        {default_value, default_variation_id}
+      {:error, message} ->
+        Logger.error(message)
+
+        EvaluationDetails.new(
+          default_value?: true,
+          error: message,
+          key: key,
+          value: default_value,
+          variation_id: default_variation_id
+        )
     end
   end
 
@@ -43,26 +66,48 @@ defmodule ConfigCat.Rollout do
   defp validate_user(%User{} = user), do: {:ok, user}
   defp validate_user(_), do: {:error, :invalid_user}
 
-  defp evaluate_rules([], [], _user, _key), do: {:none, nil}
+  defp setting_descriptor(settings, key, default_value) do
+    case Map.fetch(settings, key) do
+      {:ok, descriptor} ->
+        {:ok, descriptor}
+
+      :error ->
+        available_keys =
+          settings
+          |> Map.keys()
+          |> Enum.map_join(", ", &"'#{&1}'")
+
+        message =
+          "Failed to evaluate setting '#{key}' (the key was not found in config JSON). " <>
+            "Returning the `default_value` parameter that you specified in your application: '#{default_value}'. " <>
+            "Available keys: [#{available_keys}]."
+
+        {:error, message}
+    end
+  end
+
+  defp evaluate_rules([], [], _user, _key), do: {:none, nil, nil, nil}
 
   defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key) do
     log_nil_user(key)
-    {:none, nil}
+    {:none, nil, nil, nil}
   end
 
   defp evaluate_rules(rollout_rules, percentage_rules, user, key) do
     log_valid_user(user)
-    {value, variation} = evaluate_rollout_rules(rollout_rules, user, key)
 
-    if value == :none do
-      evaluate_percentage_rules(percentage_rules, user, key)
-    else
-      {value, variation}
+    case evaluate_rollout_rules(rollout_rules, user, key) do
+      {:none, _, _} ->
+        {value, variation, rule} = evaluate_percentage_rules(percentage_rules, user, key)
+        {value, variation, nil, rule}
+
+      {value, variation, rule} ->
+        {value, variation, rule, nil}
     end
   end
 
   defp evaluate_rollout_rules(rules, user, _key) do
-    Enum.reduce_while(rules, {:none, nil}, &evaluate_rollout_rule(&1, &2, user))
+    Enum.reduce_while(rules, {:none, nil, nil}, &evaluate_rollout_rule(&1, &2, user))
   end
 
   defp evaluate_rollout_rule(rule, default, user) do
@@ -80,7 +125,7 @@ defmodule ConfigCat.Rollout do
           case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
             {:ok, true} ->
               log_match(comparison_attribute, user_value, comparator, comparison_value, value)
-              {:halt, {value, variation}}
+              {:halt, {value, variation, rule}}
 
             {:ok, false} ->
               log_no_match(comparison_attribute, user_value, comparator, comparison_value)
@@ -101,25 +146,29 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_percentage_rules([] = _percentage_rules, _user, _key), do: {:none, nil}
+  defp evaluate_percentage_rules([] = _percentage_rules, _user, _key), do: {:none, nil, nil}
 
   defp evaluate_percentage_rules(percentage_rules, user, key) do
     hash_val = hash_user(user, key)
 
-    Enum.reduce_while(percentage_rules, {0, nil}, &evaluate_percentage_rule(&1, &2, hash_val))
+    Enum.reduce_while(
+      percentage_rules,
+      {0, nil, nil},
+      &evaluate_percentage_rule(&1, &2, hash_val)
+    )
   end
 
   defp evaluate_percentage_rule(rule, increment, hash_val) do
-    {bucket, _v} = increment
+    {bucket, _v, _r} = increment
     bucket = increment_bucket(bucket, rule)
 
     if hash_val < bucket do
       percentage_value = Map.get(rule, Constants.value())
       variation_value = Map.get(rule, Constants.variation_id())
 
-      {:halt, {percentage_value, variation_value}}
+      {:halt, {percentage_value, variation_value, rule}}
     else
-      {:cont, {bucket, nil}}
+      {:cont, {bucket, nil, nil}}
     end
   end
 
@@ -164,12 +213,6 @@ defmodule ConfigCat.Rollout do
   defp log_validation_error(comparison_attribute, user_value, comparator, comparison_value, error) do
     Logger.warn(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
-    )
-  end
-
-  defp log_no_value_found(key, default_value) do
-    Logger.error(
-      "Evaluating get_value('#{key}') failed. Value not found for key '#{key}'. Return default_value: [#{default_value}]."
     )
   end
 
