@@ -4,7 +4,7 @@ defmodule ConfigCat.Hooks.State do
 
   require Logger
 
-  @type callback :: fun()
+  @type callback :: fun() | tuple()
   @type hook :: :on_client_ready | :on_config_changed | :on_error | :on_flag_evaluated
 
   typedstruct do
@@ -50,12 +50,7 @@ defmodule ConfigCat.Hooks.State do
     apply(callback, args)
   end
 
-  defp invoke_callback({module, function, arity}, args) when length(args) == arity do
-    apply(module, function, args)
-  end
-
-  defp invoke_callback({module, function, arity}, args) do
-    raise ArgumentError,
-          "Callback #{module}.#{function}/#{arity} has incorrect arity. Expected #{length(args)} but was #{arity}."
+  defp invoke_callback({module, function, extra_args}, args) do
+    apply(module, function, args ++ extra_args)
   end
 end

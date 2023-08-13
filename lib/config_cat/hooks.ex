@@ -31,10 +31,33 @@ defmodule ConfigCat.Hooks do
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks.State
 
-  @type on_client_ready_callback :: (() -> term()) | mfa()
-  @type on_config_changed_callback :: (Config.t() -> term()) | mfa()
-  @type on_error_callback :: (String.t() -> term()) | mfa()
-  @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> term()) | mfa()
+  @typedoc """
+  A module/function name/extra arguments tuple representing a callback function.
+
+  Each callback passes specific arguments. These specific arguments are
+  prepended to the extra arguments provided in the tuple (if any).
+
+  For example, you might want to define a callback that sends a message to
+  another process which the config changes. You can pass the pid of that process
+  as an extra argument:
+
+  ```elixir
+  def MyModule do
+    def subscribe_to_config_changes(subscriber_pid) do
+      ConfigCat.hooks()
+      |> ConfigCat.Hooks.add_on_config_changed({__MODULE__, :on_config_changed, [subscriber_pid]})
+    end
+
+    def on_config_changed(config, pid) do
+      send pid, {:config_changed, config}
+    end
+  end
+  """
+  @type named_callback :: {module(), atom(), list()}
+  @type on_client_ready_callback :: (() -> term()) | named_callback()
+  @type on_config_changed_callback :: (Config.t() -> term()) | named_callback()
+  @type on_error_callback :: (String.t() -> term()) | named_callback()
+  @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> term()) | named_callback()
   @type option ::
           {:on_client_ready, on_client_ready_callback()}
           | {:on_config_changed, on_config_changed_callback()}

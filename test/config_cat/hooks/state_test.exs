@@ -1,6 +1,7 @@
 defmodule ConfigCat.Hooks.StateTest do
   use ExUnit.Case, async: true
 
+  alias ConfigCat.Config
   alias ConfigCat.Hooks.State
 
   test "calls initial hook when invoked" do
@@ -84,28 +85,31 @@ defmodule ConfigCat.Hooks.StateTest do
     # infinite recursion of calling the failed on_error callback.
   end
 
-  test "allows module/function/arity as a hook" do
-    state = State.new(on_client_ready: {__MODULE__, :on_client_ready, 0})
+  test "allows module/function/extra args as a hook" do
+    state = State.new(on_client_ready: {__MODULE__, :on_client_ready, []})
 
     assert :ok = State.invoke_hook(state, :on_client_ready, [])
 
     assert_received :on_client_ready_mfa_called
   end
 
-  @tag capture_log: true
-  test "fails if module/function/arity hook has wrong arity" do
-    on_error = fn message -> send(self(), {:on_error, message}) end
-    state = State.new(on_config_changed: {__MODULE__, :on_client_ready, 0}, on_error: on_error)
+  test "passes extra args to mfa hook callback" do
+    config = %{"some" => "config"}
+    state = State.new(on_config_changed: {__MODULE__, :on_config_changed, [42, "string"]})
 
-    assert :ok = State.invoke_hook(state, :on_config_changed, [%{}])
+    assert :ok = State.invoke_hook(state, :on_config_changed, [config])
 
-    assert_received {:on_error, message}
-    assert message =~ "has incorrect arity"
+    assert_received {:on_config_changed_called, ^config, 42, "string"}
   end
 
   @spec on_client_ready :: :ok
   def on_client_ready do
     send(self(), :on_client_ready_mfa_called)
     :ok
+  end
+
+  @spec on_config_changed(Config.t(), number(), String.t()) :: :ok
+  def on_config_changed(config, extra_number, extra_string) do
+    send(self(), {:on_config_changed_called, config, extra_number, extra_string})
   end
 end
