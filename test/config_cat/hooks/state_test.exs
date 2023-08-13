@@ -1,16 +1,16 @@
-defmodule ConfigCat.HooksTest do
+defmodule ConfigCat.Hooks.StateTest do
   use ExUnit.Case, async: true
 
-  alias ConfigCat.Hooks
+  alias ConfigCat.Hooks.State
 
   test "calls initial hook when invoked" do
     callback = fn ->
       send(self(), :on_client_ready_called)
     end
 
-    hooks = Hooks.new(on_client_ready: callback)
+    state = State.new(on_client_ready: callback)
 
-    assert :ok = Hooks.invoke_on_client_ready(hooks)
+    assert :ok = State.invoke_hook(state, :on_client_ready, [])
     assert_received :on_client_ready_called
   end
 
@@ -21,11 +21,11 @@ defmodule ConfigCat.HooksTest do
       send(self(), {:on_error_called, msg})
     end
 
-    hooks =
-      Hooks.new()
-      |> Hooks.add_on_error(callback)
+    state =
+      State.new()
+      |> State.add_hook(:on_error, callback)
 
-    assert :ok = Hooks.invoke_on_error(hooks, message)
+    assert :ok = State.invoke_hook(state, :on_error, [message])
     assert_received {:on_error_called, ^message}
   end
 
@@ -33,11 +33,11 @@ defmodule ConfigCat.HooksTest do
     callback1 = fn -> send(self(), :callback1_called) end
     callback2 = fn -> send(self(), :callback2_called) end
 
-    hooks =
-      Hooks.new(on_client_ready: callback1)
-      |> Hooks.add_on_client_ready(callback2)
+    state =
+      State.new(on_client_ready: callback1)
+      |> State.add_hook(:on_client_ready, callback2)
 
-    assert :ok = Hooks.invoke_on_client_ready(hooks)
+    assert :ok = State.invoke_hook(state, :on_client_ready, [])
 
     assert_received :callback1_called
     assert_received :callback2_called
@@ -48,11 +48,11 @@ defmodule ConfigCat.HooksTest do
     fail_callback = fn -> raise "Callback failed" end
     good_callback = fn -> send(self(), :good_callback_called) end
 
-    hooks =
-      Hooks.new(on_client_ready: fail_callback)
-      |> Hooks.add_on_client_ready(good_callback)
+    state =
+      State.new(on_client_ready: fail_callback)
+      |> State.add_hook(:on_client_ready, good_callback)
 
-    assert :ok = Hooks.invoke_on_client_ready(hooks)
+    assert :ok = State.invoke_hook(state, :on_client_ready, [])
 
     assert_received :good_callback_called
   end
@@ -63,9 +63,9 @@ defmodule ConfigCat.HooksTest do
     fail_callback = fn -> raise message end
     on_error_callback = fn msg -> send(self(), {:on_error_called, msg}) end
 
-    hooks = Hooks.new(on_client_ready: fail_callback, on_error: on_error_callback)
+    state = State.new(on_client_ready: fail_callback, on_error: on_error_callback)
 
-    assert :ok = Hooks.invoke_on_client_ready(hooks)
+    assert :ok = State.invoke_hook(state, :on_client_ready, [])
 
     assert_received {:on_error_called, received}
     assert received =~ message
@@ -76,18 +76,18 @@ defmodule ConfigCat.HooksTest do
   test "does not call on_error hook recursively" do
     fail_callback = fn _msg -> raise "Callback failed" end
 
-    hooks = Hooks.new(on_error: fail_callback)
+    state = State.new(on_error: fail_callback)
 
-    assert :ok = Hooks.invoke_on_error(hooks, "Some error")
+    assert :ok = State.invoke_hook(state, :on_error, ["Some error"])
 
     # If this test finishes without timing out, we successfully avoided an
     # infinite recursion of calling the failed on_error callback.
   end
 
   test "allows module/function/arity as a hook" do
-    hooks = Hooks.new(on_client_ready: {__MODULE__, :on_client_ready, 0})
+    state = State.new(on_client_ready: {__MODULE__, :on_client_ready, 0})
 
-    assert :ok = Hooks.invoke_on_client_ready(hooks)
+    assert :ok = State.invoke_hook(state, :on_client_ready, [])
 
     assert_received :on_client_ready_mfa_called
   end
@@ -95,9 +95,9 @@ defmodule ConfigCat.HooksTest do
   @tag capture_log: true
   test "fails if module/function/arity hook has wrong arity" do
     on_error = fn message -> send(self(), {:on_error, message}) end
-    hooks = Hooks.new(on_config_changed: {__MODULE__, :on_client_ready, 0}, on_error: on_error)
+    state = State.new(on_config_changed: {__MODULE__, :on_client_ready, 0}, on_error: on_error)
 
-    assert :ok = Hooks.invoke_on_config_changed(hooks, %{})
+    assert :ok = State.invoke_hook(state, :on_config_changed, [%{}])
 
     assert_received {:on_error, message}
     assert message =~ "has incorrect arity"

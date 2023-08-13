@@ -7,6 +7,7 @@ defmodule ConfigCat.Supervisor do
   alias ConfigCat.CacheControlConfigFetcher
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
+  alias ConfigCat.Hooks
   alias ConfigCat.InMemoryCache
   alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
@@ -53,6 +54,7 @@ defmodule ConfigCat.Supervisor do
 
     children =
       [
+        hooks(options),
         cache(options),
         config_fetcher(options, override_behaviour),
         cache_policy(options, override_behaviour),
@@ -61,6 +63,11 @@ defmodule ConfigCat.Supervisor do
       |> Enum.reject(&is_nil/1)
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp hooks(options) do
+    hooks_options = Keyword.take(options, [:hooks, :instance_id])
+    {Hooks, hooks_options}
   end
 
   defp cache(options) do

@@ -25,12 +25,11 @@ defmodule ConfigCat.Hooks do
   - on_error(error: String.t()): This event is sent when an error occurs within the
     ConfigCat SDK.
   """
-  use TypedStruct
+  use GenServer
 
   alias ConfigCat.Config
   alias ConfigCat.EvaluationDetails
-
-  require Logger
+  alias ConfigCat.Hooks.State
 
   @type on_client_ready_callback :: (() -> term()) | mfa()
   @type on_config_changed_callback :: (Config.t() -> term()) | mfa()
@@ -41,109 +40,109 @@ defmodule ConfigCat.Hooks do
           | {:on_config_changed, on_config_changed_callback()}
           | {:on_error, on_error_callback()}
           | {:on_flag_evaluated, on_flag_evaluated_callback()}
+  @type start_option :: {:hooks, t()} | {:instance_id, ConfigCat.instance_id()}
+  @opaque t :: ConfigCat.instance_id()
 
-  typedstruct opaque: true do
-    field :on_client_ready, [on_client_ready_callback()], default: []
-    field :on_config_changed, [on_config_changed_callback()], default: []
-    field :on_error, [on_error_callback()], default: []
-    field :on_flag_evaluated, [on_flag_evaluated_callback()], default: []
-  end
+  @doc false
+  @spec start_link([start_option()]) :: GenServer.on_start()
+  def start_link(options) do
+    instance_id = Keyword.fetch!(options, :instance_id)
+    hooks = Keyword.get(options, :hooks, [])
 
-  @doc """
-  Create a new `ConfigCat.Hooks` struct with the given callbacks.
-  """
-  @spec new([option]) :: t()
-  def new(options \\ []) do
-    hooks = Enum.map(options, fn {key, value} -> {key, List.wrap(value)} end)
-    struct!(__MODULE__, hooks)
+    GenServer.start_link(__MODULE__, State.new(hooks), name: via_tuple(instance_id))
   end
 
   @doc """
   Add an `on_client_ready` callback.
   """
-  @spec add_on_client_ready(t(), on_client_ready_callback()) :: t()
-  def add_on_client_ready(%__MODULE__{} = hooks, callback) do
-    Map.update!(hooks, :on_client_ready, &[callback | &1])
+  @spec add_on_client_ready(t(), on_client_ready_callback()) :: :ok
+  def add_on_client_ready(instance_id, callback) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:add_hook, :on_client_ready, callback})
   end
 
   @doc """
   Add an `on_config_changed` callback.
   """
-  @spec add_on_config_changed(t(), on_config_changed_callback()) :: t()
-  def add_on_config_changed(%__MODULE__{} = hooks, callback) do
-    Map.update!(hooks, :on_config_changed, &[callback | &1])
+  @spec add_on_config_changed(t(), on_config_changed_callback()) :: :ok
+  def add_on_config_changed(instance_id, callback) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:add_hook, :on_config_changed, callback})
   end
 
   @doc """
   Add an `on_error` callback.
   """
-  @spec add_on_error(t(), on_error_callback()) :: t()
-  def add_on_error(%__MODULE__{} = hooks, callback) do
-    Map.update!(hooks, :on_error, &[callback | &1])
+  @spec add_on_error(t(), on_error_callback()) :: :ok
+  def add_on_error(instance_id, callback) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:add_hook, :on_error, callback})
   end
 
   @doc """
   Add an `on_flag_evaluated` callback.
   """
-  @spec add_on_flag_evaluated(t(), on_flag_evaluated_callback()) :: t()
-  def add_on_flag_evaluated(%__MODULE__{} = hooks, callback) do
-    Map.update!(hooks, :on_flag_evaluated, &[callback | &1])
+  @spec add_on_flag_evaluated(t(), on_flag_evaluated_callback()) :: :ok
+  def add_on_flag_evaluated(instance_id, callback) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:add_hook, :on_flag_evaluated, callback})
   end
 
   @doc false
   @spec invoke_on_client_ready(t()) :: :ok
-  def invoke_on_client_ready(%__MODULE__{} = hooks) do
-    invoke_callbacks(hooks, :on_client_ready, [])
+  def invoke_on_client_ready(instance_id) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:invoke_hook, :on_client_ready, []})
   end
 
   @doc false
   @spec invoke_on_config_changed(t(), Config.t()) :: :ok
-  def invoke_on_config_changed(%__MODULE__{} = hooks, config) do
-    invoke_callbacks(hooks, :on_config_changed, [config])
+  def invoke_on_config_changed(instance_id, config) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:invoke_hook, :on_config_changed, [config]})
   end
 
   @doc false
   @spec invoke_on_error(t(), String.t()) :: :ok
-  def invoke_on_error(%__MODULE__{} = hooks, message) do
-    invoke_callbacks(hooks, :on_error, [message])
+  def invoke_on_error(instance_id, message) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:invoke_hook, :on_error, [message]})
   end
 
   @doc false
   @spec invoke_on_flag_evaluated(t(), EvaluationDetails.t()) :: :ok
-  def invoke_on_flag_evaluated(%__MODULE__{} = hooks, %EvaluationDetails{} = details) do
-    invoke_callbacks(hooks, :on_flag_evaluated, [details])
+  def invoke_on_flag_evaluated(instance_id, %EvaluationDetails{} = details) do
+    instance_id
+    |> via_tuple()
+    |> GenServer.call({:invoke_hook, :on_flag_evaluated, [details]})
   end
 
-  defp invoke_callbacks(hooks, name, args) do
-    hooks
-    |> Map.fetch!(name)
-    |> Enum.each(fn callback ->
-      try do
-        invoke_callback(callback, args)
-      rescue
-        e ->
-          error = "Exception occurred during invoke_#{name} callback: #{inspect(e)}"
-
-          unless name == :on_error do
-            Logger.error(error)
-            invoke_on_error(hooks, error)
-          end
-      end
-    end)
-
-    :ok
+  defp via_tuple(instance_id) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
   end
 
-  defp invoke_callback(callback, args) when is_function(callback) do
-    apply(callback, args)
+  @impl GenServer
+  def init(%State{} = state) do
+    {:ok, state}
   end
 
-  defp invoke_callback({module, function, arity}, args) when length(args) == arity do
-    apply(module, function, args)
+  @impl GenServer
+  def handle_call({:add_hook, hook, callback}, _from, %State{} = state) do
+    new_state = State.add_hook(state, hook, callback)
+    {:reply, :ok, new_state}
   end
 
-  defp invoke_callback({module, function, arity}, args) do
-    raise ArgumentError,
-          "Callback #{module}.#{function}/#{arity} has incorrect arity. Expected #{length(args)} but was #{arity}."
+  @impl GenServer
+  def handle_call({:invoke_hook, hook, args}, _from, %State{} = state) do
+    result = State.invoke_hook(state, hook, args)
+
+    {:reply, result, state}
   end
 end
