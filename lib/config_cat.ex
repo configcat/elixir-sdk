@@ -519,9 +519,7 @@ defmodule ConfigCat do
   """
   @spec hooks([api_option()]) :: Hooks.t()
   def hooks(options \\ []) do
-    options
-    |> client()
-    |> GenServer.call(:hooks, Constants.fetch_timeout())
+    Keyword.get(options, :client, __MODULE__)
   end
 
   defp client(options) do

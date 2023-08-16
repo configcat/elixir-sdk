@@ -78,41 +78,49 @@ defmodule ConfigCat.Hooks do
   @doc """
   Add an `on_client_ready` callback.
   """
-  @spec add_on_client_ready(t(), on_client_ready_callback()) :: :ok
+  @spec add_on_client_ready(t(), on_client_ready_callback()) :: t()
   def add_on_client_ready(instance_id, callback) do
     instance_id
     |> via_tuple()
     |> GenServer.call({:add_hook, :on_client_ready, callback})
+
+    instance_id
   end
 
   @doc """
   Add an `on_config_changed` callback.
   """
-  @spec add_on_config_changed(t(), on_config_changed_callback()) :: :ok
+  @spec add_on_config_changed(t(), on_config_changed_callback()) :: t()
   def add_on_config_changed(instance_id, callback) do
     instance_id
     |> via_tuple()
     |> GenServer.call({:add_hook, :on_config_changed, callback})
+
+    instance_id
   end
 
   @doc """
   Add an `on_error` callback.
   """
-  @spec add_on_error(t(), on_error_callback()) :: :ok
+  @spec add_on_error(t(), on_error_callback()) :: t()
   def add_on_error(instance_id, callback) do
     instance_id
     |> via_tuple()
     |> GenServer.call({:add_hook, :on_error, callback})
+
+    instance_id
   end
 
   @doc """
   Add an `on_flag_evaluated` callback.
   """
-  @spec add_on_flag_evaluated(t(), on_flag_evaluated_callback()) :: :ok
+  @spec add_on_flag_evaluated(t(), on_flag_evaluated_callback()) :: t()
   def add_on_flag_evaluated(instance_id, callback) do
     instance_id
     |> via_tuple()
     |> GenServer.call({:add_hook, :on_flag_evaluated, callback})
+
+    instance_id
   end
 
   @doc false

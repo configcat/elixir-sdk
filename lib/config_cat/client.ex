@@ -162,11 +162,6 @@ defmodule ConfigCat.Client do
     {:reply, result, state}
   end
 
-  @impl GenServer
-  def handle_call(:hooks, _from, %State{} = state) do
-    {:reply, state.instance_id, state}
-  end
-
   defp do_get_value(key, default_value, user, %State{} = state) do
     %EvaluationDetails{value: value} = evaluate(key, user, default_value, nil, state)
     value

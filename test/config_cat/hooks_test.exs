@@ -86,10 +86,12 @@ defmodule ConfigCat.HooksTest do
 
     {:ok, instance_id} = start_hooks()
 
-    :ok = Hooks.add_on_client_ready(instance_id, {TestHooks, :on_client_ready, [test_pid]})
-    :ok = Hooks.add_on_config_changed(instance_id, {TestHooks, :on_config_changed, [test_pid]})
-    :ok = Hooks.add_on_flag_evaluated(instance_id, {TestHooks, :on_flag_evaluated, [test_pid]})
-    :ok = Hooks.add_on_error(instance_id, {TestHooks, :on_error, [test_pid]})
+    _hooks =
+      ConfigCat.hooks(client: instance_id)
+      |> Hooks.add_on_client_ready({TestHooks, :on_client_ready, [test_pid]})
+      |> Hooks.add_on_config_changed({TestHooks, :on_config_changed, [test_pid]})
+      |> Hooks.add_on_flag_evaluated({TestHooks, :on_flag_evaluated, [test_pid]})
+      |> Hooks.add_on_error({TestHooks, :on_error, [test_pid]})
 
     :ok = start_client(instance_id: instance_id)
 
