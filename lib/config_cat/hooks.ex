@@ -119,32 +119,38 @@ defmodule ConfigCat.Hooks do
   @spec invoke_on_client_ready(t()) :: :ok
   def invoke_on_client_ready(instance_id) do
     instance_id
-    |> via_tuple()
-    |> GenServer.call({:invoke_hook, :on_client_ready, []})
+    |> hooks()
+    |> State.invoke_hook(:on_client_ready, [])
   end
 
   @doc false
   @spec invoke_on_config_changed(t(), Config.t()) :: :ok
   def invoke_on_config_changed(instance_id, config) do
     instance_id
-    |> via_tuple()
-    |> GenServer.call({:invoke_hook, :on_config_changed, [config]})
+    |> hooks()
+    |> State.invoke_hook(:on_config_changed, [config])
   end
 
   @doc false
   @spec invoke_on_error(t(), String.t()) :: :ok
   def invoke_on_error(instance_id, message) do
     instance_id
-    |> via_tuple()
-    |> GenServer.call({:invoke_hook, :on_error, [message]})
+    |> hooks()
+    |> State.invoke_hook(:on_error, [message])
   end
 
   @doc false
   @spec invoke_on_flag_evaluated(t(), EvaluationDetails.t()) :: :ok
   def invoke_on_flag_evaluated(instance_id, %EvaluationDetails{} = details) do
     instance_id
+    |> hooks()
+    |> State.invoke_hook(:on_flag_evaluated, [details])
+  end
+
+  defp hooks(instance_id) do
+    instance_id
     |> via_tuple()
-    |> GenServer.call({:invoke_hook, :on_flag_evaluated, [details]})
+    |> GenServer.call(:hooks)
   end
 
   defp via_tuple(instance_id) do
@@ -163,9 +169,7 @@ defmodule ConfigCat.Hooks do
   end
 
   @impl GenServer
-  def handle_call({:invoke_hook, hook, args}, _from, %State{} = state) do
-    result = State.invoke_hook(state, hook, args)
-
-    {:reply, result, state}
+  def handle_call(:hooks, _from, %State{} = state) do
+    {:reply, state, state}
   end
 end
