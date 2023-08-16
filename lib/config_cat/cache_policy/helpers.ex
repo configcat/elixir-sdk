@@ -7,6 +7,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
 
   defmodule State do
     @moduledoc false
@@ -51,6 +52,11 @@ defmodule ConfigCat.CachePolicy.Helpers do
     instance_id = Keyword.fetch!(options, :instance_id)
 
     GenServer.start_link(module, State.new(options), name: CachePolicy.via_tuple(instance_id))
+  end
+
+  @spec on_client_ready(State.t()) :: :ok
+  def on_client_ready(%State{} = state) do
+    Hooks.invoke_on_client_ready(state.instance_id)
   end
 
   @spec cached_settings(State.t()) ::

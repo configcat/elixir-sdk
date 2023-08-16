@@ -109,8 +109,10 @@ defmodule ConfigCat.CachePolicy.Auto do
 
     if delay_ms == 0 do
       refresh(state)
+      Helpers.on_client_ready(state)
       schedule_next_refresh(state)
     else
+      Helpers.on_client_ready(state)
       Process.send_after(self(), :polled_refresh, delay_ms)
     end
   end
