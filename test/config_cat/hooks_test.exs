@@ -6,8 +6,12 @@ defmodule ConfigCat.HooksTest do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks
   alias ConfigCat.NullDataSource
+  alias ConfigCat.User
+
+  require ConfigCat.Constants, as: Constants
 
   @moduletag capture_log: true
 
@@ -79,6 +83,8 @@ defmodule ConfigCat.HooksTest do
 
     assert value == "testValue"
     assert_received :on_client_ready
+    assert_received {:on_flag_evaluated, _details}
+    refute_received _any_other_messages
   end
 
   test "calls subscribed hooks" do
@@ -99,6 +105,40 @@ defmodule ConfigCat.HooksTest do
 
     assert value == "testValue"
     assert_received :on_client_ready
+    assert_received {:on_flag_evaluated, _details}
+    refute_received _any_other_messages
+  end
+
+  test "provides details on on_flag_evaluated hook" do
+    test_pid = self()
+
+    {:ok, instance_id} =
+      start_hooks(on_flag_evaluated: {TestHooks, :on_flag_evaluated, [test_pid]})
+
+    :ok = start_client(instance_id: instance_id)
+
+    user = User.new("test@test1.com")
+    value = ConfigCat.get_value("testStringKey", "", user, client: instance_id)
+
+    assert value == "fake1"
+
+    assert_received {:on_flag_evaluated, details}
+
+    assert %EvaluationDetails{
+             default_value?: false,
+             error: nil,
+             key: "testStringKey",
+             matched_evaluation_rule: %{
+               Constants.comparator() => 2,
+               Constants.comparison_attribute() => "Identifier",
+               Constants.comparison_value() => "@test1.com",
+               Constants.value() => "fake1"
+             },
+             matched_evaluation_percentage_rule: nil,
+             user: ^user,
+             value: "fake1",
+             variation_id: "id1"
+           } = details
   end
 
   defp start_hooks(config \\ []) do

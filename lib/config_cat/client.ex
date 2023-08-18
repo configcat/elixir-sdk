@@ -6,6 +6,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.CachePolicy
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
@@ -202,31 +203,35 @@ defmodule ConfigCat.Client do
   defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
     user = if user != nil, do: user, else: state.default_user
 
-    case cached_settings(state) do
-      {:ok, settings, fetch_time_ms} ->
-        %EvaluationDetails{} =
-          details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
+    details =
+      case cached_settings(state) do
+        {:ok, settings, fetch_time_ms} ->
+          %EvaluationDetails{} =
+            details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
 
-        fetch_time =
-          case FetchTime.to_datetime(fetch_time_ms) do
-            {:ok, %DateTime{} = dt} -> dt
-            _ -> nil
-          end
+          fetch_time =
+            case FetchTime.to_datetime(fetch_time_ms) do
+              {:ok, %DateTime{} = dt} -> dt
+              _ -> nil
+            end
 
-        %{details | fetch_time: fetch_time}
+          %{details | fetch_time: fetch_time}
 
-      _ ->
-        message =
-          "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
+        _ ->
+          message =
+            "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
 
-        EvaluationDetails.new(
-          default_value?: true,
-          error: message,
-          key: key,
-          value: default_value,
-          variation_id: default_variation_id
-        )
-    end
+          EvaluationDetails.new(
+            default_value?: true,
+            error: message,
+            key: key,
+            value: default_value,
+            variation_id: default_variation_id
+          )
+      end
+
+    Hooks.invoke_on_flag_evaluated(state.instance_id, details)
+    details
   end
 
   defp cached_settings(%State{} = state) do

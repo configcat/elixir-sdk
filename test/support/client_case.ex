@@ -5,6 +5,7 @@ defmodule ConfigCat.ClientCase do
 
   alias ConfigCat.Client
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
   alias ConfigCat.MockCachePolicy
   alias ConfigCat.NullDataSource
 
@@ -17,6 +18,8 @@ defmodule ConfigCat.ClientCase do
   @spec start_client([Client.option()]) :: {:ok, GenServer.server()}
   def start_client(opts \\ []) do
     instance_id = UUID.uuid4() |> String.to_atom()
+
+    start_supervised!({Hooks, instance_id: instance_id})
 
     options =
       [
