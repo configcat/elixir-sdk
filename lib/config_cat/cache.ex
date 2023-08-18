@@ -7,16 +7,17 @@ defmodule ConfigCat.Cache do
   alias ConfigCat.ConfigEntry
 
   require ConfigCat.Constants, as: Constants
-  require Logger
+  require ConfigCat.ErrorReporter, as: ErrorReporter
 
   defmodule State do
     @moduledoc false
     use TypedStruct
 
-    typedstruct do
-      field :cache, module(), enforce: true
-      field :cache_key, ConfigCache.key(), enforce: true
-      field :latest_entry, ConfigEntry.t()
+    typedstruct enforce: true do
+      field :cache, module()
+      field :cache_key, ConfigCache.key()
+      field :instance_id, ConfigCat.instance_id()
+      field :latest_entry, ConfigEntry.t(), enforce: false
     end
 
     @spec new(Keyword.t()) :: t()
@@ -37,7 +38,7 @@ defmodule ConfigCat.Cache do
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(options) do
-    {instance_id, options} = Keyword.pop!(options, :instance_id)
+    instance_id = Keyword.fetch!(options, :instance_id)
 
     GenServer.start_link(__MODULE__, State.new(options), name: via_tuple(instance_id))
   end
@@ -77,7 +78,7 @@ defmodule ConfigCat.Cache do
   @impl GenServer
   def handle_call(:get, _from, %State{latest_entry: nil} = state) do
     with {:ok, serialized} <- state.cache.get(state.cache_key),
-         {:ok, entry} <- deserialize(serialized) do
+         {:ok, entry} <- deserialize(serialized, state) do
       {:reply, {:ok, entry}, State.with_entry(state, entry)}
     else
       error ->
@@ -95,13 +96,14 @@ defmodule ConfigCat.Cache do
     {:reply, result, State.with_entry(state, entry)}
   end
 
-  defp deserialize(str) do
+  defp deserialize(str, %State{} = state) do
     case ConfigEntry.deserialize(str) do
       {:ok, entry} ->
         {:ok, entry}
 
-      {:error, message} ->
-        Logger.error("Error occurred while reading the cache. #{message}")
+      {:error, reason} ->
+        message = "Error occurred while reading the cache. #{reason}"
+        ErrorReporter.call(message, instance_id: state.instance_id)
         {:error, :not_found}
     end
   end

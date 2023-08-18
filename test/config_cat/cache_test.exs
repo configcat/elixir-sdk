@@ -5,6 +5,7 @@ defmodule ConfigCat.CacheTest do
 
   alias ConfigCat.Cache
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.Hooks
   alias ConfigCat.MockConfigCache
 
   @entry ConfigEntry.new(%{"some" => "config"}, "ETAG")
@@ -21,6 +22,10 @@ defmodule ConfigCat.CacheTest do
     setup do
       cache_key = UUID.uuid4()
       instance_id = UUID.uuid4()
+      test_pid = self()
+      on_error = fn message -> send(test_pid, {:on_error, message}) end
+
+      start_supervised!({Hooks, hooks: [on_error: on_error], instance_id: instance_id})
 
       cache =
         start_supervised!(
@@ -38,6 +43,8 @@ defmodule ConfigCat.CacheTest do
     } do
       MockConfigCache
       |> expect(:get, fn ^cache_key -> {:ok, @serialized} end)
+
+      refute_received {:on_error, _message}
 
       assert {:ok, @entry} = Cache.get(instance_id)
     end
@@ -75,6 +82,19 @@ defmodule ConfigCat.CacheTest do
       :ok = Cache.set(instance_id, @entry)
 
       assert {:ok, @entry} = Cache.get(instance_id)
+    end
+
+    @tag capture_log: true
+    test "calls on_error hook when cache format is invalid", %{
+      instance_id: instance_id
+    } do
+      MockConfigCache
+      |> stub(:get, fn _cache_key -> {:ok, ""} end)
+
+      {:error, :not_found} = Cache.get(instance_id)
+
+      assert_received {:on_error, message}
+      assert message =~ ~r/Error occurred while reading the cache. .*fewer.*/
     end
   end
 end

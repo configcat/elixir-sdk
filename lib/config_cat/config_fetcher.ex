@@ -22,6 +22,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
+  require ConfigCat.ErrorReporter, as: ErrorReporter
   require ConfigCat.RedirectMode, as: RedirectMode
   require Logger
 
@@ -36,6 +37,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       field :custom_endpoint?, boolean()
       field :data_governance, ConfigCat.data_governance(), default: :global
       field :http_proxy, String.t(), enforce: false
+      field :instance_id, ConfigCat.instance_id()
       field :mode, String.t()
       field :read_timeout_milliseconds, non_neg_integer, default: 5_000
       field :redirects, map(), default: %{}
@@ -79,7 +81,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
-    {instance_id, options} = Keyword.pop!(options, :instance_id)
+    instance_id = Keyword.fetch!(options, :instance_id)
 
     GenServer.start_link(__MODULE__, State.new(options), name: via_tuple(instance_id))
   end
@@ -243,13 +245,19 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp log_error(error, %State{} = state) do
-    Logger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
-    Logger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
+    ErrorReporter.call("Double-check your SDK Key at https://app.configcat.com/sdkkey.",
+      instance_id: state.instance_id
+    )
+
+    ErrorReporter.call("Failed to fetch configuration from ConfigCat: #{inspect(error)}",
+      instance_id: state.instance_id
+    )
 
     case error do
       {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
-        Logger.error(
-          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
+        ErrorReporter.call(
+          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
+          instance_id: state.instance_id
         )
 
       _error ->

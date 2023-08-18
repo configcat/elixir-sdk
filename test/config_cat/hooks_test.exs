@@ -2,12 +2,14 @@ defmodule ConfigCat.HooksTest do
   use ConfigCat.CachePolicyCase, async: true
 
   import Jason.Sigil
+  import Mox
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks
+  alias ConfigCat.MockFetcher
   alias ConfigCat.NullDataSource
   alias ConfigCat.User
 
@@ -84,6 +86,7 @@ defmodule ConfigCat.HooksTest do
     assert value == "testValue"
     assert_received :on_client_ready
     assert_received {:on_flag_evaluated, _details}
+    refute_received {:on_error, _error}
     refute_received _any_other_messages
   end
 
@@ -106,16 +109,22 @@ defmodule ConfigCat.HooksTest do
     assert value == "testValue"
     assert_received :on_client_ready
     assert_received {:on_flag_evaluated, _details}
+    refute_received {:on_error, _error}
     refute_received _any_other_messages
   end
 
   test "provides details on on_flag_evaluated hook" do
+    MockFetcher
+    |> stub(:fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
+
     test_pid = self()
 
     {:ok, instance_id} =
       start_hooks(on_flag_evaluated: {TestHooks, :on_flag_evaluated, [test_pid]})
 
     :ok = start_client(instance_id: instance_id)
+
+    ConfigCat.force_refresh(client: instance_id)
 
     user = User.new("test@test1.com")
     value = ConfigCat.get_value("testStringKey", "", user, client: instance_id)
@@ -139,6 +148,29 @@ defmodule ConfigCat.HooksTest do
              value: "fake1",
              variation_id: "id1"
            } = details
+  end
+
+  test "doesn't fail when callbacks raise errors" do
+    MockFetcher
+    |> stub(:fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
+
+    callback0 = fn -> raise "Error raised in callback" end
+    callback1 = fn _ignored -> raise "Error raised in callback" end
+
+    {:ok, instance_id} =
+      start_hooks(
+        on_client_ready: callback0,
+        on_config_changed: callback1,
+        on_flag_evaluated: callback1,
+        on_error: callback1
+      )
+
+    :ok = start_client(instance_id: instance_id)
+
+    ConfigCat.force_refresh(client: instance_id)
+
+    assert "testValue" == ConfigCat.get_value("testStringKey", "", client: instance_id)
+    assert "default" == ConfigCat.get_value("", "default", client: instance_id)
   end
 
   defp start_hooks(config \\ []) do
