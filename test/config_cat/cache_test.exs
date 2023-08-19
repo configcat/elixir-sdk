@@ -4,11 +4,13 @@ defmodule ConfigCat.CacheTest do
   import Mox
 
   alias ConfigCat.Cache
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
   alias ConfigCat.Hooks
   alias ConfigCat.MockConfigCache
 
-  @entry ConfigEntry.new(%{"some" => "config"}, "ETAG")
+  @config Config.new_with_settings(%{})
+  @entry ConfigEntry.new(@config, "ETAG")
   @serialized ConfigEntry.serialize(@entry)
 
   describe "generating a cache key" do

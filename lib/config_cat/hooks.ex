@@ -54,10 +54,10 @@ defmodule ConfigCat.Hooks do
   end
   """
   @type named_callback :: {module(), atom(), list()}
-  @type on_client_ready_callback :: (() -> term()) | named_callback()
-  @type on_config_changed_callback :: (Config.t() -> term()) | named_callback()
-  @type on_error_callback :: (String.t() -> term()) | named_callback()
-  @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> term()) | named_callback()
+  @type on_client_ready_callback :: (() -> any()) | named_callback()
+  @type on_config_changed_callback :: (Config.settings() -> any()) | named_callback()
+  @type on_error_callback :: (String.t() -> any()) | named_callback()
+  @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> any()) | named_callback()
   @type option ::
           {:on_client_ready, on_client_ready_callback()}
           | {:on_config_changed, on_config_changed_callback()}
@@ -132,11 +132,11 @@ defmodule ConfigCat.Hooks do
   end
 
   @doc false
-  @spec invoke_on_config_changed(t(), Config.t()) :: :ok
-  def invoke_on_config_changed(instance_id, config) do
+  @spec invoke_on_config_changed(t(), Config.settings()) :: :ok
+  def invoke_on_config_changed(instance_id, settings) do
     instance_id
     |> hooks()
-    |> State.invoke_hook(:on_config_changed, [config])
+    |> State.invoke_hook(:on_config_changed, [settings])
   end
 
   @doc false

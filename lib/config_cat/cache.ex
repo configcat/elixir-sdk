@@ -3,8 +3,10 @@ defmodule ConfigCat.Cache do
 
   use GenServer
 
+  alias ConfigCat.Config
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.Hooks
 
   require ConfigCat.Constants, as: Constants
   require ConfigCat.ErrorReporter, as: ErrorReporter
@@ -78,7 +80,9 @@ defmodule ConfigCat.Cache do
   @impl GenServer
   def handle_call(:get, _from, %State{latest_entry: nil} = state) do
     with {:ok, serialized} <- state.cache.get(state.cache_key),
-         {:ok, entry} <- deserialize(serialized, state) do
+         {:ok, entry} <- deserialize(serialized, state),
+         {:ok, settings} <- Config.fetch_settings(entry.config) do
+      Hooks.invoke_on_config_changed(state.instance_id, settings)
       {:reply, {:ok, entry}, State.with_entry(state, entry)}
     else
       error ->

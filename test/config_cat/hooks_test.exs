@@ -6,6 +6,7 @@ defmodule ConfigCat.HooksTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks
@@ -83,9 +84,13 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
+    {:ok, settings} = Config.fetch_settings(@config)
+
     assert value == "testValue"
     assert_received :on_client_ready
+    assert_received {:on_config_changed, ^settings}
     assert_received {:on_flag_evaluated, _details}
+
     refute_received {:on_error, _error}
     refute_received _any_other_messages
   end
@@ -106,8 +111,11 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
+    {:ok, settings} = Config.fetch_settings(@config)
+
     assert value == "testValue"
     assert_received :on_client_ready
+    assert_received {:on_config_changed, ^settings}
     assert_received {:on_flag_evaluated, _details}
     refute_received {:on_error, _error}
     refute_received _any_other_messages

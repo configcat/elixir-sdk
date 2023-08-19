@@ -55,7 +55,8 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, cache_key} = start_cache(instance_id)
 
     if entry = options[:initial_entry] do
-      Cache.set(instance_id, entry)
+      # Bypass Cache to force it to refresh itself on first call.
+      InMemoryCache.set(cache_key, ConfigEntry.serialize(entry))
     end
 
     {:ok, pid} =

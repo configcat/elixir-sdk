@@ -17,7 +17,6 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   typedstruct enforce: true do
     field :mode, String.t(), default: "a"
-    field :on_changed, on_changed_callback(), enforce: false
     field :poll_interval_ms, pos_integer(), default: @default_poll_interval_seconds * 1000
   end
 
@@ -128,31 +127,7 @@ defmodule ConfigCat.CachePolicy.Auto do
       Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       :ok
     else
-      with original <- Helpers.cached_config(state),
-           :ok <- Helpers.refresh_config(state) do
-        if config_changed?(state, original) do
-          safely_call_callback(state.policy_options.on_changed)
-        end
-
-        :ok
-      end
+      Helpers.refresh_config(state)
     end
-  end
-
-  defp config_changed?(%State{} = state, original) do
-    Helpers.cached_config(state) != original
-  end
-
-  defp safely_call_callback(nil), do: :ok
-
-  defp safely_call_callback(callback) do
-    Task.start(fn ->
-      try do
-        callback.()
-      rescue
-        e ->
-          Logger.error("on_change callback failed: #{inspect(e)}")
-      end
-    end)
   end
 end

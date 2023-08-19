@@ -48,8 +48,7 @@ defmodule ConfigCat.CachePolicy do
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
-          {:on_changed, on_changed_callback()}
-          | {:poll_interval_seconds, pos_integer()}
+          {:poll_interval_seconds, pos_integer()}
         ]
 
   @typedoc "Options for lazy-polling mode."
@@ -85,17 +84,6 @@ defmodule ConfigCat.CachePolicy do
 
   ```elixir
   ConfigCat.CachePolicy.auto(poll_interval_seconds: 60)
-  ```
-
-  If you want your application to be notified whenever a new
-  configuration is available, provide a 0-arity callback function
-  using the `on_change` option.
-
-  The `on_change` callback is called asynchronously (using `Task.start`).
-  Any exceptions raised are caught and logged.
-
-  ```elixir
-  ConfigCat.CachePolicy.auto(on_changed: callback)
   ```
   """
   @spec auto(auto_options()) :: t()
