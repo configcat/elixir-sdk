@@ -10,7 +10,6 @@ defmodule ConfigCat.LocalMapDataSource do
   alias ConfigCat.OverrideDataSource
 
   require ConfigCat.Constants, as: Constants
-  require Logger
 
   typedstruct enforce: true do
     field :override_behaviour, OverrideDataSource.behaviour()

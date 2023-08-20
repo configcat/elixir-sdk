@@ -63,6 +63,7 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 

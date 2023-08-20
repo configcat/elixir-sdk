@@ -74,13 +74,14 @@ defmodule ConfigCat.Cache do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 
   @impl GenServer
   def handle_call(:get, _from, %State{latest_entry: nil} = state) do
     with {:ok, serialized} <- state.cache.get(state.cache_key),
-         {:ok, entry} <- deserialize(serialized, state),
+         {:ok, entry} <- deserialize(serialized),
          {:ok, settings} <- Config.fetch_settings(entry.config) do
       Hooks.invoke_on_config_changed(state.instance_id, settings)
       {:reply, {:ok, entry}, State.with_entry(state, entry)}
@@ -100,14 +101,13 @@ defmodule ConfigCat.Cache do
     {:reply, result, State.with_entry(state, entry)}
   end
 
-  defp deserialize(str, %State{} = state) do
+  defp deserialize(str) do
     case ConfigEntry.deserialize(str) do
       {:ok, entry} ->
         {:ok, entry}
 
       {:error, reason} ->
-        message = "Error occurred while reading the cache. #{reason}"
-        ErrorReporter.call(message, instance_id: state.instance_id)
+        ErrorReporter.call("Error occurred while reading the cache. #{reason}")
         {:error, :not_found}
     end
   end

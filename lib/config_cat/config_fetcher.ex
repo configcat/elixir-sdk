@@ -99,6 +99,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 
@@ -245,19 +246,13 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp log_error(error, %State{} = state) do
-    ErrorReporter.call("Double-check your SDK Key at https://app.configcat.com/sdkkey.",
-      instance_id: state.instance_id
-    )
-
-    ErrorReporter.call("Failed to fetch configuration from ConfigCat: #{inspect(error)}",
-      instance_id: state.instance_id
-    )
+    ErrorReporter.call("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
+    ErrorReporter.call("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
 
     case error do
       {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
         ErrorReporter.call(
-          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
-          instance_id: state.instance_id
+          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
         )
 
       _error ->

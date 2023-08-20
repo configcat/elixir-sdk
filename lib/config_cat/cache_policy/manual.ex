@@ -20,7 +20,8 @@ defmodule ConfigCat.CachePolicy.Manual do
   end
 
   @impl GenServer
-  def init(state) do
+  def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state, {:continue, :on_client_ready}}
   end
 

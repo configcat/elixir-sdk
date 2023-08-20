@@ -7,7 +7,10 @@ defmodule ConfigCat.Application do
 
   @impl Application
   def start(_type, _args) do
-    children = [{Registry, keys: :unique, name: ConfigCat.Registry}, InMemoryCache]
+    children = [
+      {Registry, keys: :unique, name: ConfigCat.Registry},
+      InMemoryCache
+    ]
 
     opts = [strategy: :one_for_one, name: ConfigCat.RegistrySupervisor]
     Supervisor.start_link(children, opts)

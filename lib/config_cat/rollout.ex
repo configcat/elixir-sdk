@@ -6,8 +6,9 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
-  require Logger
   require ConfigCat.Constants, as: Constants
+  require ConfigCat.ErrorReporter, as: ErrorReporter
+  require Logger
 
   @spec evaluate(
           Config.key(),
@@ -50,7 +51,7 @@ defmodule ConfigCat.Rollout do
         evaluate(key, nil, default_value, default_variation_id, settings)
 
       {:error, message} ->
-        Logger.error(message)
+        ErrorReporter.call(message)
 
         EvaluationDetails.new(
           default_value?: true,

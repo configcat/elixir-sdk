@@ -34,6 +34,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state, {:continue, :initial_fetch}}
   end
 
@@ -52,6 +53,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
     unless state.offline do
       Task.start_link(fn ->
+        Logger.metadata(instance_id: state.instance_id)
         refresh(state)
         schedule_next_refresh(state, pid)
       end)
