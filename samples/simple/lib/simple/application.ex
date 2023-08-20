@@ -7,8 +7,8 @@ defmodule Simple.Application do
 
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A"
 
+  @impl Application
   def start(_type, _args) do
-
     # Debug level logging helps to inspect the feature flag evaluation process.
     # Use the :warning level to avoid too detailed logging in your application.
     Logger.configure(level: :debug)

@@ -9,7 +9,7 @@ defmodule ConfigCat.Cache do
   alias ConfigCat.Hooks
 
   require ConfigCat.Constants, as: Constants
-  require ConfigCat.ErrorReporter, as: ErrorReporter
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   defmodule State do
     @moduledoc false
@@ -107,7 +107,7 @@ defmodule ConfigCat.Cache do
         {:ok, entry}
 
       {:error, reason} ->
-        ErrorReporter.call("Error occurred while reading the cache. #{reason}")
+        ConfigCatLogger.error("Error occurred while reading the cache. #{reason}")
         {:error, :not_found}
     end
   end

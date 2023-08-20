@@ -34,7 +34,7 @@ defmodule ConfigCat.Hooks.Impl do
         invoke_callback(callback, args)
       rescue
         e ->
-          # Call Logger instead of ErrorReporter to avoid recursively invoking a
+          # Call Logger instead of ConfigCatLogger to avoid recursively invoking a
           # bad on_error hook.
           message = "Exception occurred during #{hook} callback: #{inspect(e)}"
           Logger.error(message)

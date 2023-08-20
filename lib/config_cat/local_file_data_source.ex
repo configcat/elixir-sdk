@@ -9,7 +9,7 @@ defmodule ConfigCat.LocalFileDataSource do
   alias ConfigCat.Config
   alias ConfigCat.OverrideDataSource
 
-  require ConfigCat.ErrorReporter, as: ErrorReporter
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   defmodule FileCache do
     @moduledoc false
@@ -60,7 +60,7 @@ defmodule ConfigCat.LocalFileDataSource do
   @spec new(String.t(), OverrideDataSource.behaviour()) :: t
   def new(filename, override_behaviour) do
     unless File.exists?(filename) do
-      ErrorReporter.call("The file #{filename} does not exist.")
+      ConfigCatLogger.error("The file #{filename} does not exist.")
     end
 
     {:ok, pid} = FileCache.start_link([])
@@ -103,13 +103,13 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp log_error({:error, %Jason.DecodeError{} = error}, filename) do
-      ErrorReporter.call(
+      ConfigCatLogger.error(
         "Could not decode json from file #{filename}. #{Exception.message(error)}"
       )
     end
 
     defp log_error({:error, error}, filename) do
-      ErrorReporter.call(
+      ConfigCatLogger.error(
         "Could not read the content of the file #{filename}. #{:file.format_error(error)}"
       )
     end

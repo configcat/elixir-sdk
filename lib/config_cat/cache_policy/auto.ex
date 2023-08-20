@@ -11,7 +11,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
 
-  require Logger
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   @default_poll_interval_seconds 60
 
@@ -126,7 +126,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defp refresh(%State{} = state) do
     if state.offline do
-      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
+      ConfigCatLogger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       :ok
     else
       Helpers.refresh_config(state)
