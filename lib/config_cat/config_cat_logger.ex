@@ -17,11 +17,9 @@ defmodule ConfigCat.ConfigCatLogger do
     quote bind_quoted: [message: message, metadata: metadata, module: __MODULE__] do
       require Logger
 
-      instance_id = Logger.metadata() |> Keyword.get(:instance_id)
+      Logger.error(fn -> module.formatted_message(message) end)
 
-      message
-      |> module.format_message(instance_id)
-      |> Logger.error(metadata)
+      instance_id = Logger.metadata() |> Keyword.get(:instance_id)
 
       if instance_id do
         ConfigCat.Hooks.invoke_on_error(instance_id, message)
@@ -35,11 +33,7 @@ defmodule ConfigCat.ConfigCatLogger do
     quote bind_quoted: [message: message, metadata: metadata, module: __MODULE__] do
       require Logger
 
-      instance_id = Logger.metadata() |> Keyword.get(:instance_id)
-
-      message
-      |> module.format_message(instance_id)
-      |> Logger.info(metadata)
+      Logger.info(fn -> module.formatted_message(message) end)
     end
   end
 
@@ -49,16 +43,16 @@ defmodule ConfigCat.ConfigCatLogger do
     quote bind_quoted: [message: message, metadata: metadata, module: __MODULE__] do
       require Logger
 
-      instance_id = Logger.metadata() |> Keyword.get(:instance_id)
-
-      message
-      |> module.format_message(instance_id)
-      |> Logger.warn(metadata)
+      Logger.warn(fn -> module.formatted_message(message) end)
     end
   end
 
   @doc false
-  @spec format_message(String.t(), ConfigCat.instance_id() | nil) :: String.t()
-  def format_message(message, nil), do: message
-  def format_message(message, instance_id), do: "[" <> to_string(instance_id) <> "] " <> message
+  @spec formatted_message(String.t()) :: String.t()
+  def formatted_message(message) do
+    case Logger.metadata() |> Keyword.get(:instance_id) do
+      nil -> message
+      instance_id -> "[" <> to_string(instance_id) <> "] " <> message
+    end
+  end
 end
