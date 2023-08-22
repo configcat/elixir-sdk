@@ -88,14 +88,20 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
   @spec refresh_config(State.t()) :: CachePolicy.refresh_result()
   def refresh_config(%State{} = state) do
-    etag =
+    cached_entry =
       case cached_entry(state) do
-        {:ok, %ConfigEntry{} = entry} -> entry.etag
+        {:ok, %ConfigEntry{} = entry} -> entry
         _ -> nil
       end
 
+    etag = cached_entry && cached_entry.etag
+
     case state.fetcher.fetch(state.instance_id, etag) do
       {:ok, :unchanged} ->
+        if cached_entry do
+          update_cache(state, ConfigEntry.refresh(cached_entry))
+        end
+
         :ok
 
       {:ok, %ConfigEntry{} = entry} ->

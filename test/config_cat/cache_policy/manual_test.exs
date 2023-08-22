@@ -5,6 +5,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Manual
+  alias ConfigCat.FetchTime
 
   @policy CachePolicy.manual()
 
@@ -20,60 +21,69 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
   describe "getting the config" do
     test "returns the config from the cache without refreshing" do
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_not_refreshed()
 
-      assert {:error, :not_found} = CachePolicy.get(policy_id)
+      assert {:error, :not_found} = CachePolicy.get(instance_id)
     end
   end
 
   describe "refreshing the config" do
     test "stores new config in the cache", %{entry: entry, settings: settings} do
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
 
-      assert :ok = CachePolicy.force_refresh(policy_id)
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
+      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
-    test "does not update config when server responds that the config hasn't changed" do
-      {:ok, policy_id} = start_cache_policy(@policy)
+    test "updates fetch time when server responds that the config hasn't changed", %{
+      entry: entry,
+      settings: settings
+    } do
+      entry = Map.update!(entry, :fetch_time_ms, &(&1 - 200))
+      {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
 
       expect_unchanged()
 
-      assert :ok = CachePolicy.force_refresh(policy_id)
+      before = FetchTime.now_ms()
+
+      assert :ok = CachePolicy.force_refresh(instance_id)
+
+      assert {:ok, ^settings, new_fetch_time_ms} = CachePolicy.get(instance_id)
+      assert before <= new_fetch_time_ms && new_fetch_time_ms <= FetchTime.now_ms()
     end
 
     @tag capture_log: true
     test "handles error responses" do
-      {:ok, policy_id} = start_cache_policy(@policy)
+      {:ok, instance_id} = start_cache_policy(@policy)
 
-      assert_returns_error(fn -> CachePolicy.force_refresh(policy_id) end)
+      assert_returns_error(fn -> CachePolicy.force_refresh(instance_id) end)
     end
   end
 
   describe "offline" do
     @tag capture_log: true
     test "does not fetch config when offline mode is set", %{entry: entry} do
-      {:ok, policy_id} = start_cache_policy(@policy)
-      assert CachePolicy.is_offline(policy_id) == false
+      {:ok, instance_id} = start_cache_policy(@policy)
+      assert CachePolicy.is_offline(instance_id) == false
 
       expect_refresh(entry)
-      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
 
-      assert :ok = CachePolicy.set_offline(policy_id)
-      assert CachePolicy.is_offline(policy_id) == true
+      assert :ok = CachePolicy.set_offline(instance_id)
+      assert CachePolicy.is_offline(instance_id) == true
 
       expect_not_refreshed()
-      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
 
-      assert :ok = CachePolicy.set_online(policy_id)
-      assert CachePolicy.is_offline(policy_id) == false
+      assert :ok = CachePolicy.set_online(instance_id)
+      assert CachePolicy.is_offline(instance_id) == false
 
       expect_refresh(entry)
-      assert :ok = CachePolicy.force_refresh(policy_id)
+      assert :ok = CachePolicy.force_refresh(instance_id)
     end
   end
 end
