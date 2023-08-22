@@ -77,7 +77,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
       assert CachePolicy.is_offline(instance_id) == true
 
       expect_not_refreshed()
-      assert :ok = CachePolicy.force_refresh(instance_id)
+      assert {:error, _message} = CachePolicy.force_refresh(instance_id)
 
       assert :ok = CachePolicy.set_online(instance_id)
       assert CachePolicy.is_offline(instance_id) == false

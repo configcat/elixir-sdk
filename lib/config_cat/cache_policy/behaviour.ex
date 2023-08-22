@@ -6,14 +6,12 @@ defmodule ConfigCat.CachePolicy.Behaviour do
   alias ConfigCat.Config
   alias ConfigCat.FetchTime
 
-  @type refresh_result :: CachePolicy.refresh_result()
-
   @callback get(ConfigCat.instance_id()) ::
               {:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}
   @callback is_offline(ConfigCat.instance_id()) :: boolean()
   @callback set_offline(ConfigCat.instance_id()) :: :ok
   @callback set_online(ConfigCat.instance_id()) :: :ok
-  @callback force_refresh(ConfigCat.instance_id()) :: refresh_result()
+  @callback force_refresh(ConfigCat.instance_id()) :: ConfigCat.refresh_result()
 
   defmacro __using__(_opts) do
     quote location: :keep do

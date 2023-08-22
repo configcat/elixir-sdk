@@ -2,11 +2,31 @@ defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
   alias ConfigCat.ConfigEntry
-  alias HTTPoison.Error
   alias HTTPoison.Response
 
-  @type fetch_error :: {:error, Error.t() | Response.t()}
-  @type result :: {:ok, ConfigEntry.t()} | {:ok, :unchanged} | fetch_error()
+  defmodule FetchError do
+    @moduledoc false
+    @enforce_keys [:reason, :transient?]
+    defexception [:reason, :transient?]
+
+    @type option :: {:reason, any()} | {:transient?, boolean()}
+    @type t :: %__MODULE__{
+            reason: any(),
+            transient?: boolean()
+          }
+
+    @impl Exception
+    def exception(options) do
+      struct!(__MODULE__, options)
+    end
+
+    @impl Exception
+    def message(%__MODULE__{} = error) do
+      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error.reason)}"
+    end
+  end
+
+  @type result :: {:ok, ConfigEntry.t()} | {:ok, :unchanged} | {:error, FetchError.t()}
 
   @callback fetch(ConfigCat.instance_id(), String.t()) :: result()
 end
@@ -19,6 +39,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
+  alias ConfigCat.ConfigFetcher.FetchError
   alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
@@ -113,13 +134,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     with api <- state.api,
          {:ok, response} <-
            api.get(url(state), headers(state, etag), http_options(state)) do
-      response
-      |> log_response()
-      |> handle_response(state, etag)
+      handle_response(response, state, etag)
     else
       error ->
-        log_error(error, state)
-        {:reply, error, state}
+        {:reply, {:error, handle_error(error, state)}, state}
     end
   end
 
@@ -168,6 +186,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          etag
        )
        when code >= 200 and code < 300 do
+    ConfigCatLogger.info(
+      "ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}"
+    )
+
     with {:ok, config} <- Jason.decode(raw_config),
          new_etag <- extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
@@ -225,37 +247,50 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:reply, {:ok, :unchanged}, state}
   end
 
+  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag)
+       when status in [403, 404] do
+    ConfigCatLogger.error(
+      "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}"
+    )
+
+    error = FetchError.exception(reason: response, transient?: false)
+
+    {:reply, {:error, error}, state}
+  end
+
   defp handle_response(response, %State{} = state, _etag) do
-    {:reply, {:error, response}, state}
+    ConfigCatLogger.error(
+      "Unexpected HTTP response was received while trying to fetch config JSON: #{inspect(response)}"
+    )
+
+    error = FetchError.exception(reason: response, transient?: true)
+
+    {:reply, {:error, error}, state}
+  end
+
+  defp handle_error(
+         {:error, %HTTPoison.Error{reason: :checkout_timeout} = error},
+         %State{} = state
+       ) do
+    ConfigCatLogger.error(
+      "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
+    )
+
+    FetchError.exception(reason: error, transient?: true)
+  end
+
+  defp handle_error({:error, error}, _state) do
+    ConfigCatLogger.error(
+      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error)}"
+    )
+
+    FetchError.exception(reason: error, transient?: true)
   end
 
   defp extract_etag(headers) do
     case List.keyfind(headers, "ETag", 0) do
       nil -> nil
       {_key, value} -> value
-    end
-  end
-
-  defp log_response(%Response{headers: headers, status_code: status_code} = response) do
-    ConfigCatLogger.info(
-      "ConfigCat configuration json fetch response code: #{status_code} Cached: #{extract_etag(headers)}"
-    )
-
-    response
-  end
-
-  defp log_error(error, %State{} = state) do
-    ConfigCatLogger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
-    ConfigCatLogger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
-
-    case error do
-      {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
-        ConfigCatLogger.error(
-          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
-        )
-
-      _error ->
-        :ok
     end
   end
 

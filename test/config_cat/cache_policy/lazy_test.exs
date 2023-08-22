@@ -52,7 +52,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
-      CachePolicy.force_refresh(instance_id)
+      :ok = CachePolicy.force_refresh(instance_id)
 
       expect_not_refreshed()
       CachePolicy.get(instance_id)
@@ -64,7 +64,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       %{entry: old_entry} = make_old_entry()
 
       expect_refresh(old_entry)
-      CachePolicy.force_refresh(instance_id)
+      :ok = CachePolicy.force_refresh(instance_id)
 
       expect_refresh(entry)
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
@@ -85,10 +85,10 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
-      CachePolicy.force_refresh(instance_id)
+      :ok = CachePolicy.force_refresh(instance_id)
 
       expect_refresh(entry)
-      CachePolicy.force_refresh(instance_id)
+      :ok = CachePolicy.force_refresh(instance_id)
     end
 
     test "updates fetch time when server responds that the config hasn't changed", %{
@@ -129,7 +129,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       assert CachePolicy.is_offline(instance_id) == true
 
       expect_not_refreshed()
-      assert :ok = CachePolicy.force_refresh(instance_id)
+      assert {:error, _message} = CachePolicy.force_refresh(instance_id)
 
       assert :ok = CachePolicy.set_online(instance_id)
       assert CachePolicy.is_offline(instance_id) == false

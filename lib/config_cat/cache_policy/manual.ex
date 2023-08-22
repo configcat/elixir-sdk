@@ -54,8 +54,9 @@ defmodule ConfigCat.CachePolicy.Manual do
   @impl GenServer
   def handle_call(:force_refresh, _from, %State{} = state) do
     if state.offline do
-      ConfigCatLogger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
-      {:reply, :ok, state}
+      message = "Client is in offline mode; it cannot initiate HTTP calls."
+      ConfigCatLogger.warn(message)
+      {:reply, {:error, message}, state}
     else
       case Helpers.refresh_config(state) do
         :ok ->

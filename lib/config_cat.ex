@@ -217,7 +217,7 @@ defmodule ConfigCat do
   @type options :: [option()]
 
   @typedoc "The return value of the `force_refresh/1` function."
-  @type refresh_result :: :ok | {:error, term()}
+  @type refresh_result :: :ok | {:error, String.t()}
 
   @typedoc "The actual value of a configuration setting."
   @type value :: Config.value()
