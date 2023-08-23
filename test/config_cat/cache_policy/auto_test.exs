@@ -17,15 +17,24 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
   describe "creation" do
     test "returns a struct with the expected polling mode and options" do
-      seconds = 123
-      policy = CachePolicy.auto(poll_interval_seconds: seconds)
+      policy = CachePolicy.auto(max_init_wait_time_seconds: 123, poll_interval_seconds: 456)
 
-      assert policy == %Auto{poll_interval_ms: seconds * 1000, mode: "a"}
+      assert policy == %Auto{max_init_wait_time_ms: 123_000, poll_interval_ms: 456_000, mode: "a"}
+    end
+
+    test "provides a default max init wait time interval" do
+      policy = CachePolicy.auto()
+      assert policy.max_init_wait_time_ms == 5_000
     end
 
     test "provides a default poll interval" do
       policy = CachePolicy.auto()
       assert policy.poll_interval_ms == 60_000
+    end
+
+    test "enforces a minimum max init wait time interval" do
+      policy = CachePolicy.auto(max_init_wait_time_seconds: -1)
+      assert policy.max_init_wait_time_ms == 0
     end
 
     test "enforces a minimum poll interval" do

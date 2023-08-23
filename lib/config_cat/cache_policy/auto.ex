@@ -13,9 +13,13 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
+  @default_max_init_wait_time_seconds 5
   @default_poll_interval_seconds 60
 
   typedstruct enforce: true do
+    field :max_init_wait_time_ms, non_neg_integer(),
+      default: @default_max_init_wait_time_seconds * 1000
+
     field :mode, String.t(), default: "a"
     field :poll_interval_ms, pos_integer(), default: @default_poll_interval_seconds * 1000
   end
@@ -25,10 +29,19 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @spec new(options()) :: t()
   def new(options \\ []) do
-    {seconds, options} =
+    {max_init_wait_time_seconds, options} =
+      Keyword.pop(options, :max_init_wait_time_seconds, @default_max_init_wait_time_seconds)
+
+    {poll_interval_seconds, options} =
       Keyword.pop(options, :poll_interval_seconds, @default_poll_interval_seconds)
 
-    options = Keyword.put(options, :poll_interval_ms, max(seconds, 1) * 1000)
+    options =
+      [
+        max_init_wait_time_ms: max(max_init_wait_time_seconds, 0) * 1000,
+        poll_interval_ms: max(poll_interval_seconds, 1) * 1000
+      ]
+      |> Keyword.merge(options)
+
     struct(__MODULE__, options)
   end
 
