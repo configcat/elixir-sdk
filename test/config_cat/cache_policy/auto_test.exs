@@ -74,6 +74,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "doesn't refresh between poll intervals", %{entry: entry} do
       expect_refresh(entry)
       {:ok, instance_id} = start_cache_policy(@policy)
+      ensure_initialized(instance_id)
 
       expect_not_refreshed()
       CachePolicy.get(instance_id)
@@ -86,6 +87,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       policy = CachePolicy.auto(poll_interval_seconds: 1)
       {:ok, instance_id} = start_cache_policy(policy)
+      ensure_initialized(instance_id)
 
       expect_refresh(entry)
       wait_for_poll(policy)
@@ -116,6 +118,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       expect_refresh(entry)
       {:ok, instance_id} = start_cache_policy(@policy)
+      ensure_initialized(instance_id)
 
       expect_unchanged()
 
@@ -131,6 +134,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "handles error responses", %{entry: entry} do
       expect_refresh(entry)
       {:ok, instance_id} = start_cache_policy(@policy)
+      ensure_initialized(instance_id)
 
       assert_returns_error(fn -> CachePolicy.force_refresh(instance_id) end)
     end
@@ -150,9 +154,13 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       policy = CachePolicy.auto(poll_interval_seconds: 1)
 
       expect_refresh(old_entry)
-      {:ok, _} = start_cache_policy(policy, instance_id: instance_id, start_hooks?: false)
 
-      assert_receive {:config_changed, ^old_settings}
+      {:ok, instance_id} =
+        start_cache_policy(policy, instance_id: instance_id, start_hooks?: false)
+
+      ensure_initialized(instance_id)
+
+      assert_received {:config_changed, ^old_settings}
 
       %{instance_id: instance_id, policy: policy}
     end
@@ -216,6 +224,10 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       assert {:ok, new_settings, new_entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
+  end
+
+  defp ensure_initialized(instance_id) do
+    _settings = CachePolicy.get(instance_id)
   end
 
   defp wait_for_poll(policy) do

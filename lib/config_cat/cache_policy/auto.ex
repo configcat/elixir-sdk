@@ -13,6 +13,26 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
+  defmodule LocalState do
+    @moduledoc false
+    use TypedStruct
+
+    typedstruct enforce: true do
+      field :callers, [GenServer.from()], default: []
+      field :initialized?, boolean(), default: false
+    end
+
+    @spec add_caller(t(), GenServer.from()) :: t()
+    def add_caller(%__MODULE__{} = state, caller) do
+      %{state | callers: [caller | state.callers]}
+    end
+
+    @spec be_initialized(t()) :: t()
+    def be_initialized(%__MODULE__{} = state) do
+      %{state | callers: [], initialized?: true}
+    end
+  end
+
   @default_max_init_wait_time_seconds 5
   @default_poll_interval_seconds 60
 
@@ -48,16 +68,37 @@ defmodule ConfigCat.CachePolicy.Auto do
   @impl GenServer
   def init(%State{} = state) do
     Logger.metadata(instance_id: state.instance_id)
-    {:ok, state, {:continue, :initial_fetch}}
+    state = Map.put(state, :policy_state, %LocalState{})
+
+    Process.send_after(self(), :init_timeout, state.policy_options.max_init_wait_time_ms)
+
+    {:ok, state, {:continue, :start_polling}}
+  end
+
+  defguardp initialized?(state) when state.policy_state.initialized?
+
+  @impl GenServer
+  def handle_continue(:start_polling, %State{} = state) do
+    new_state =
+      if state.offline do
+        be_initialized(state)
+      else
+        schedule_initial_refresh(state)
+      end
+
+    {:noreply, new_state}
   end
 
   @impl GenServer
-  def handle_continue(:initial_fetch, %State{} = state) do
-    unless state.offline do
-      initial_refresh(state)
-    end
+  def handle_info(:be_initialized, %State{} = state) do
+    new_state = be_initialized(state)
+    {:noreply, new_state}
+  end
 
-    {:noreply, state}
+  @impl GenServer
+  def handle_info(:init_timeout, %State{} = state) do
+    new_state = be_initialized(state)
+    {:noreply, new_state}
   end
 
   @impl GenServer
@@ -69,10 +110,17 @@ defmodule ConfigCat.CachePolicy.Auto do
         Logger.metadata(instance_id: state.instance_id)
         refresh(state)
         schedule_next_refresh(state, pid)
+        send(pid, :be_initialized)
       end)
     end
 
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call(:get, from, %State{} = state) when not initialized?(state) do
+    new_state = State.update_policy_state(state, &LocalState.add_caller(&1, from))
+    {:noreply, new_state}
   end
 
   @impl GenServer
@@ -92,8 +140,11 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:set_online, _from, %State{} = state) do
-    new_state = State.set_online(state)
-    initial_refresh(new_state)
+    new_state =
+      state
+      |> State.set_online()
+      |> schedule_initial_refresh()
+
     {:reply, :ok, new_state}
   end
 
@@ -114,7 +165,7 @@ defmodule ConfigCat.CachePolicy.Auto do
     end
   end
 
-  defp initial_refresh(%State{} = state) do
+  defp schedule_initial_refresh(%State{} = state) do
     interval_ms = state.policy_options.poll_interval_ms
 
     delay_ms =
@@ -128,16 +179,29 @@ defmodule ConfigCat.CachePolicy.Auto do
       end
 
     if delay_ms == 0 do
-      refresh(state)
-      Helpers.on_client_ready(state)
-      schedule_next_refresh(state)
+      send(self(), :polled_refresh)
+      state
     else
-      Helpers.on_client_ready(state)
       Process.send_after(self(), :polled_refresh, delay_ms)
+      be_initialized(state)
     end
   end
 
-  defp schedule_next_refresh(%State{} = state, pid \\ self()) do
+  defp be_initialized(%State{} = state) when initialized?(state), do: state
+
+  defp be_initialized(%State{} = state) do
+    settings = Helpers.cached_settings(state)
+
+    for caller <- state.policy_state.callers do
+      GenServer.reply(caller, settings)
+    end
+
+    Helpers.on_client_ready(state)
+
+    State.update_policy_state(state, &LocalState.be_initialized/1)
+  end
+
+  defp schedule_next_refresh(%State{} = state, pid) do
     interval_ms = state.policy_options.poll_interval_ms
 
     Process.send_after(pid, :polled_refresh, interval_ms)
