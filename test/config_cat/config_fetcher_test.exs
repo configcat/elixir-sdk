@@ -59,6 +59,32 @@ defmodule ConfigCat.ConfigFetcherTest do
     assert before <= fetch_time_ms && fetch_time_ms <= FetchTime.now_ms()
   end
 
+  test "responds to pending callers with the same fetch results" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
+
+    url = global_config_url()
+
+    MockAPI
+    |> expect(:get, 1, fn ^url, _headers, _options ->
+      Process.sleep(50)
+      {:ok, %Response{status_code: 200, body: @raw_config, headers: [{"ETag", @etag}]}}
+    end)
+
+    results =
+      1..3
+      |> Enum.map(fn _n -> Task.async(fn -> ConfigFetcher.fetch(fetcher, nil) end) end)
+      |> Task.await_many()
+
+    for result <- results do
+      assert {:ok,
+              %ConfigEntry{
+                config: @config,
+                etag: @etag,
+                raw_config: @raw_config
+              }} = result
+    end
+  end
+
   test "user agent header that includes the fetch mode" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
