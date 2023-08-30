@@ -15,8 +15,8 @@ defmodule Multi.Application do
     Logger.configure(level: :debug)
 
     children = [
-      Supervisor.child_spec({ConfigCat, [sdk_key: @sdk_key_1, name: :first]}, id: :config_cat_1),
-      Supervisor.child_spec({ConfigCat, [sdk_key: @sdk_key_2, name: :second]}, id: :config_cat_2),
+      {Multi.First, sdk_key: @sdk_key_1},
+      {Multi.Second, sdk_key: @sdk_key_2},
       Multi
     ]
 
