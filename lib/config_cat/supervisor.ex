@@ -12,12 +12,15 @@ defmodule ConfigCat.Supervisor do
   alias ConfigCat.NullDataSource
   alias ConfigCat.OverrideDataSource
 
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+
   @default_cache InMemoryCache
 
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(options) when is_list(options) do
     sdk_key = options[:sdk_key]
     validate_sdk_key(sdk_key)
+    ensure_unique_sdk_key(sdk_key)
 
     options =
       default_options()
@@ -28,15 +31,31 @@ defmodule ConfigCat.Supervisor do
     {instance_id, options} = Keyword.pop!(options, :name)
     options = Keyword.put(options, :instance_id, instance_id)
 
-    Supervisor.start_link(__MODULE__, options, name: :"#{instance_id}.Supervisor")
+    Supervisor.start_link(__MODULE__, options, name: via_tuple(instance_id, sdk_key))
   end
 
   defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
   defp validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
   defp validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
 
-  defp put_cache_key(options, sdk_key) do
-    Keyword.put(options, :cache_key, Cache.generate_key(sdk_key))
+  defp ensure_unique_sdk_key(sdk_key) do
+    ConfigCat.Registry
+    |> Registry.select([{{{__MODULE__, :"$1"}, :_, sdk_key}, [], [:"$1"]}])
+    |> case do
+      [] ->
+        :ok
+
+      [instance_id] ->
+        message =
+          "There is an existing ConfigCat instance for the specified SDK Key. " <>
+            "No new instance will be created and the specified options are ignored. " <>
+            "You can use the existing instance by passing `client: #{instance_id}` to the ConfigCat API functions. " <>
+            "SDK Key: '#{sdk_key}'."
+
+        ConfigCatLogger.warn(message, event_id: 3000)
+
+        raise ArgumentError, message
+    end
   end
 
   defp default_options,
@@ -47,6 +66,14 @@ defmodule ConfigCat.Supervisor do
       name: ConfigCat,
       offline: false
     ]
+
+  defp put_cache_key(options, sdk_key) do
+    Keyword.put(options, :cache_key, Cache.generate_key(sdk_key))
+  end
+
+  defp via_tuple(instance_id, sdk_key) do
+    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}, sdk_key}}
+  end
 
   @impl Supervisor
   def init(options) do
