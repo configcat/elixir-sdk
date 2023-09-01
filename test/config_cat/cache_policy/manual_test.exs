@@ -68,19 +68,19 @@ defmodule ConfigCat.CachePolicy.ManualTest do
     @tag capture_log: true
     test "does not fetch config when offline mode is set", %{entry: entry} do
       {:ok, instance_id} = start_cache_policy(@policy)
-      assert CachePolicy.is_offline(instance_id) == false
+      assert CachePolicy.offline?(instance_id) == false
 
       expect_refresh(entry)
       assert :ok = CachePolicy.force_refresh(instance_id)
 
       assert :ok = CachePolicy.set_offline(instance_id)
-      assert CachePolicy.is_offline(instance_id) == true
+      assert CachePolicy.offline?(instance_id) == true
 
       expect_not_refreshed()
       assert {:error, _message} = CachePolicy.force_refresh(instance_id)
 
       assert :ok = CachePolicy.set_online(instance_id)
-      assert CachePolicy.is_offline(instance_id) == false
+      assert CachePolicy.offline?(instance_id) == false
 
       expect_refresh(entry)
       assert :ok = CachePolicy.force_refresh(instance_id)

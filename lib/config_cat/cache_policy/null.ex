@@ -16,7 +16,7 @@ defmodule ConfigCat.CachePolicy.Null do
   end
 
   @impl Behaviour
-  def is_offline(_instance_id) do
+  def offline?(_instance_id) do
     true
   end
 

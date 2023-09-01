@@ -37,7 +37,7 @@ defmodule ConfigCat.CachePolicy.Manual do
   end
 
   @impl GenServer
-  def handle_call(:is_offline, _from, %State{} = state) do
+  def handle_call(:offline?, _from, %State{} = state) do
     {:reply, state.offline, state}
   end
 

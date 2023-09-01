@@ -164,10 +164,10 @@ defmodule ConfigCat.Client do
   end
 
   @impl GenServer
-  def handle_call(:is_offline, _from, %State{} = state) do
+  def handle_call(:offline?, _from, %State{} = state) do
     %{cache_policy: policy, instance_id: instance_id} = state
 
-    result = policy.is_offline(instance_id)
+    result = policy.offline?(instance_id)
     {:reply, result, state}
   end
 
