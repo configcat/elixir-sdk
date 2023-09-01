@@ -98,11 +98,19 @@ defmodule ConfigCat.Client do
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
     with {:ok, settings, _fetch_time_ms} <- cached_settings(state),
          result <- Enum.find_value(settings, nil, &entry_matching(&1, variation_id)) do
+      if is_nil(result) do
+        ConfigCatLogger.error(
+          "Could not find the setting for the specified variation ID: '#{variation_id}'",
+          event_id: 2011
+        )
+      end
+
       {:reply, result, state}
     else
       _ ->
-        ConfigCatLogger.warn(
-          "Evaluating get_key_and_value(#{variation_id}) failed. Cache is empty. Returning nil."
+        ConfigCatLogger.error(
+          "Config JSON is not present. Returning nil.",
+          event_id: 1000
         )
 
         {:reply, nil, state}
@@ -142,7 +150,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_online(instance_id)
-    ConfigCatLogger.info("Switched to ONLINE mode.")
+    ConfigCatLogger.info("Switched to ONLINE mode.", event_id: 5200)
     {:reply, result, state}
   end
 
@@ -151,7 +159,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_offline(instance_id)
-    ConfigCatLogger.info("Switched to OFFLINE mode.")
+    ConfigCatLogger.info("Switched to OFFLINE mode.", event_id: 5200)
     {:reply, result, state}
   end
 
@@ -178,6 +186,10 @@ defmodule ConfigCat.Client do
         Map.keys(settings)
 
       _ ->
+        ConfigCatLogger.error("Config JSON is not present. Returning empty result.",
+          event_id: 1000
+        )
+
         []
     end
   end
@@ -220,6 +232,8 @@ defmodule ConfigCat.Client do
         _ ->
           message =
             "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
+
+          ConfigCatLogger.error(message, event_id: 1000)
 
           EvaluationDetails.new(
             default_value?: true,

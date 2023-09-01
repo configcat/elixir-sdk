@@ -10,10 +10,10 @@ defmodule ConfigCat.Config do
   @typedoc "The name of a configuration setting."
   @type key :: String.t()
 
-  @typedoc false
+  @typedoc "The configuration settings within a Config."
   @type settings :: map()
 
-  @typedoc "A collection of configuration settings."
+  @typedoc "A collection of configuration settings and preferences."
   @type t :: map()
 
   @typedoc false

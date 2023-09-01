@@ -60,7 +60,10 @@ defmodule ConfigCat.LocalFileDataSource do
   @spec new(String.t(), OverrideDataSource.behaviour()) :: t
   def new(filename, override_behaviour) do
     unless File.exists?(filename) do
-      ConfigCatLogger.error("The file #{filename} does not exist.")
+      ConfigCatLogger.error(
+        "Cannot find the local config file '#{filename}'. This is a path that your application provided to the ConfigCat SDK by passing it to the `LocalFileDataSource.new()` function. Read more: https://configcat.com/docs/sdk-reference/elixir/#json-file",
+        event_id: 1300
+      )
     end
 
     {:ok, pid} = FileCache.start_link([])
@@ -104,13 +107,15 @@ defmodule ConfigCat.LocalFileDataSource do
 
     defp log_error({:error, %Jason.DecodeError{} = error}, filename) do
       ConfigCatLogger.error(
-        "Could not decode json from file #{filename}. #{Exception.message(error)}"
+        "Failed to decode JSON from the local config file #{filename}. #{Exception.message(error)}",
+        event_id: 2302
       )
     end
 
     defp log_error({:error, error}, filename) do
       ConfigCatLogger.error(
-        "Could not read the content of the file #{filename}. #{:file.format_error(error)}"
+        "Failed to read the local config file '#{filename}'. #{:file.format_error(error)}",
+        event_id: 1302
       )
     end
 

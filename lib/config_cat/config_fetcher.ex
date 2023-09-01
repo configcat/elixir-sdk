@@ -171,7 +171,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   def handle_info({:ssl_closed, _msg}, %State{} = state), do: {:noreply, state}
 
   defp do_fetch(%State{} = state, etag) do
-    ConfigCatLogger.info("Fetching configuration from ConfigCat")
+    ConfigCatLogger.debug("Fetching configuration from ConfigCat")
 
     case state.api.get(url(state), headers(state, etag), http_options(state)) do
       {:ok, response} ->
@@ -227,7 +227,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          etag
        )
        when code >= 200 and code < 300 do
-    ConfigCatLogger.info(
+    ConfigCatLogger.debug(
       "ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}"
     )
 
@@ -258,8 +258,9 @@ defmodule ConfigCat.CacheControlConfigFetcher do
             next_state
 
           followed? ->
-            ConfigCatLogger.warn(
-              "Redirect loop during config.json fetch. Please contact support@configcat.com."
+            ConfigCatLogger.error(
+              "Redirection loop encountered while trying to fetch config JSON. Please contact us at https://configcat.com/support/",
+              event_id: 1104
             )
 
             # redirects needs reset as customers might change their configs at any time.
@@ -270,12 +271,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         end
 
       if redirect_mode == RedirectMode.should_redirect() do
-        ConfigCatLogger.warn("""
-        Your data_governance parameter at ConfigCat client initialization
-        is not in sync with your preferences on the ConfigCat Dashboard:
-        https://app.configcat.com/organization/data-governance.
-        Only Organization Admins can set this preference.
-        """)
+        ConfigCatLogger.warn(
+          "The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. " <>
+            "Read more: https://configcat.com/docs/advanced/data-governance/",
+          event_id: 3002
+        )
       end
 
       entry = ConfigEntry.new(config, new_etag, raw_config)
@@ -291,7 +291,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag)
        when status in [403, 404] do
     ConfigCatLogger.error(
-      "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}"
+      "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}",
+      event_id: 1100
     )
 
     error = FetchError.exception(reason: response, transient?: false)
@@ -301,7 +302,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp handle_response(response, %State{} = state, _etag) do
     ConfigCatLogger.error(
-      "Unexpected HTTP response was received while trying to fetch config JSON: #{inspect(response)}"
+      "Unexpected HTTP response was received while trying to fetch config JSON: #{inspect(response)}",
+      event_id: 1101
     )
 
     error = FetchError.exception(reason: response, transient?: true)
@@ -314,7 +316,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
          %State{} = state
        ) do
     ConfigCatLogger.error(
-      "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
+      "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
+      event_id: 1102
     )
 
     FetchError.exception(reason: error, transient?: true)
@@ -322,7 +325,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp handle_error({:error, error}, _state) do
     ConfigCatLogger.error(
-      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error)}"
+      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error)}",
+      event_id: 1103
     )
 
     FetchError.exception(reason: error, transient?: true)

@@ -6,6 +6,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
@@ -25,8 +26,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
     instance_id = UUID.uuid4() |> String.to_atom()
-    default_options = [api: MockAPI, instance_id: instance_id, mode: mode, sdk_key: sdk_key]
 
+    start_supervised!({Hooks, instance_id: instance_id})
+
+    default_options = [api: MockAPI, instance_id: instance_id, mode: mode, sdk_key: sdk_key]
     {:ok, pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
 
     allow(MockAPI, self(), pid)

@@ -104,6 +104,13 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_info(:init_timeout, %State{} = state) do
+    seconds = state.policy_options.max_init_wait_time_ms / 1000
+
+    ConfigCatLogger.warn(
+      "`max_init_wait_time_seconds` for the very first fetch reached (#{seconds}). Returning cached config.",
+      event_id: 4200
+    )
+
     new_state = be_initialized(state)
     {:noreply, new_state}
   end
@@ -158,8 +165,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   @impl GenServer
   def handle_call(:force_refresh, _from, %State{} = state) do
     if state.offline do
-      message = "Client is in offline mode; it cannot initiate HTTP calls."
-      ConfigCatLogger.warn(message)
+      message = ConfigCatLogger.warn_offline()
       {:reply, {:error, message}, state}
     else
       case refresh(state) do
@@ -216,7 +222,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defp refresh(%State{} = state) do
     if state.offline do
-      ConfigCatLogger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
+      ConfigCatLogger.warn_offline()
       :ok
     else
       Helpers.refresh_config(state)
