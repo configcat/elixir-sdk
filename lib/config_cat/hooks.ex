@@ -74,6 +74,7 @@ defmodule ConfigCat.Hooks do
       send pid, {:config_changed, config}
     end
   end
+  ```
   """
   @type named_callback :: {module(), atom(), list()}
   @type on_client_ready_callback :: (() -> any()) | named_callback()

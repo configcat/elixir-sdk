@@ -24,6 +24,7 @@ defmodule ConfigCat.MixProject do
       docs: [
         assets: "assets",
         extras: ["CONTRIBUTING.md", "README.md"],
+        formatters: ["html"],
         logo: "assets/logo.png",
         main: "readme"
       ],
