@@ -225,6 +225,7 @@ defmodule ConfigCat.Client do
             default_value?: true,
             error: message,
             key: key,
+            user: user,
             value: default_value,
             variation_id: default_variation_id
           )
