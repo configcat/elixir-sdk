@@ -7,6 +7,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
 
   defmodule State do
     @moduledoc false
@@ -53,6 +54,11 @@ defmodule ConfigCat.CachePolicy.Helpers do
     GenServer.start_link(module, State.new(options), name: CachePolicy.via_tuple(instance_id))
   end
 
+  @spec on_client_ready(State.t()) :: :ok
+  def on_client_ready(%State{} = state) do
+    Hooks.invoke_on_client_ready(state.instance_id)
+  end
+
   @spec cached_settings(State.t()) ::
           {:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}
   def cached_settings(%State{} = state) do
@@ -94,6 +100,11 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
       {:ok, %ConfigEntry{} = entry} ->
         update_cache(state, entry)
+
+        with {:ok, settings} <- Config.fetch_settings(entry.config) do
+          Hooks.invoke_on_config_changed(state.instance_id, settings)
+        end
+
         :ok
 
       error ->

@@ -6,6 +6,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
   alias HTTPoison.Response
 
@@ -22,6 +23,9 @@ defmodule ConfigCat.ConfigFetcherTest do
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options \\ []) do
     instance_id = UUID.uuid4() |> String.to_atom()
+
+    start_supervised!({Hooks, instance_id: instance_id})
+
     default_options = [api: MockAPI, mode: mode, instance_id: instance_id, sdk_key: sdk_key]
 
     {:ok, pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})

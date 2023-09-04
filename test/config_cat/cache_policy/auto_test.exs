@@ -8,6 +8,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   alias ConfigCat.CachePolicy.Auto
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.Hooks
 
   @policy CachePolicy.auto()
 
@@ -29,17 +30,6 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "enforces a minimum poll interval" do
       policy = CachePolicy.auto(poll_interval_seconds: -1)
       assert policy.poll_interval_ms == 1000
-    end
-
-    test "does not have a change callback by default" do
-      policy = CachePolicy.auto()
-      assert policy.on_changed == nil
-    end
-
-    test "takes an optional change callback" do
-      callback = fn -> :ok end
-      policy = CachePolicy.auto(on_changed: callback)
-      assert policy.on_changed == callback
     end
   end
 
@@ -92,51 +82,6 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
-
-    test "calls the change callback after refreshing", %{entry: entry} do
-      test_pid = self()
-      interval = 1
-      %{entry: old_entry} = make_old_entry()
-
-      expect_refresh(old_entry)
-
-      policy =
-        CachePolicy.auto(
-          on_changed: fn -> send(test_pid, :callback) end,
-          poll_interval_seconds: interval
-        )
-
-      {:ok, _} = start_cache_policy(policy)
-
-      assert_receive(:callback)
-
-      expect_refresh(entry)
-      wait_for_poll(policy)
-
-      assert_receive(:callback)
-    end
-
-    test "doesn't call the change callback if the configuration hasn't changed", %{entry: entry} do
-      test_pid = self()
-      interval = 1
-
-      expect_refresh(entry)
-
-      policy =
-        CachePolicy.auto(
-          on_changed: fn -> send(test_pid, :callback) end,
-          poll_interval_seconds: interval
-        )
-
-      {:ok, _} = start_cache_policy(policy)
-
-      assert_receive(:callback)
-
-      expect_unchanged()
-      wait_for_poll(policy)
-
-      refute_receive(:callback)
-    end
   end
 
   describe "refreshing the config" do
@@ -151,39 +96,6 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_refresh(entry)
       assert :ok = CachePolicy.force_refresh(instance_id)
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
-    end
-
-    test "calls the change callback", %{entry: entry} do
-      test_pid = self()
-      %{entry: old_entry} = make_old_entry()
-      expect_refresh(old_entry)
-
-      policy = CachePolicy.auto(on_changed: fn -> send(test_pid, :callback) end)
-      {:ok, instance_id} = start_cache_policy(policy)
-
-      assert_receive(:callback)
-
-      expect_refresh(entry)
-      :ok = CachePolicy.force_refresh(instance_id)
-
-      assert_receive(:callback)
-    end
-
-    @tag capture_log: true
-    test "handles errors in the change callback", %{entry: entry, settings: settings} do
-      test_pid = self()
-      expect_refresh(entry)
-
-      callback = fn ->
-        send(test_pid, :callback)
-        raise RuntimeError, "callback failed"
-      end
-
-      policy = CachePolicy.auto(on_changed: callback)
-      {:ok, instance_id} = start_cache_policy(policy)
-
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
-      assert_receive(:callback)
     end
 
     test "does not update config when server responds that the config hasn't changed", %{
@@ -203,6 +115,57 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       assert_returns_error(fn -> CachePolicy.force_refresh(instance_id) end)
+    end
+  end
+
+  describe "calling the config-changed callback" do
+    setup do
+      test_pid = self()
+      instance_id = UUID.uuid4() |> String.to_atom()
+
+      %{entry: old_entry, settings: old_settings} = make_old_entry()
+
+      callback = fn settings -> send(test_pid, {:config_changed, settings}) end
+
+      start_supervised!({Hooks, hooks: [on_config_changed: callback], instance_id: instance_id})
+
+      policy = CachePolicy.auto(poll_interval_seconds: 1)
+
+      expect_refresh(old_entry)
+      {:ok, _} = start_cache_policy(policy, instance_id: instance_id, start_hooks?: false)
+
+      assert_receive {:config_changed, ^old_settings}
+
+      %{instance_id: instance_id, policy: policy}
+    end
+
+    test "calls the change callback after polled refresh", %{
+      entry: entry,
+      policy: policy,
+      settings: settings
+    } do
+      expect_refresh(entry)
+      wait_for_poll(policy)
+
+      assert_receive {:config_changed, ^settings}
+    end
+
+    test "doesn't call the change callback if the configuration hasn't changed", %{policy: policy} do
+      expect_unchanged()
+      wait_for_poll(policy)
+
+      refute_receive {:config_changed, _settings}
+    end
+
+    test "calls the change callback after forced refresh", %{
+      entry: entry,
+      instance_id: instance_id,
+      settings: settings
+    } do
+      expect_refresh(entry)
+      :ok = CachePolicy.force_refresh(instance_id)
+
+      assert_receive {:config_changed, ^settings}
     end
   end
 

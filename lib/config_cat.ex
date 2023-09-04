@@ -111,6 +111,9 @@ defmodule ConfigCat do
     `ConfigCat.LocalFileDataSource` and `ConfigCat.LocalMapDataSource` are
     provided for you to use.
 
+  - `hooks`: **OPTIONAL** Specify callback functions to be called when
+    particular events are fired by the SDK. See `ConfigCat.Hooks`.
+
   - `http_proxy`: **OPTIONAL** Specify this option if you need to use a proxy
     server to access your ConfigCat settings. You can provide a simple URL, like
     `https://my_proxy.example.com` or include authentication information, like
@@ -173,6 +176,7 @@ defmodule ConfigCat do
   alias ConfigCat.Client
   alias ConfigCat.Config
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.Hooks
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.User
 
@@ -203,6 +207,7 @@ defmodule ConfigCat do
           | {:data_governance, data_governance()}
           | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
+          | {:hooks, [Hooks.option()]}
           | {:http_proxy, String.t()}
           | {:name, instance_id()}
           | {:offline, boolean()}
@@ -501,6 +506,20 @@ defmodule ConfigCat do
     options
     |> client()
     |> GenServer.call(:is_offline, Constants.fetch_timeout())
+  end
+
+  @doc """
+  Return the current hook callbacks.
+
+  ### Options
+
+  - `client`: If you are running multiple instances of `ConfigCat`, provide the
+    `client: :unique_name` option, specifying the name you configured for the
+    instance you want to access.
+  """
+  @spec hooks([api_option()]) :: Hooks.t()
+  def hooks(options \\ []) do
+    Keyword.get(options, :client, __MODULE__)
   end
 
   defp client(options) do

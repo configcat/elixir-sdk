@@ -28,7 +28,13 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   @impl GenServer
   def init(state) do
-    {:ok, state}
+    {:ok, state, {:continue, :on_client_ready}}
+  end
+
+  @impl GenServer
+  def handle_continue(:on_client_ready, %State{} = state) do
+    Helpers.on_client_ready(state)
+    {:noreply, state}
   end
 
   @impl GenServer

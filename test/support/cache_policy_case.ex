@@ -9,6 +9,7 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.Hooks
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
   alias HTTPoison.Response
@@ -44,12 +45,18 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}
   def start_cache_policy(policy, options \\ []) do
-    instance_id = UUID.uuid4() |> String.to_atom()
+    instance_id =
+      Keyword.get_lazy(options, :instance_id, fn -> UUID.uuid4() |> String.to_atom() end)
+
+    if Keyword.get(options, :start_hooks?, true) do
+      start_supervised!({Hooks, instance_id: instance_id})
+    end
 
     {:ok, cache_key} = start_cache(instance_id)
 
     if entry = options[:initial_entry] do
-      Cache.set(instance_id, entry)
+      # Bypass Cache to force it to refresh itself on first call.
+      InMemoryCache.set(cache_key, ConfigEntry.serialize(entry))
     end
 
     {:ok, pid} =
