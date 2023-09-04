@@ -29,7 +29,29 @@ defmodule ConfigCat.Hooks do
 
   alias ConfigCat.Config
   alias ConfigCat.EvaluationDetails
-  alias ConfigCat.Hooks.State
+  alias ConfigCat.Hooks.Impl
+
+  defmodule State do
+    @moduledoc false
+    use TypedStruct
+
+    typedstruct do
+      field :impl, Impl.t()
+      field :instance_id, ConfigCat.instance_id(), enforce: true
+    end
+
+    @spec new(keyword()) :: t()
+    def new(options \\ []) do
+      hooks = Keyword.get(options, :hooks, [])
+
+      struct!(__MODULE__, impl: Impl.new(hooks), instance_id: options[:instance_id])
+    end
+
+    @spec with_impl(t(), Impl.t()) :: t()
+    def with_impl(%__MODULE__{} = state, %Impl{} = impl) do
+      %{state | impl: impl}
+    end
+  end
 
   @typedoc """
   A module/function name/extra arguments tuple representing a callback function.
@@ -70,9 +92,8 @@ defmodule ConfigCat.Hooks do
   @spec start_link([start_option()]) :: GenServer.on_start()
   def start_link(options) do
     instance_id = Keyword.fetch!(options, :instance_id)
-    hooks = Keyword.get(options, :hooks, [])
 
-    GenServer.start_link(__MODULE__, State.new(hooks), name: via_tuple(instance_id))
+    GenServer.start_link(__MODULE__, State.new(options), name: via_tuple(instance_id))
   end
 
   @doc """
@@ -128,7 +149,7 @@ defmodule ConfigCat.Hooks do
   def invoke_on_client_ready(instance_id) do
     instance_id
     |> hooks()
-    |> State.invoke_hook(:on_client_ready, [])
+    |> Impl.invoke_hook(:on_client_ready, [])
   end
 
   @doc false
@@ -136,7 +157,7 @@ defmodule ConfigCat.Hooks do
   def invoke_on_config_changed(instance_id, settings) do
     instance_id
     |> hooks()
-    |> State.invoke_hook(:on_config_changed, [settings])
+    |> Impl.invoke_hook(:on_config_changed, [settings])
   end
 
   @doc false
@@ -144,7 +165,7 @@ defmodule ConfigCat.Hooks do
   def invoke_on_error(instance_id, message) do
     instance_id
     |> hooks()
-    |> State.invoke_hook(:on_error, [message])
+    |> Impl.invoke_hook(:on_error, [message])
   end
 
   @doc false
@@ -152,7 +173,7 @@ defmodule ConfigCat.Hooks do
   def invoke_on_flag_evaluated(instance_id, %EvaluationDetails{} = details) do
     instance_id
     |> hooks()
-    |> State.invoke_hook(:on_flag_evaluated, [details])
+    |> Impl.invoke_hook(:on_flag_evaluated, [details])
   end
 
   defp hooks(instance_id) do
@@ -167,17 +188,18 @@ defmodule ConfigCat.Hooks do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 
   @impl GenServer
   def handle_call({:add_hook, hook, callback}, _from, %State{} = state) do
-    new_state = State.add_hook(state, hook, callback)
-    {:reply, :ok, new_state}
+    new_impl = Impl.add_hook(state.impl, hook, callback)
+    {:reply, :ok, State.with_impl(state, new_impl)}
   end
 
   @impl GenServer
   def handle_call(:hooks, _from, %State{} = state) do
-    {:reply, state, state}
+    {:reply, state.impl, state}
   end
 end

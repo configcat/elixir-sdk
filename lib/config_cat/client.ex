@@ -12,7 +12,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.User
 
   require ConfigCat.Constants, as: Constants
-  require Logger
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   defmodule State do
     @moduledoc false
@@ -63,6 +63,7 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 
@@ -101,7 +102,7 @@ defmodule ConfigCat.Client do
       {:reply, result, state}
     else
       _ ->
-        Logger.warn(
+        ConfigCatLogger.warn(
           "Evaluating get_key_and_value(#{variation_id}) failed. Cache is empty. Returning nil."
         )
 
@@ -142,7 +143,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_online(instance_id)
-    Logger.info("Switched to ONLINE mode.")
+    ConfigCatLogger.info("Switched to ONLINE mode.")
     {:reply, result, state}
   end
 
@@ -151,7 +152,7 @@ defmodule ConfigCat.Client do
     %{cache_policy: policy, instance_id: instance_id} = state
 
     result = policy.set_offline(instance_id)
-    Logger.info("Switched to OFFLINE mode.")
+    ConfigCatLogger.info("Switched to OFFLINE mode.")
     {:reply, result, state}
   end
 

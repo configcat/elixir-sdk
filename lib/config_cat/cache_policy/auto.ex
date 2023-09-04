@@ -11,7 +11,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
 
-  require Logger
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   @default_poll_interval_seconds 60
 
@@ -34,6 +34,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state, {:continue, :initial_fetch}}
   end
 
@@ -52,6 +53,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
     unless state.offline do
       Task.start_link(fn ->
+        Logger.metadata(instance_id: state.instance_id)
         refresh(state)
         schedule_next_refresh(state, pid)
       end)
@@ -124,7 +126,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   defp refresh(%State{} = state) do
     if state.offline do
-      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
+      ConfigCatLogger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       :ok
     else
       Helpers.refresh_config(state)

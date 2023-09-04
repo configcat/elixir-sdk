@@ -22,9 +22,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
-  require ConfigCat.ErrorReporter, as: ErrorReporter
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
   require ConfigCat.RedirectMode, as: RedirectMode
-  require Logger
 
   defmodule State do
     @moduledoc false
@@ -99,6 +98,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @impl GenServer
   def init(%State{} = state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state}
   end
 
@@ -108,7 +108,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp do_fetch(%State{} = state, etag) do
-    Logger.info("Fetching configuration from ConfigCat")
+    ConfigCatLogger.info("Fetching configuration from ConfigCat")
 
     with api <- state.api,
          {:ok, response} <-
@@ -195,7 +195,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
             next_state
 
           followed? ->
-            Logger.warn(
+            ConfigCatLogger.warn(
               "Redirect loop during config.json fetch. Please contact support@configcat.com."
             )
 
@@ -207,7 +207,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         end
 
       if redirect_mode == RedirectMode.should_redirect() do
-        Logger.warn("""
+        ConfigCatLogger.warn("""
         Your data_governance parameter at ConfigCat client initialization
         is not in sync with your preferences on the ConfigCat Dashboard:
         https://app.configcat.com/organization/data-governance.
@@ -237,7 +237,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp log_response(%Response{headers: headers, status_code: status_code} = response) do
-    Logger.info(
+    ConfigCatLogger.info(
       "ConfigCat configuration json fetch response code: #{status_code} Cached: #{extract_etag(headers)}"
     )
 
@@ -245,19 +245,13 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp log_error(error, %State{} = state) do
-    ErrorReporter.call("Double-check your SDK Key at https://app.configcat.com/sdkkey.",
-      instance_id: state.instance_id
-    )
-
-    ErrorReporter.call("Failed to fetch configuration from ConfigCat: #{inspect(error)}",
-      instance_id: state.instance_id
-    )
+    ConfigCatLogger.error("Double-check your SDK Key at https://app.configcat.com/sdkkey.")
+    ConfigCatLogger.error("Failed to fetch configuration from ConfigCat: #{inspect(error)}")
 
     case error do
       {:error, %HTTPoison.Error{reason: :checkout_timeout}} ->
-        ErrorReporter.call(
-          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
-          instance_id: state.instance_id
+        ConfigCatLogger.error(
+          "Request timed out. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]"
         )
 
       _error ->

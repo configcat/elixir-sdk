@@ -1,4 +1,4 @@
-defmodule ConfigCat.Hooks.State do
+defmodule ConfigCat.Hooks.Impl do
   @moduledoc false
   use TypedStruct
 
@@ -34,11 +34,13 @@ defmodule ConfigCat.Hooks.State do
         invoke_callback(callback, args)
       rescue
         e ->
-          error = "Exception occurred during #{hook} callback: #{inspect(e)}"
+          # Call Logger instead of ConfigCatLogger to avoid recursively invoking a
+          # bad on_error hook.
+          message = "Exception occurred during #{hook} callback: #{inspect(e)}"
+          Logger.error(message)
 
           unless hook == :on_error do
-            Logger.error(error)
-            invoke_hook(state, :on_error, [error])
+            invoke_hook(state, :on_error, [message])
           end
       end
     end)

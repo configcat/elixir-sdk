@@ -10,7 +10,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
 
-  require Logger
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   typedstruct enforce: true do
     field :cache_expiry_ms, non_neg_integer()
@@ -28,6 +28,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   @impl GenServer
   def init(state) do
+    Logger.metadata(instance_id: state.instance_id)
     {:ok, state, {:continue, :on_client_ready}}
   end
 
@@ -62,7 +63,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   @impl GenServer
   def handle_call(:force_refresh, _from, %State{} = state) do
     if state.offline do
-      Logger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
+      ConfigCatLogger.warn("Client is in offline mode; it cannot initiate HTTP calls.")
       {:reply, :ok, state}
     else
       case refresh(state) do

@@ -6,8 +6,8 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
-  require Logger
   require ConfigCat.Constants, as: Constants
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   @spec evaluate(
           Config.key(),
@@ -50,7 +50,7 @@ defmodule ConfigCat.Rollout do
         evaluate(key, nil, default_value, default_variation_id, settings)
 
       {:error, message} ->
-        Logger.error(message)
+        ConfigCatLogger.error(message)
 
         EvaluationDetails.new(
           default_value?: true,
@@ -190,44 +190,46 @@ defmodule ConfigCat.Rollout do
 
   defp base_value(setting_descriptor, default_value) do
     result = Map.get(setting_descriptor, Constants.value(), default_value)
-    Logger.debug("Returning #{result}")
+    ConfigCatLogger.debug("Returning #{result}")
 
     result
   end
 
   defp log_evaluating(key) do
-    Logger.debug("Evaluating get_value('#{key}').")
+    ConfigCatLogger.debug("Evaluating get_value('#{key}').")
   end
 
   defp log_match(comparison_attribute, user_value, comparator, comparison_value, value) do
-    Logger.debug(
+    ConfigCatLogger.debug(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
   defp log_no_match(comparison_attribute, user_value, comparator, comparison_value) do
-    Logger.debug(
+    ConfigCatLogger.debug(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
 
   defp log_validation_error(comparison_attribute, user_value, comparator, comparison_value, error) do
-    Logger.warn(
+    ConfigCatLogger.warn(
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
     )
   end
 
   defp log_valid_user(user) do
-    Logger.debug("User object: #{inspect(user)}")
+    ConfigCatLogger.debug("User object: #{inspect(user)}")
   end
 
   defp log_nil_user(key) do
-    Logger.warn(
+    ConfigCatLogger.warn(
       "Evaluating get_value('#{key}'). User struct missing! You should pass a User to get_value(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/"
     )
   end
 
   defp log_invalid_user(key) do
-    Logger.warn("Evaluating get_value('#{key}'). User Object is not an instance of User struct.")
+    ConfigCatLogger.warn(
+      "Evaluating get_value('#{key}'). User Object is not an instance of User struct."
+    )
   end
 end
