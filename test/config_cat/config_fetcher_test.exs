@@ -5,6 +5,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
@@ -127,7 +128,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:ok, response} end)
 
-    assert {:error, ^response} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:error, %FetchError{reason: ^response}} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   @tag capture_log: true
@@ -139,7 +140,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     MockAPI
     |> stub(:get, fn _url, _headers, _options -> {:error, error} end)
 
-    assert {:error, ^error} = ConfigFetcher.fetch(fetcher, nil)
+    assert {:error, %FetchError{reason: ^error}} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "allows base URL to be configured" do

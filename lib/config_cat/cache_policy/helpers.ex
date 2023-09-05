@@ -6,6 +6,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
   alias ConfigCat.Config
   alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
 
@@ -86,16 +87,19 @@ defmodule ConfigCat.CachePolicy.Helpers do
     Cache.get(state.instance_id)
   end
 
-  @spec refresh_config(State.t()) :: CachePolicy.refresh_result()
+  @spec refresh_config(State.t()) :: ConfigCat.refresh_result()
   def refresh_config(%State{} = state) do
-    etag =
+    cached_entry =
       case cached_entry(state) do
-        {:ok, %ConfigEntry{} = entry} -> entry.etag
+        {:ok, %ConfigEntry{} = entry} -> entry
         _ -> nil
       end
 
+    etag = cached_entry && cached_entry.etag
+
     case state.fetcher.fetch(state.instance_id, etag) do
       {:ok, :unchanged} ->
+        refresh_cached_entry(state, cached_entry)
         :ok
 
       {:ok, %ConfigEntry{} = entry} ->
@@ -107,9 +111,20 @@ defmodule ConfigCat.CachePolicy.Helpers do
 
         :ok
 
-      error ->
-        error
+      {:error, %FetchError{} = error} ->
+        unless error.transient? do
+          refresh_cached_entry(state, cached_entry)
+        end
+
+        {:error, Exception.message(error)}
     end
+  end
+
+  defp refresh_cached_entry(%State{} = _state, nil), do: :ok
+
+  defp refresh_cached_entry(%State{} = state, %ConfigEntry{} = entry) do
+    update_cache(state, ConfigEntry.refresh(entry))
+    :ok
   end
 
   defp update_cache(%State{} = state, %ConfigEntry{} = entry) do

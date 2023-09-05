@@ -40,7 +40,6 @@ defmodule ConfigCat.CachePolicy do
   alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.CachePolicy.Manual
-  alias ConfigCat.ConfigFetcher
 
   require ConfigCat.Constants, as: Constants
 
@@ -66,9 +65,6 @@ defmodule ConfigCat.CachePolicy do
 
   @typedoc false
   @type options :: [option]
-
-  @typedoc false
-  @type refresh_result :: :ok | ConfigFetcher.fetch_error()
 
   @typedoc "The polling mode"
   @opaque t :: Auto.t() | Lazy.t() | Manual.t()

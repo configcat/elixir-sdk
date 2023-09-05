@@ -48,7 +48,6 @@ defmodule ConfigCat.Client do
           | {:flag_overrides, OverrideDataSource.t()}
           | {:instance_id, ConfigCat.instance_id()}
   @type options :: [option]
-  @type refresh_result :: CachePolicy.refresh_result()
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do

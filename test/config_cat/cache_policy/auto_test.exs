@@ -8,6 +8,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   alias ConfigCat.CachePolicy.Auto
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
 
   @policy CachePolicy.auto()
@@ -98,15 +99,23 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
-    test "does not update config when server responds that the config hasn't changed", %{
-      entry: entry
+    test "updates fetch time when server responds that the config hasn't changed", %{
+      entry: entry,
+      settings: settings
     } do
+      entry = Map.update!(entry, :fetch_time_ms, &(&1 - 200))
+
       expect_refresh(entry)
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_unchanged()
 
+      before = FetchTime.now_ms()
+
       assert :ok = CachePolicy.force_refresh(instance_id)
+
+      assert {:ok, ^settings, new_fetch_time_ms} = CachePolicy.get(instance_id)
+      assert before <= new_fetch_time_ms && new_fetch_time_ms <= FetchTime.now_ms()
     end
 
     @tag capture_log: true

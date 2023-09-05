@@ -50,15 +50,15 @@ defmodule ConfigCat.IntegrationTest do
   test "does not fetch config when offline mode is set" do
     {:ok, client} = start_config_cat(@sdk_key, offline: true)
 
-    assert ConfigCat.is_offline(client: client) == true
+    assert ConfigCat.is_offline(client: client)
 
-    :ok = ConfigCat.force_refresh(client: client)
+    {:error, _message} = ConfigCat.force_refresh(client: client)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
              "default value"
 
     :ok = ConfigCat.set_online(client: client)
-    assert ConfigCat.is_offline(client: client) == false
+    refute ConfigCat.is_offline(client: client)
 
     :ok = ConfigCat.force_refresh(client: client)
 
@@ -70,15 +70,14 @@ defmodule ConfigCat.IntegrationTest do
   test "handles errors from ConfigCat server" do
     {:ok, client} = start_config_cat("invalid_sdk_key")
 
-    {:error, response} = ConfigCat.force_refresh(client: client)
-    assert response.status_code == 403
+    assert {:error, _message} = ConfigCat.force_refresh(client: client)
   end
 
   @tag capture_log: true
   test "handles invalid base_url" do
     {:ok, client} = start_config_cat(@sdk_key, base_url: "https://invalidcdn.configcat.com")
 
-    assert {:error, %HTTPoison.Error{}} = ConfigCat.force_refresh(client: client)
+    assert {:error, _message} = ConfigCat.force_refresh(client: client)
   end
 
   @tag capture_log: true

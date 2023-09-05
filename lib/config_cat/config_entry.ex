@@ -33,6 +33,11 @@ defmodule ConfigCat.ConfigEntry do
     }
   end
 
+  @spec refresh(t()) :: t()
+  def refresh(%__MODULE__{} = entry) do
+    %{entry | fetch_time_ms: FetchTime.now_ms()}
+  end
+
   @spec deserialize(String.t()) :: {:ok, t()} | {:error, String.t()}
   def deserialize(str) do
     with {:ok, [fetch_time_str, etag, raw_config]} <- parse(str),

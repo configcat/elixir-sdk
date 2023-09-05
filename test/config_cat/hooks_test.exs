@@ -132,7 +132,7 @@ defmodule ConfigCat.HooksTest do
 
     :ok = start_client(instance_id: instance_id)
 
-    ConfigCat.force_refresh(client: instance_id)
+    :ok = ConfigCat.force_refresh(client: instance_id)
 
     user = User.new("test@test1.com")
     value = ConfigCat.get_value("testStringKey", "", user, client: instance_id)
@@ -175,7 +175,7 @@ defmodule ConfigCat.HooksTest do
 
     :ok = start_client(instance_id: instance_id)
 
-    ConfigCat.force_refresh(client: instance_id)
+    :ok = ConfigCat.force_refresh(client: instance_id)
 
     assert "testValue" == ConfigCat.get_value("testStringKey", "", client: instance_id)
     assert "default" == ConfigCat.get_value("", "default", client: instance_id)

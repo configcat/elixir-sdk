@@ -9,6 +9,7 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
+  alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.Hooks
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
@@ -112,10 +113,11 @@ defmodule ConfigCat.CachePolicyCase do
   @spec assert_returns_error(function()) :: true
   def assert_returns_error(force_refresh_fn) do
     response = %Response{status_code: 503}
+    error = FetchError.exception(reason: response, transient?: true)
 
     MockFetcher
-    |> stub(:fetch, fn _id, _etag -> {:error, response} end)
+    |> stub(:fetch, fn _id, _etag -> {:error, error} end)
 
-    assert {:error, ^response} = force_refresh_fn.()
+    assert {:error, _message} = force_refresh_fn.()
   end
 end
