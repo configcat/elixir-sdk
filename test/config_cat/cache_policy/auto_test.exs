@@ -10,6 +10,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
+  alias ConfigCat.MockFetcher
 
   @policy CachePolicy.auto()
 
@@ -69,6 +70,29 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: old_entry)
 
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+    end
+
+    test "returns previously cached entry if max init wait time expires before initial fetch completes",
+         %{entry: entry} do
+      wait_time_ms = 100
+      policy = CachePolicy.auto(max_init_wait_time_seconds: wait_time_ms / 1000.0)
+
+      %{entry: old_entry, settings: old_settings} = make_old_entry()
+      old_entry = Map.update!(old_entry, :fetch_time_ms, &(&1 - policy.poll_interval_ms - 1))
+
+      MockFetcher
+      |> expect(:fetch, fn _id, _etag ->
+        Process.sleep(wait_time_ms * 5)
+        {:ok, entry}
+      end)
+
+      {:ok, instance_id} = start_cache_policy(policy, initial_entry: old_entry)
+
+      before = FetchTime.now_ms()
+      assert {:ok, old_settings, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      elapsed_ms = FetchTime.now_ms() - before
+
+      assert wait_time_ms < elapsed_ms && elapsed_ms < wait_time_ms * 2
     end
 
     test "doesn't refresh between poll intervals", %{entry: entry} do

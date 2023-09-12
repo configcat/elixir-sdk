@@ -57,12 +57,19 @@ defmodule ConfigCat.CachePolicy.Auto do
 
     options =
       [
-        max_init_wait_time_ms: max(max_init_wait_time_seconds, 0) * 1000,
-        poll_interval_ms: max(poll_interval_seconds, 1) * 1000
+        max_init_wait_time_ms: rounded_ms(max_init_wait_time_seconds, 0),
+        poll_interval_ms: rounded_ms(poll_interval_seconds, 1)
       ]
       |> Keyword.merge(options)
 
     struct(__MODULE__, options)
+  end
+
+  defp rounded_ms(seconds, min_value) do
+    seconds
+    |> max(min_value)
+    |> Kernel.*(1000)
+    |> round
   end
 
   @impl GenServer
