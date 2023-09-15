@@ -237,10 +237,12 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       assert {:ok, old_settings, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
 
-      expect_refresh(entry)
+      expect_refresh(entry, self())
 
       assert :ok = CachePolicy.set_online(instance_id)
       refute CachePolicy.offline?(instance_id)
+
+      assert_receive :fetch_complete
 
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
