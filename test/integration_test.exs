@@ -50,7 +50,7 @@ defmodule ConfigCat.IntegrationTest do
   test "does not fetch config when offline mode is set" do
     {:ok, client} = start_config_cat(@sdk_key, offline: true)
 
-    assert ConfigCat.is_offline(client: client)
+    assert ConfigCat.offline?(client: client)
 
     {:error, _message} = ConfigCat.force_refresh(client: client)
 
@@ -58,7 +58,7 @@ defmodule ConfigCat.IntegrationTest do
              "default value"
 
     :ok = ConfigCat.set_online(client: client)
-    refute ConfigCat.is_offline(client: client)
+    refute ConfigCat.offline?(client: client)
 
     :ok = ConfigCat.force_refresh(client: client)
 

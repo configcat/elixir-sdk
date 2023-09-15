@@ -95,10 +95,11 @@ defmodule ConfigCat.CachePolicyCase do
     {:ok, cache_key}
   end
 
-  @spec expect_refresh(ConfigEntry.t()) :: Mox.t()
-  def expect_refresh(entry) do
+  @spec expect_refresh(ConfigEntry.t(), pid() | nil) :: Mox.t()
+  def expect_refresh(entry, test_pid \\ nil) do
     MockFetcher
     |> expect(:fetch, fn _id, _etag ->
+      if test_pid, do: send(test_pid, :fetch_complete)
       {:ok, entry}
     end)
   end

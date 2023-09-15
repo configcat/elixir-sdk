@@ -148,10 +148,10 @@ defmodule ConfigCat.CachePolicy do
   end
 
   @impl Behaviour
-  def is_offline(instance_id) do
+  def offline?(instance_id) do
     instance_id
     |> via_tuple()
-    |> GenServer.call(:is_offline, Constants.fetch_timeout())
+    |> GenServer.call(:offline?, Constants.fetch_timeout())
   end
 
   @impl Behaviour

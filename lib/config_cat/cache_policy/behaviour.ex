@@ -8,7 +8,7 @@ defmodule ConfigCat.CachePolicy.Behaviour do
 
   @callback get(ConfigCat.instance_id()) ::
               {:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}
-  @callback is_offline(ConfigCat.instance_id()) :: boolean()
+  @callback offline?(ConfigCat.instance_id()) :: boolean()
   @callback set_offline(ConfigCat.instance_id()) :: :ok
   @callback set_online(ConfigCat.instance_id()) :: :ok
   @callback force_refresh(ConfigCat.instance_id()) :: ConfigCat.refresh_result()

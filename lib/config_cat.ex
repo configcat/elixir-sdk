@@ -554,11 +554,11 @@ defmodule ConfigCat do
     `client: :unique_name` option, specifying the name you configured for the
     instance you want to access.
   """
-  @spec is_offline([api_option()]) :: boolean()
-  def is_offline(options \\ []) do
+  @spec offline?([api_option()]) :: boolean()
+  def offline?(options \\ []) do
     options
     |> client()
-    |> GenServer.call(:is_offline, Constants.fetch_timeout())
+    |> GenServer.call(:offline?, Constants.fetch_timeout())
   end
 
   @doc """
@@ -653,11 +653,9 @@ defmodule ConfigCat do
         ConfigCat.set_offline(client: @client)
       end
 
-      @spec is_offline :: boolean()
-      # We should consider renaming this throughout the codebase in a follow-up
-      # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
-      def is_offline do
-        ConfigCat.is_offline(client: @client)
+      @spec offline? :: boolean()
+      def offline? do
+        ConfigCat.offline?(client: @client)
       end
 
       @spec hooks :: ConfigCat.Hooks.t()
