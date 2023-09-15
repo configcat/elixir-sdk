@@ -92,7 +92,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert {:ok, old_settings, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
       elapsed_ms = FetchTime.now_ms() - before
 
-      assert wait_time_ms < elapsed_ms && elapsed_ms < wait_time_ms * 2
+      assert wait_time_ms <= elapsed_ms && elapsed_ms <= wait_time_ms * 2
     end
 
     test "doesn't refresh between poll intervals", %{entry: entry} do

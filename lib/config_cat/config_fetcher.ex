@@ -53,6 +53,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     typedstruct enforce: true do
       field :api, module(), default: ConfigCat.API
       field :base_url, String.t()
+      field :callers, [GenServer.from()], default: []
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
       field :custom_endpoint?, boolean()
       field :data_governance, ConfigCat.data_governance(), default: :global
@@ -69,6 +70,16 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       options = choose_base_url(options)
 
       struct!(__MODULE__, options)
+    end
+
+    @spec add_caller(t(), GenServer.from()) :: t()
+    def add_caller(%__MODULE__{} = state, caller) do
+      %{state | callers: [caller | state.callers]}
+    end
+
+    @spec clear_callers(t()) :: t()
+    def clear_callers(%__MODULE__{} = state) do
+      %{state | callers: []}
     end
 
     defp choose_base_url(options) do
@@ -124,20 +135,50 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   @impl GenServer
-  def handle_call({:fetch, etag}, _from, %State{} = state) do
-    do_fetch(state, etag)
+  def handle_call({:fetch, etag}, from, %State{callers: []} = state) do
+    pid = self()
+
+    Task.start_link(fn ->
+      Logger.metadata(instance_id: state.instance_id)
+      result = do_fetch(state, etag)
+      send(pid, {:fetch_complete, result})
+    end)
+
+    new_state = State.add_caller(state, from)
+    {:noreply, new_state}
   end
+
+  @impl GenServer
+  def handle_call({:fetch, _etag}, from, %State{} = state) do
+    new_state = State.add_caller(state, from)
+    {:noreply, new_state}
+  end
+
+  @impl GenServer
+  def handle_info({:fetch_complete, result}, %State{} = state) do
+    {status, payload, new_state} = result
+
+    for caller <- state.callers do
+      GenServer.reply(caller, {status, payload})
+    end
+
+    {:noreply, State.clear_callers(new_state)}
+  end
+
+  @impl GenServer
+  # Work around leaking messages from hackney (see https://github.com/benoitc/hackney/issues/464#issuecomment-495731612)
+  # Seems to be an issue in OTP 21 and later.
+  def handle_info({:ssl_closed, _msg}, %State{} = state), do: {:noreply, state}
 
   defp do_fetch(%State{} = state, etag) do
     ConfigCatLogger.info("Fetching configuration from ConfigCat")
 
-    with api <- state.api,
-         {:ok, response} <-
-           api.get(url(state), headers(state, etag), http_options(state)) do
-      handle_response(response, state, etag)
-    else
+    case state.api.get(url(state), headers(state, etag), http_options(state)) do
+      {:ok, response} ->
+        handle_response(response, state, etag)
+
       error ->
-        {:reply, {:error, handle_error(error, state)}, state}
+        {:error, handle_error(error, state), state}
     end
   end
 
@@ -239,12 +280,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
       entry = ConfigEntry.new(config, new_etag, raw_config)
 
-      {:reply, {:ok, entry}, new_state}
+      {:ok, entry, new_state}
     end
   end
 
   defp handle_response(%Response{status_code: 304}, %State{} = state, _etag) do
-    {:reply, {:ok, :unchanged}, state}
+    {:ok, :unchanged, state}
   end
 
   defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag)
@@ -255,7 +296,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
     error = FetchError.exception(reason: response, transient?: false)
 
-    {:reply, {:error, error}, state}
+    {:error, error, state}
   end
 
   defp handle_response(response, %State{} = state, _etag) do
@@ -265,7 +306,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
     error = FetchError.exception(reason: response, transient?: true)
 
-    {:reply, {:error, error}, state}
+    {:error, error, state}
   end
 
   defp handle_error(
@@ -293,9 +334,4 @@ defmodule ConfigCat.CacheControlConfigFetcher do
       {_key, value} -> value
     end
   end
-
-  @impl GenServer
-  # Work around leaking messages from hackney (see https://github.com/benoitc/hackney/issues/464#issuecomment-495731612)
-  # Seems to be an issue in OTP 21 and later.
-  def handle_info({:ssl_closed, _msg}, %State{} = state), do: {:noreply, state}
 end
