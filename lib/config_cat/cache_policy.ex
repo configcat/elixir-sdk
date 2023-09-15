@@ -47,7 +47,8 @@ defmodule ConfigCat.CachePolicy do
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
-          {:poll_interval_seconds, pos_integer()}
+          {:max_init_wait_time_seconds, non_neg_integer()}
+          | {:poll_interval_seconds, pos_integer()}
         ]
 
   @typedoc "Options for lazy-polling mode."
@@ -74,6 +75,14 @@ defmodule ConfigCat.CachePolicy do
 
   The *ConfigCat SDK* downloads the latest values and stores them
   automatically on a regular schedule.
+
+  Use the `max_init_wait_time_seconds` option to set the maximum waiting time
+  between initialization and the first config acquisition. Defaults to 5 seconds
+  if not specified.
+
+  ```elixir
+  ConfigCat.CachePolicy.auto(max_init_wait_time_seconds: 5)
+  ```
 
   Use the `poll_interval_seconds` option to change the
   polling interval. Defaults to 60 seconds if not specified.

@@ -19,6 +19,7 @@ defmodule ConfigCat.CachePolicy.Helpers do
       field :instance_id, ConfigCat.instance_id()
       field :offline, boolean()
       field :policy_options, map(), default: %{}
+      field :policy_state, map(), default: %{}
     end
 
     @spec new(Keyword.t()) :: t()
@@ -45,6 +46,11 @@ defmodule ConfigCat.CachePolicy.Helpers do
     @spec set_online(t()) :: t()
     def set_online(%__MODULE__{} = state) do
       %{state | offline: false}
+    end
+
+    @spec update_policy_state(t(), (map() -> map())) :: t()
+    def update_policy_state(%__MODULE__{} = state, updater) do
+      Map.update!(state, :policy_state, updater)
     end
   end
 
