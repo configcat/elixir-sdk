@@ -97,8 +97,19 @@ defmodule ConfigCat.Cache do
 
   @impl GenServer
   def handle_call({:set, %ConfigEntry{} = entry}, _from, %State{} = state) do
-    result = state.cache.set(state.cache_key, ConfigEntry.serialize(entry))
-    {:reply, result, State.with_entry(state, entry)}
+    case state.cache.set(state.cache_key, ConfigEntry.serialize(entry)) do
+      :ok ->
+        :ok
+
+      {:error, error} ->
+        ConfigCatLogger.error("Error occurred while writing the cache. #{inspect(error)}",
+          event_id: 2201
+        )
+
+        :ok
+    end
+
+    {:reply, :ok, State.with_entry(state, entry)}
   end
 
   defp deserialize(str) do
@@ -107,7 +118,10 @@ defmodule ConfigCat.Cache do
         {:ok, entry}
 
       {:error, reason} ->
-        ConfigCatLogger.error("Error occurred while reading the cache. #{reason}")
+        ConfigCatLogger.error("Error occurred while reading the cache. #{reason}",
+          event_id: 2200
+        )
+
         {:error, :not_found}
     end
   end

@@ -33,13 +33,18 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   @spec make_old_entry :: %{entry: ConfigEntry.t(), settings: Config.settings()}
-  def make_old_entry do
+  @spec make_old_entry(non_neg_integer()) :: %{
+          entry: ConfigEntry.t(),
+          settings: Config.settings()
+        }
+  def make_old_entry(age_ms \\ 0) do
     settings = %{"old" => "settings"}
 
     entry =
       settings
       |> Config.new_with_settings()
       |> ConfigEntry.new("OldETag")
+      |> Map.update!(:fetch_time_ms, &(&1 - age_ms))
 
     %{entry: entry, settings: settings}
   end

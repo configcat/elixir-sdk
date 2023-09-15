@@ -59,20 +59,6 @@ defmodule ConfigCat.Hooks.ImplTest do
   end
 
   @tag capture_log: true
-  test "calls on_error hook when other hook fails" do
-    message = "Callback failed"
-    fail_callback = fn -> raise message end
-    on_error_callback = fn msg -> send(self(), {:on_error_called, msg}) end
-
-    impl = Impl.new(on_client_ready: fail_callback, on_error: on_error_callback)
-
-    assert :ok = Impl.invoke_hook(impl, :on_client_ready, [])
-
-    assert_received {:on_error_called, received}
-    assert received =~ message
-  end
-
-  @tag capture_log: true
   @tag timeout: 1_000
   test "does not call on_error hook recursively" do
     fail_callback = fn _msg -> raise "Callback failed" end

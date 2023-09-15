@@ -31,5 +31,5 @@ defmodule ConfigCat.ConfigCache do
 
   Returns :ok.
   """
-  @callback set(key, config :: String.t()) :: :ok
+  @callback set(key, config :: String.t()) :: :ok | {:error, term()}
 end

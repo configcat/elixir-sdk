@@ -2,6 +2,7 @@ defmodule ConfigCat.Hooks.Impl do
   @moduledoc false
   use TypedStruct
 
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
   require Logger
 
   @type callback :: fun() | tuple()
@@ -34,13 +35,14 @@ defmodule ConfigCat.Hooks.Impl do
         invoke_callback(callback, args)
       rescue
         e ->
-          # Call Logger instead of ConfigCatLogger to avoid recursively invoking a
-          # bad on_error hook.
           message = "Exception occurred during #{hook} callback: #{inspect(e)}"
-          Logger.error(message)
 
-          unless hook == :on_error do
-            invoke_hook(state, :on_error, [message])
+          if hook == :on_error do
+            # Call Logger instead of ConfigCatLogger to avoid recursively invoking a
+            # bad on_error hook.
+            Logger.error(message)
+          else
+            ConfigCatLogger.error(message)
           end
       end
     end)

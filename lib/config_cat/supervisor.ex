@@ -58,7 +58,7 @@ defmodule ConfigCat.Supervisor do
         cache(options),
         config_fetcher(options, override_behaviour),
         cache_policy(options, override_behaviour),
-        client(options)
+        client(options, override_behaviour)
       ]
       |> Enum.reject(&is_nil/1)
 
@@ -103,7 +103,9 @@ defmodule ConfigCat.Supervisor do
     {CachePolicy, policy_options}
   end
 
-  defp client(options) do
+  defp client(options, override_behaviour) do
+    cache_policy = if override_behaviour == :local_only, do: CachePolicy.Null, else: CachePolicy
+
     client_options =
       options
       |> Keyword.take([
@@ -111,6 +113,7 @@ defmodule ConfigCat.Supervisor do
         :flag_overrides,
         :instance_id
       ])
+      |> Keyword.put(:cache_policy, cache_policy)
 
     {Client, client_options}
   end

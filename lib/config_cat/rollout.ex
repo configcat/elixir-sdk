@@ -50,7 +50,7 @@ defmodule ConfigCat.Rollout do
         evaluate(key, nil, default_value, default_variation_id, settings)
 
       {:error, message} ->
-        ConfigCatLogger.error(message)
+        ConfigCatLogger.error(message, event_id: 1001)
 
         EvaluationDetails.new(
           default_value?: true,
@@ -223,13 +223,17 @@ defmodule ConfigCat.Rollout do
 
   defp log_nil_user(key) do
     ConfigCatLogger.warn(
-      "Evaluating get_value('#{key}'). User struct missing! You should pass a User to get_value(), in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/"
+      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is missing). " <>
+        "You should pass a User Object to the evaluation functions like `get_value()` in order to make targeting work properly. " <>
+        "Read more: https://configcat.com/docs/advanced/user-object/",
+      event_id: 3001
     )
   end
 
   defp log_invalid_user(key) do
     ConfigCatLogger.warn(
-      "Evaluating get_value('#{key}'). User Object is not an instance of User struct."
+      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is not an instance of User struct).",
+      event_id: 4001
     )
   end
 end
