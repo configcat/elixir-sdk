@@ -17,49 +17,60 @@ defmodule ConfigCat.Rollout do
           Config.settings()
         ) :: EvaluationDetails.t()
   def evaluate(key, user, default_value, default_variation_id, settings) do
-    log_evaluating(key)
+    {:ok, logs} = Agent.start(fn -> [] end)
 
-    with {:ok, valid_user} <- validate_user(user),
-         {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
-         setting_variation <-
-           Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
-         rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
-         percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules(), []),
-         {value, variation, rule, percentage_rule} <-
-           evaluate_rules(rollout_rules, percentage_rules, valid_user, key) do
-      variation = variation || setting_variation
+    try do
+      log_evaluating(logs, key, user)
 
-      value =
-        if value == :none do
-          base_value(setting_descriptor, default_value)
-        else
-          value
-        end
+      with {:ok, valid_user} <- validate_user(user),
+           {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
+           setting_variation <-
+             Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
+           rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
+           percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules(), []),
+           {value, variation, rule, percentage_rule} <-
+             evaluate_rules(rollout_rules, percentage_rules, valid_user, key, logs) do
+        variation = variation || setting_variation
 
-      EvaluationDetails.new(
-        key: key,
-        matched_evaluation_rule: rule,
-        matched_evaluation_percentage_rule: percentage_rule,
-        user: user,
-        value: value,
-        variation_id: variation
-      )
-    else
-      {:error, :invalid_user} ->
-        log_invalid_user(key)
-        evaluate(key, nil, default_value, default_variation_id, settings)
-
-      {:error, message} ->
-        ConfigCatLogger.error(message, event_id: 1001)
+        value =
+          if value == :none do
+            base_value(setting_descriptor, default_value, logs)
+          else
+            value
+          end
 
         EvaluationDetails.new(
-          default_value?: true,
-          error: message,
           key: key,
+          matched_evaluation_rule: rule,
+          matched_evaluation_percentage_rule: percentage_rule,
           user: user,
-          value: default_value,
-          variation_id: default_variation_id
+          value: value,
+          variation_id: variation
         )
+      else
+        {:error, :invalid_user} ->
+          log_invalid_user(key)
+          evaluate(key, nil, default_value, default_variation_id, settings)
+
+        {:error, message} ->
+          ConfigCatLogger.error(message, event_id: 1001)
+
+          EvaluationDetails.new(
+            default_value?: true,
+            error: message,
+            key: key,
+            value: default_value,
+            variation_id: default_variation_id
+          )
+      end
+    after
+      logs
+      |> Agent.get(& &1)
+      |> Enum.reverse()
+      |> Enum.join("\n")
+      |> ConfigCatLogger.debug(event_id: 5000)
+
+      Agent.stop(logs)
     end
   end
 
@@ -87,17 +98,15 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rules([], [], _user, _key), do: {:none, nil, nil, nil}
+  defp evaluate_rules([], [], _user, _key, _logs), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key) do
+  defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key, _logs) do
     log_nil_user(key)
     {:none, nil, nil, nil}
   end
 
-  defp evaluate_rules(rollout_rules, percentage_rules, user, key) do
-    log_valid_user(user)
-
-    case evaluate_rollout_rules(rollout_rules, user, key) do
+  defp evaluate_rules(rollout_rules, percentage_rules, user, key, logs) do
+    case evaluate_rollout_rules(rollout_rules, user, key, logs) do
       {:none, _, _} ->
         {value, variation, rule} = evaluate_percentage_rules(percentage_rules, user, key)
         {value, variation, nil, rule}
@@ -107,11 +116,11 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rollout_rules(rules, user, _key) do
-    Enum.reduce_while(rules, {:none, nil, nil}, &evaluate_rollout_rule(&1, &2, user))
+  defp evaluate_rollout_rules(rules, user, _key, logs) do
+    Enum.reduce_while(rules, {:none, nil, nil}, &evaluate_rollout_rule(&1, &2, user, logs))
   end
 
-  defp evaluate_rollout_rule(rule, default, user) do
+  defp evaluate_rollout_rule(rule, default, user, logs) do
     with comparison_attribute <- Map.get(rule, Constants.comparison_attribute()),
          comparison_value <- Map.get(rule, Constants.comparison_value()),
          comparator <- Map.get(rule, Constants.comparator()),
@@ -119,21 +128,30 @@ defmodule ConfigCat.Rollout do
          variation <- Map.get(rule, Constants.variation_id()) do
       case User.get_attribute(user, comparison_attribute) do
         nil ->
-          log_no_match(comparison_attribute, nil, comparator, comparison_value)
+          log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
           {:cont, default}
 
         user_value ->
           case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
             {:ok, true} ->
-              log_match(comparison_attribute, user_value, comparator, comparison_value, value)
+              log_match(
+                logs,
+                comparison_attribute,
+                user_value,
+                comparator,
+                comparison_value,
+                value
+              )
+
               {:halt, {value, variation, rule}}
 
             {:ok, false} ->
-              log_no_match(comparison_attribute, user_value, comparator, comparison_value)
+              log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
               {:cont, default}
 
             {:error, error} ->
               log_validation_error(
+                logs,
                 comparison_attribute,
                 user_value,
                 comparator,
@@ -188,37 +206,44 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
-  defp base_value(setting_descriptor, default_value) do
+  defp base_value(setting_descriptor, default_value, logs) do
     result = Map.get(setting_descriptor, Constants.value(), default_value)
-    ConfigCatLogger.debug("Returning #{result}")
+    log(logs, "Returning #{result}")
 
     result
   end
 
-  defp log_evaluating(key) do
-    ConfigCatLogger.debug("Evaluating get_value('#{key}').")
+  defp log_evaluating(logs, key, user) do
+    log(logs, "Evaluating get_value('#{key}). User object:\n#{inspect(user)}")
   end
 
-  defp log_match(comparison_attribute, user_value, comparator, comparison_value, value) do
-    ConfigCatLogger.debug(
+  defp log_match(logs, comparison_attribute, user_value, comparator, comparison_value, value) do
+    log(
+      logs,
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
-  defp log_no_match(comparison_attribute, user_value, comparator, comparison_value) do
-    ConfigCatLogger.debug(
+  defp log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value) do
+    log(
+      logs,
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
 
-  defp log_validation_error(comparison_attribute, user_value, comparator, comparison_value, error) do
-    ConfigCatLogger.warn(
+  defp log_validation_error(
+         logs,
+         comparison_attribute,
+         user_value,
+         comparator,
+         comparison_value,
+         error
+       ) do
+    message =
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
-    )
-  end
 
-  defp log_valid_user(user) do
-    ConfigCatLogger.debug("User object: #{inspect(user)}")
+    ConfigCatLogger.warn(message)
+    log(logs, message)
   end
 
   defp log_nil_user(key) do
@@ -235,5 +260,9 @@ defmodule ConfigCat.Rollout do
       "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is not an instance of User struct).",
       event_id: 4001
     )
+  end
+
+  defp log(logs, message) do
+    Agent.update(logs, &[message | &1])
   end
 end
