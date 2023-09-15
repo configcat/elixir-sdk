@@ -23,28 +23,9 @@ defmodule ConfigCat do
   end
   ```
 
-  If you need to run more than one instance of `ConfigCat`, you can add multiple
-  `ConfigCat` children. You will need to give `ConfigCat` a unique `name` option
-  for each, as well as using `Supervisor.child_spec/2` to provide a unique `id`
-  for each instance.
-
-  ```elixir
-  # lib/my_app/application.ex
-  def start(_type, _args) do
-    children = [
-      # ... other children ...
-      Supervisor.child_spec({ConfigCat, [sdk_key: "sdk_key_1", name: :first]}, id: :config_cat_1),
-      Supervisor.child_spec({ConfigCat, [sdk_key: "sdk_key_2", name: :second]}, id: :config_cat_2),
-    ]
-
-    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
-    Supervisor.start_link(children, opts)
-  end
-  ```
-
   ### Options
 
-  `ConfigCat` takes a number of other keyword arguments:
+  `ConfigCat` takes a number of keyword arguments:
 
   - `sdk_key`: **REQUIRED** The SDK key for accessing your ConfigCat settings.
     Go to the [Connect your application](https://app.configcat.com/sdkkey) tab
@@ -82,8 +63,8 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", cache_policy: ConfigCat.CachePolicy.manual()]}
     ```
 
-  - `connect_timeout_milliseconds`: **OPTIONAL** timeout for establishing a TCP or SSL connection,
-    in milliseconds. Default is 8000.
+  - `connect_timeout_milliseconds`: **OPTIONAL** timeout for establishing a TCP
+    or SSL connection, in milliseconds. Default is 8000.
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", connect_timeout_milliseconds: 8000]}
@@ -127,7 +108,7 @@ defmodule ConfigCat do
     Defaults to `ConfigCat`.  Must be provided if you need to run more than one
     instance of `ConfigCat` in the same application. If you provide a `name`,
     you must then pass that name to all of the API functions using the `client`
-    option.
+    option. See `Multiple Instances` below.
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", name: :unique_name]}
@@ -144,12 +125,84 @@ defmodule ConfigCat do
     {ConfigCat, [sdk_key: "YOUR SDK KEY", offline: true]}
     ```
 
-  - `read_timeout_milliseconds`: **OPTIONAL** timeout for receiving an HTTP response from
-    the socket, in milliseconds. Default is 5000.
+  - `read_timeout_milliseconds`: **OPTIONAL** timeout for receiving an HTTP
+    response from the socket, in milliseconds. Default is 5000.
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", read_timeout_milliseconds: 5000]}
     ```
+
+  ### Multiple Instances
+
+  If you need to run more than one instance of `ConfigCat`, there are two ways
+  you can do it.
+
+  #### Module-Based
+
+  You can create a module that `use`s `ConfigCat` and then call the ConfigCat
+  API functions on that module. This is the recommended option, as it makes the
+  calling code a bit clearer and simpler.
+
+  You can pass any of the options listed above as arguments to `use ConfigCat`
+  or specify them in your supervisor. Arguments specified by the supervisor take
+  precedence over those provided to `use ConfigCat`.
+
+  ```elixir
+  # lib/my_app/first_flags.ex
+  defmodule MyApp.FirstFlags do
+    use ConfigCat, sdk_key: "sdk_key_1"
+  end
+
+  # lib/my_app/second_flags.ex
+  defmodule MyApp.SecondFlags do
+    use ConfigCat, sdk_key: "sdk_key_2"
+  end
+
+  # lib/my_app/application.ex
+  def start(_type, _args) do
+    children = [
+      # ... other children ...
+      FirstFlags,
+      SecondFlags,
+    ]
+
+    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+
+  # Calling code:
+  FirstFlags.get_value("someKey", "default value")
+  SecondFlags.get_value("otherKey", "other default")
+  ```
+
+  #### Explicit Client
+
+  If you prefer not to use the module-based solution, you can instead add
+  multiple `ConfigCat` children to your application's supervision tree. You will
+  need to give `ConfigCat` a unique `name` option for each, as well as using
+  `Supervisor.child_spec/2` to provide a unique `id` for each instance.
+
+  When calling the ConfigCat API functions, you'll pass a `client:` keyword
+  argument with the unique `name` you gave to that instance.
+
+  ```elixir
+  # lib/my_app/application.ex
+  def start(_type, _args) do
+    children = [
+      # ... other children ...
+      Supervisor.child_spec({ConfigCat, [sdk_key: "sdk_key_1", name: :first]}, id: :config_cat_1),
+      Supervisor.child_spec({ConfigCat, [sdk_key: "sdk_key_2", name: :second]}, id: :config_cat_2),
+    ]
+
+    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  # Calling code:
+  ConfigCat.get_value("someKey", "default value", client: :first)
+  ConfigCat.get_value("otherKey", "other default", client: :second)
+  ```
 
   ## Use the API
 
@@ -526,5 +579,91 @@ defmodule ConfigCat do
     options
     |> Keyword.get(:client, __MODULE__)
     |> Client.via_tuple()
+  end
+
+  defmacro __using__(default_options) do
+    quote do
+      @client Keyword.get(unquote(default_options), :name, __MODULE__)
+
+      @spec child_spec(ConfigCat.options()) :: Supervisor.child_spec()
+      def child_spec(options) do
+        options =
+          unquote(default_options)
+          |> Keyword.merge(options)
+          |> Keyword.put_new(:name, @client)
+
+        Supervisor.child_spec({ConfigCat, options}, id: @client)
+      end
+
+      @spec get_all_keys :: [ConfigCat.key()]
+      def get_all_keys do
+        ConfigCat.get_all_keys(client: @client)
+      end
+
+      @spec get_value(ConfigCat.key(), ConfigCat.value(), ConfigCat.User.t() | nil) ::
+              ConfigCat.value()
+      def get_value(key, default_value, user \\ nil) do
+        ConfigCat.get_value(key, default_value, user, client: @client)
+      end
+
+      @spec get_value_details(ConfigCat.key(), ConfigCat.value(), ConfigCat.User.t() | nil) ::
+              ConfigCat.EvaluationDetails.t()
+      def get_value_details(key, default_value, user \\ nil) do
+        ConfigCat.get_value_details(key, default_value, user, client: @client)
+      end
+
+      @spec get_all_value_details(ConfigCat.User.t() | nil) :: [EvaluationDetails.t()]
+      def get_all_value_details(user \\ nil) do
+        ConfigCat.get_all_value_details(user, client: @client)
+      end
+
+      @spec get_key_and_value(ConfigCat.variation_id()) ::
+              {ConfigCat.key(), ConfigCat.value()} | nil
+      def get_key_and_value(variation_id) do
+        ConfigCat.get_key_and_value(variation_id, client: @client)
+      end
+
+      @spec get_all_values(ConfigCat.User.t() | nil) :: %{ConfigCat.key() => ConfigCat.value()}
+      def get_all_values(user \\ nil) do
+        ConfigCat.get_all_values(user, client: @client)
+      end
+
+      @spec force_refresh :: ConfigCat.refresh_result()
+      def force_refresh do
+        ConfigCat.force_refresh(client: @client)
+      end
+
+      @spec set_default_user(ConfigCat.User.t()) :: :ok
+      def set_default_user(user) do
+        ConfigCat.set_default_user(user, client: @client)
+      end
+
+      @spec clear_default_user :: :ok
+      def clear_default_user do
+        ConfigCat.clear_default_user(client: @client)
+      end
+
+      @spec set_online :: :ok
+      def set_online do
+        ConfigCat.set_online(client: @client)
+      end
+
+      @spec set_offline :: :ok
+      def set_offline do
+        ConfigCat.set_offline(client: @client)
+      end
+
+      @spec is_offline :: boolean()
+      # We should consider renaming this throughout the codebase in a follow-up
+      # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
+      def is_offline do
+        ConfigCat.is_offline(client: @client)
+      end
+
+      @spec hooks :: ConfigCat.Hooks.t()
+      def hooks do
+        ConfigCat.hooks(client: @client)
+      end
+    end
   end
 end

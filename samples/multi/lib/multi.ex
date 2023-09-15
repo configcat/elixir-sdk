@@ -17,6 +17,16 @@ defmodule Multi do
 
   alias ConfigCat.User
 
+  defmodule First do
+    @moduledoc false
+    use ConfigCat, sdk_key: "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A"
+  end
+
+  defmodule Second do
+    @moduledoc false
+    use ConfigCat, sdk_key: "PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ"
+  end
+
   def start_link(_options) do
     GenServer.start_link(__MODULE__, [])
   end
@@ -32,41 +42,36 @@ defmodule Multi do
   defp run_first_examples do
     # 1. As the passed User's country is Hungary this will print 'Dog'
     my_setting_value =
-      ConfigCat.get_value("keySampleText", "default value", User.new("key", country: "Hungary"),
-        client: :first
-      )
+      First.get_value("keySampleText", "default value", User.new("key", country: "Hungary"))
 
     print("keySampleText", my_setting_value)
 
     # 2. As the passed User's custom attribute - SubscriptionType - is unlimited this will print 'Lion'
     my_setting_value =
-      ConfigCat.get_value(
+      First.get_value(
         "keySampleText",
         "default value",
-        User.new("key", custom: %{"SubscriptionType" => "unlimited"}),
-        client: :first
+        User.new("key", custom: %{"SubscriptionType" => "unlimited"})
       )
 
     print("keySampleText", my_setting_value)
 
     # 3/a. As the passed User doesn't fill in any rules, this will serve 'Falcon' or 'Horse'.
-    my_setting_value =
-      ConfigCat.get_value("keySampleText", "default value", User.new("key"), client: :first)
+    my_setting_value = First.get_value("keySampleText", "default value", User.new("key"))
 
     print("keySampleText", my_setting_value)
 
     # 3/b. As this is the same user from 3/a., this will print the same value as the previous one ('Falcon' or 'Horse')
-    my_setting_value =
-      ConfigCat.get_value("keySampleText", "default value", User.new("key"), client: :first)
+    my_setting_value = First.get_value("keySampleText", "default value", User.new("key"))
 
     print("keySampleText", my_setting_value)
 
     # 4. As we don't pass an User object to this call, this will print the setting's default value - 'Cat'
-    my_setting_value = ConfigCat.get_value("keySampleText", "default value", client: :first)
+    my_setting_value = First.get_value("keySampleText", "default value")
     print("keySampleText", my_setting_value)
 
     # 'myKeyNotExists' setting doesn't exist in the project configuration and the client returns default value ('default value')
-    my_setting_value = ConfigCat.get_value("myKeyNotExists", "default value", client: :first)
+    my_setting_value = First.get_value("myKeyNotExists", "default value")
     print("myKeyNotExists", my_setting_value)
   end
 
@@ -77,10 +82,10 @@ defmodule Multi do
         custom: %{version: "1.0.0"}
       )
 
-    value = ConfigCat.get_value("isPOCFeatureEnabled", "default value", user, client: :second)
+    value = Second.get_value("isPOCFeatureEnabled", "default value", user)
     print("isPOCFeatureEnabled", value)
 
-    value = ConfigCat.get_value("isAwesomeFeatureEnabled", "default value", client: :second)
+    value = Second.get_value("isAwesomeFeatureEnabled", "default value")
     print("isAwesomeFeatureEnabled", value)
   end
 
