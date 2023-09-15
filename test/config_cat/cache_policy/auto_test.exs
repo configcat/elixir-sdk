@@ -6,8 +6,6 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Auto
-  alias ConfigCat.Config
-  alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.MockFetcher
@@ -63,8 +61,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
     test "performs initial fetch if cache is already populated with an older entry",
          %{entry: entry, settings: settings} do
-      %{entry: old_entry} = make_old_entry()
-      old_entry = Map.update!(old_entry, :fetch_time_ms, &(&1 - @policy.poll_interval_ms - 1))
+      %{entry: old_entry} = make_old_entry(@policy.poll_interval_ms + 1)
 
       expect_refresh(entry)
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: old_entry)
@@ -72,6 +69,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
+    @tag capture_log: true
     test "returns previously cached entry if max init wait time expires before initial fetch completes",
          %{entry: entry} do
       wait_time_ms = 100
@@ -223,11 +221,13 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "does not fetch config when offline mode is set", %{entry: entry, settings: settings} do
       policy = CachePolicy.auto(poll_interval_seconds: 1)
 
-      expect_refresh(entry)
+      %{entry: old_entry, settings: old_settings} = make_old_entry(policy.poll_interval_ms + 1)
+
+      expect_refresh(old_entry)
       {:ok, instance_id} = start_cache_policy(policy)
 
       refute CachePolicy.is_offline(instance_id)
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, old_settings, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
 
       assert :ok = CachePolicy.set_offline(instance_id)
       assert CachePolicy.is_offline(instance_id)
@@ -235,18 +235,14 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       expect_not_refreshed()
       wait_for_poll(policy)
 
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, old_settings, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
 
-      new_settings = %{"new" => "config"}
-      new_config = Config.new_with_settings(new_settings)
-      new_entry = ConfigEntry.new(new_config, "NEW_ETAG")
-
-      expect_refresh(new_entry)
+      expect_refresh(entry)
 
       assert :ok = CachePolicy.set_online(instance_id)
       refute CachePolicy.is_offline(instance_id)
 
-      assert {:ok, new_settings, new_entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
   end
 

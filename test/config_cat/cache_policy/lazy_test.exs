@@ -39,8 +39,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
     test "performs initial fetch if cache is already populated with an older entry",
          %{entry: entry, settings: settings} do
-      %{entry: old_entry} = make_old_entry()
-      old_entry = Map.update!(old_entry, :fetch_time_ms, &(&1 - @policy.cache_expiry_ms - 1))
+      %{entry: old_entry} = make_old_entry(@policy.cache_expiry_ms + 1)
 
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: old_entry)
 
