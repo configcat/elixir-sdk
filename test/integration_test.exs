@@ -16,6 +16,16 @@ defmodule ConfigCat.IntegrationTest do
     |> assert_sdk_key_required()
   end
 
+  test "raises error when starting another instance with the same SDK key" do
+    {:ok, _} = start_config_cat(@sdk_key, name: :original)
+
+    assert {:error, {{:EXIT, {error, _stacktrace}}, _spec}} =
+             start_config_cat(@sdk_key, name: :duplicate)
+
+    assert %ArgumentError{message: message} = error
+    assert message =~ ~r/existing ConfigCat instance/
+  end
+
   test "fetches config" do
     {:ok, client} = start_config_cat(@sdk_key)
 
@@ -104,7 +114,7 @@ defmodule ConfigCat.IntegrationTest do
     default_options = [name: name, sdk_key: sdk_key]
 
     with {:ok, _pid} <-
-           start_supervised({ConfigCat, Keyword.merge(default_options, options)}) do
+           start_supervised({ConfigCat, Keyword.merge(default_options, options)}, id: name) do
       {:ok, name}
     end
   end
