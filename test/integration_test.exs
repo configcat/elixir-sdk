@@ -49,7 +49,7 @@ defmodule ConfigCat.IntegrationTest do
     {:ok, client} =
       start_config_cat(
         @sdk_key,
-        fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 5)
+        fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 5)
       )
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
