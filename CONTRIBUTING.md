@@ -40,5 +40,5 @@ mix deps.get
 ## Running tests
 
 ```bash
-mix test
+mix coveralls.json
 ```
