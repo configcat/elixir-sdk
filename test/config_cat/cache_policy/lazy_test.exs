@@ -7,16 +7,16 @@ defmodule ConfigCat.CachePolicy.LazyTest do
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.FetchTime
 
-  @policy CachePolicy.lazy(cache_expiry_seconds: 300)
+  @policy CachePolicy.lazy(cache_refresh_interval_seconds: 300)
 
   setup :verify_on_exit!
 
   describe "creation" do
     test "returns a struct with the expected polling mode and options" do
       seconds = 123
-      policy = CachePolicy.lazy(cache_expiry_seconds: seconds)
+      policy = CachePolicy.lazy(cache_refresh_interval_seconds: seconds)
 
-      assert policy == %Lazy{cache_expiry_ms: seconds * 1000, mode: "l"}
+      assert policy == %Lazy{cache_refresh_interval_ms: seconds * 1000, mode: "l"}
     end
   end
 
@@ -39,7 +39,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
     test "performs initial fetch if cache is already populated with an older entry",
          %{entry: entry, settings: settings} do
-      %{entry: old_entry} = make_old_entry(@policy.cache_expiry_ms + 1)
+      %{entry: old_entry} = make_old_entry(@policy.cache_refresh_interval_ms + 1)
 
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: old_entry)
 
@@ -58,7 +58,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
     end
 
     test "re-fetches if cache has expired", %{entry: entry, settings: settings} do
-      policy = CachePolicy.lazy(cache_expiry_seconds: 0)
+      policy = CachePolicy.lazy(cache_refresh_interval_seconds: 0)
       {:ok, instance_id} = start_cache_policy(policy)
       %{entry: old_entry} = make_old_entry()
 

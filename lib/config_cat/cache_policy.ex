@@ -52,7 +52,7 @@ defmodule ConfigCat.CachePolicy do
         ]
 
   @typedoc "Options for lazy-polling mode."
-  @type lazy_options :: [{:cache_expiry_seconds, non_neg_integer()}]
+  @type lazy_options :: [{:cache_refresh_interval_seconds, non_neg_integer()}]
 
   @typedoc "Callback to call when configuration changes."
   @type on_changed_callback :: (() -> :ok)
@@ -104,11 +104,11 @@ defmodule ConfigCat.CachePolicy do
   not present or have expired. In this case the function will wait
   until the settings have been fetched before returning.
 
-  Use the required `cache_expiry_seconds` option to set the cache
+  Use the required `cache_refresh_interval_seconds` option to set the cache
   lifetime.
 
   ```elixir
-  ConfigCat.CachePolicy.lazy(cache_expiry_seconds: 300)
+  ConfigCat.CachePolicy.lazy(cache_refresh_interval_seconds: 300)
   ```
   """
   @spec lazy(lazy_options()) :: t()

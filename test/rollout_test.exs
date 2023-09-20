@@ -172,7 +172,7 @@ defmodule ConfigCat.RolloutTest do
            start_supervised(
              {ConfigCat,
               [
-                fetch_policy: CachePolicy.lazy(cache_expiry_seconds: 300),
+                fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
                 name: name,
                 sdk_key: sdk_key
               ]}

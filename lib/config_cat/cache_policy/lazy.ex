@@ -13,7 +13,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   typedstruct enforce: true do
-    field :cache_expiry_ms, non_neg_integer()
+    field :cache_refresh_interval_ms, non_neg_integer()
     field :mode, String.t(), default: "l"
   end
 
@@ -21,8 +21,8 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   @spec new(options()) :: t()
   def new(options) do
-    {expiry_seconds, options} = Keyword.pop!(options, :cache_expiry_seconds)
-    options = Keyword.put(options, :cache_expiry_ms, expiry_seconds * 1000)
+    {refresh_interval_seconds, options} = Keyword.pop!(options, :cache_refresh_interval_seconds)
+    options = Keyword.put(options, :cache_refresh_interval_ms, refresh_interval_seconds * 1000)
     struct(__MODULE__, options)
   end
 
@@ -85,11 +85,11 @@ defmodule ConfigCat.CachePolicy.Lazy do
   end
 
   defp needs_fetch?(%State{} = state) do
-    expiry_ms = state.policy_options.cache_expiry_ms
+    refresh_interval_ms = state.policy_options.cache_refresh_interval_ms
 
     case Helpers.cached_entry(state) do
       {:ok, %ConfigEntry{} = entry} ->
-        entry.fetch_time_ms + expiry_ms <= FetchTime.now_ms()
+        entry.fetch_time_ms + refresh_interval_ms <= FetchTime.now_ms()
 
       _ ->
         true
