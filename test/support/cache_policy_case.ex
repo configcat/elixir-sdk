@@ -85,7 +85,6 @@ defmodule ConfigCat.CachePolicyCase do
 
   defp start_cache(instance_id) do
     cache_key = UUID.uuid4()
-    InMemoryCache.clear()
 
     {:ok, _pid} =
       start_supervised(

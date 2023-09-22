@@ -1,6 +1,10 @@
 defmodule ConfigCat.IntegrationTest do
-  use ExUnit.Case, async: true
+  # Must be async: false to avoid a collision with other tests.
+  # Now that we only allow a single ConfigCat instance to use the same SDK key,
+  # one of the async tests would fail due to the existing running instance.
+  use ExUnit.Case, async: false
 
+  alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.InMemoryCache
 
@@ -16,6 +20,7 @@ defmodule ConfigCat.IntegrationTest do
     |> assert_sdk_key_required()
   end
 
+  @tag capture_log: true
   test "raises error when starting another instance with the same SDK key" do
     {:ok, _} = start_config_cat(@sdk_key, name: :original)
 
@@ -108,7 +113,9 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   defp start_config_cat(sdk_key, options \\ []) do
-    InMemoryCache.clear()
+    sdk_key
+    |> Cache.generate_key()
+    |> InMemoryCache.clear()
 
     name = UUID.uuid4() |> String.to_atom()
     default_options = [name: name, sdk_key: sdk_key]
