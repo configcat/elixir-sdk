@@ -22,9 +22,9 @@ defmodule ConfigCat.InMemoryCache do
     GenServer.call(__MODULE__, {:set, cache_key, value})
   end
 
-  @spec clear :: :ok
-  def clear do
-    GenServer.call(__MODULE__, :clear)
+  @spec clear(ConfigCache.key()) :: :ok
+  def clear(cache_key) do
+    GenServer.call(__MODULE__, {:clear, cache_key})
   end
 
   @impl GenServer
@@ -33,8 +33,8 @@ defmodule ConfigCat.InMemoryCache do
   end
 
   @impl GenServer
-  def handle_call(:clear, _from, _state) do
-    {:reply, :ok, %{}}
+  def handle_call({:clear, cache_key}, _from, state) do
+    {:reply, :ok, Map.delete(state, cache_key)}
   end
 
   @impl GenServer

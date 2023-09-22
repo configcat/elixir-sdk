@@ -114,6 +114,7 @@ defmodule ConfigCatTest do
              } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
     end
 
+    @tag capture_log: true
     test "get_all_value_details/2 returns evaluation details for all keys", %{client: client} do
       all_details = ConfigCat.get_all_value_details(client: client)
       details_by_key = fn key -> Enum.find(all_details, &(&1.key == key)) end
@@ -133,6 +134,8 @@ defmodule ConfigCatTest do
   end
 
   describe "when the configuration has not been fetched" do
+    @describetag capture_log: true
+
     setup do
       {:ok, client} = start_client()
 
