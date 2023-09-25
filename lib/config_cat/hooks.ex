@@ -54,9 +54,9 @@ defmodule ConfigCat.Hooks do
   end
 
   @typedoc """
-  A module/function name/extra arguments tuple representing a callback function.
+  A hook callback is either an anonymous function or a module/function name/extra_arguments tuple.
 
-  Each callback passes specific arguments. These specific arguments are
+  Each callback is passed specific arguments. These specific arguments are
   prepended to the extra arguments provided in the tuple (if any).
 
   For example, you might want to define a callback that sends a message to
