@@ -39,6 +39,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.Preferences
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigCat.ConfigFetcher.FetchError
@@ -228,9 +229,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     with {:ok, config} <- Jason.decode(raw_config),
          new_etag = extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
-           state,
-         {base_url, redirect_mode} <- Config.preferences(config) do
+           state do
+      preferences = Config.preferences(config)
       followed? = Map.has_key?(redirects, new_base_url)
+      base_url = Preferences.base_url(preferences)
+      redirect_mode = Preferences.redirect_mode(preferences)
 
       new_state =
         cond do

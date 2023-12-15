@@ -2,7 +2,7 @@ defmodule ConfigCat.Config do
   @moduledoc """
   Defines configuration-related types used in the rest of the library.
   """
-  alias ConfigCat.RedirectMode
+  alias ConfigCat.Config.Preferences
 
   @typedoc false
   @type comparator :: non_neg_integer()
@@ -14,7 +14,7 @@ defmodule ConfigCat.Config do
   @type key :: String.t()
 
   @typedoc false
-  @type opt :: {:feature_flags, feature_flags()}
+  @type opt :: {:feature_flags, feature_flags()} | {:preferences, Preferences.t()}
 
   @typedoc "A collection of feature flags and preferences."
   @type t :: map()
@@ -30,26 +30,14 @@ defmodule ConfigCat.Config do
 
   @feature_flags "f"
   @preferences "p"
-  @preferences_base_url "u"
-  @redirect_mode "r"
 
   @doc false
   @spec new([opt]) :: t()
   def new(opts \\ []) do
     feature_flags = Keyword.get(opts, :feature_flags, %{})
+    preferences = Keyword.get_lazy(opts, :preferences, &Preferences.new/0)
 
-    %{@feature_flags => feature_flags}
-  end
-
-  @doc false
-  @spec new_with_preferences(url(), RedirectMode.t()) :: t()
-  def new_with_preferences(base_url, redirect_mode) do
-    %{
-      @preferences => %{
-        @preferences_base_url => base_url,
-        @redirect_mode => redirect_mode
-      }
-    }
+    %{@feature_flags => feature_flags, @preferences => preferences}
   end
 
   @doc false
@@ -68,11 +56,8 @@ defmodule ConfigCat.Config do
   end
 
   @doc false
-  @spec preferences(t()) :: {url() | nil, RedirectMode.t() | nil}
+  @spec preferences(t()) :: Preferences.t()
   def preferences(config) do
-    case config[@preferences] do
-      nil -> {nil, nil}
-      preferences -> {preferences[@preferences_base_url], preferences[@redirect_mode]}
-    end
+    Map.get_lazy(config, @preferences, &Preferences.new/0)
   end
 end
