@@ -14,7 +14,7 @@ defmodule ConfigCatTest do
 
   describe "when the configuration has been fetched" do
     setup do
-      settings = ~J"""
+      feature_flags = ~J"""
         {
           "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
           "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
@@ -31,7 +31,7 @@ defmodule ConfigCatTest do
       {:ok, client} = start_client()
 
       fetch_time_ms = FetchTime.now_ms()
-      stub_cached_settings({:ok, settings, fetch_time_ms})
+      stub_cached_feature_flags({:ok, feature_flags, fetch_time_ms})
 
       {:ok, client: client, fetch_time_ms: fetch_time_ms}
     end
@@ -138,7 +138,7 @@ defmodule ConfigCatTest do
     setup do
       {:ok, client} = start_client()
 
-      stub_cached_settings({:error, :not_found})
+      stub_cached_feature_flags({:error, :not_found})
 
       {:ok, client: client}
     end

@@ -84,11 +84,11 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    feature_flags = Config.feature_flags(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
-    assert_received {:on_config_changed, ^settings}
+    assert_received {:on_config_changed, ^feature_flags}
     assert_received {:on_flag_evaluated, _details}
 
     refute_received {:on_error, _error}
@@ -112,11 +112,11 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    feature_flags = Config.feature_flags(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
-    assert_received {:on_config_changed, ^settings}
+    assert_received {:on_config_changed, ^feature_flags}
     assert_received {:on_flag_evaluated, _details}
     refute_received {:on_error, _error}
     refute_received _any_other_messages

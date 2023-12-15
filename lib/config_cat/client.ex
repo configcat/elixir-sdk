@@ -96,9 +96,9 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    case cached_settings(state) do
-      {:ok, settings, _fetch_time_ms} ->
-        result = Enum.find_value(settings, nil, &entry_matching(&1, variation_id))
+    case cached_feature_flags(state) do
+      {:ok, feature_flags, _fetch_time_ms} ->
+        result = Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id))
 
         if is_nil(result) do
           ConfigCatLogger.error(
@@ -183,9 +183,9 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_all_keys(%State{} = state) do
-    case cached_settings(state) do
-      {:ok, settings, _fetch_time_ms} ->
-        Map.keys(settings)
+    case cached_feature_flags(state) do
+      {:ok, feature_flags, _fetch_time_ms} ->
+        Map.keys(feature_flags)
 
       _ ->
         ConfigCatLogger.error("Config JSON is not present. Returning empty result.",
@@ -216,10 +216,11 @@ defmodule ConfigCat.Client do
     user = if user != nil, do: user, else: state.default_user
 
     details =
-      case cached_settings(state) do
-        {:ok, settings, fetch_time_ms} ->
+      case cached_feature_flags(state) do
+        {:ok, feature_flags, fetch_time_ms} ->
           %EvaluationDetails{} =
-            details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
+            details =
+            Rollout.evaluate(key, user, default_value, default_variation_id, feature_flags)
 
           fetch_time =
             case FetchTime.to_datetime(fetch_time_ms) do
@@ -249,22 +250,22 @@ defmodule ConfigCat.Client do
     details
   end
 
-  defp cached_settings(%State{} = state) do
+  defp cached_feature_flags(%State{} = state) do
     %{cache_policy: policy, flag_overrides: flag_overrides, instance_id: instance_id} = state
-    local_settings = OverrideDataSource.overrides(flag_overrides)
+    local_feature_flags = OverrideDataSource.overrides(flag_overrides)
 
     case OverrideDataSource.behaviour(flag_overrides) do
       :local_only ->
-        {:ok, local_settings, 0}
+        {:ok, local_feature_flags, 0}
 
       :local_over_remote ->
-        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(remote_settings, local_settings), fetch_time_ms}
+        with {:ok, remote_feature_flags, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(remote_feature_flags, local_feature_flags), fetch_time_ms}
         end
 
       :remote_over_local ->
-        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(local_settings, remote_settings), fetch_time_ms}
+        with {:ok, remote_feature_flags, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Map.merge(local_feature_flags, remote_feature_flags), fetch_time_ms}
         end
     end
   end

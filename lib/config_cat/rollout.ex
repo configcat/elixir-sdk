@@ -14,16 +14,16 @@ defmodule ConfigCat.Rollout do
           User.t() | nil,
           Config.value(),
           Config.variation_id() | nil,
-          Config.settings()
+          Config.feature_flags()
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, settings) do
+  def evaluate(key, user, default_value, default_variation_id, feature_flags) do
     {:ok, logs} = Agent.start(fn -> [] end)
 
     try do
       log_evaluating(logs, key, user)
 
       with {:ok, valid_user} <- validate_user(user),
-           {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
+           {:ok, setting_descriptor} <- setting_descriptor(feature_flags, key, default_value),
            setting_variation =
              Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
            rollout_rules = Map.get(setting_descriptor, Constants.rollout_rules(), []),
@@ -50,7 +50,7 @@ defmodule ConfigCat.Rollout do
       else
         {:error, :invalid_user} ->
           log_invalid_user(key)
-          evaluate(key, nil, default_value, default_variation_id, settings)
+          evaluate(key, nil, default_value, default_variation_id, feature_flags)
 
         {:error, message} ->
           ConfigCatLogger.error(message, event_id: 1001)
@@ -78,14 +78,14 @@ defmodule ConfigCat.Rollout do
   defp validate_user(%User{} = user), do: {:ok, user}
   defp validate_user(_), do: {:error, :invalid_user}
 
-  defp setting_descriptor(settings, key, default_value) do
-    case Map.fetch(settings, key) do
+  defp setting_descriptor(feature_flags, key, default_value) do
+    case Map.fetch(feature_flags, key) do
       {:ok, descriptor} ->
         {:ok, descriptor}
 
       :error ->
         available_keys =
-          settings
+          feature_flags
           |> Map.keys()
           |> Enum.map_join(", ", &"'#{&1}'")
 

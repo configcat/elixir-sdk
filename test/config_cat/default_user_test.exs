@@ -9,7 +9,7 @@ defmodule ConfigCat.DefaultUserTest do
   @moduletag capture_log: true
 
   setup do
-    settings = ~J"""
+    feature_flags = ~J"""
       {
         "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
         "testStringKey": {
@@ -21,7 +21,7 @@ defmodule ConfigCat.DefaultUserTest do
       }
     """
 
-    stub_cached_settings({:ok, settings, FetchTime.now_ms()})
+    stub_cached_feature_flags({:ok, feature_flags, FetchTime.now_ms()})
 
     :ok
   end

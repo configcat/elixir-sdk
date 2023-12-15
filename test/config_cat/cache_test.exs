@@ -9,7 +9,7 @@ defmodule ConfigCat.CacheTest do
   alias ConfigCat.Hooks
   alias ConfigCat.MockConfigCache
 
-  @config Config.new_with_settings(%{})
+  @config Config.new()
   @entry ConfigEntry.new(@config, "ETAG")
   @serialized ConfigEntry.serialize(@entry)
 
