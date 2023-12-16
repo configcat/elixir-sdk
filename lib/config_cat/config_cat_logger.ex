@@ -37,20 +37,20 @@ defmodule ConfigCat.ConfigCatLogger do
     end
   end
 
-  @spec warn(String.t()) :: Macro.t()
-  @spec warn(String.t(), keyword()) :: Macro.t()
-  defmacro warn(message, metadata \\ []) do
+  @spec warning(String.t()) :: Macro.t()
+  @spec warning(String.t(), keyword()) :: Macro.t()
+  defmacro warning(message, metadata \\ []) do
     quote bind_quoted: [message: message, metadata: metadata, module: __MODULE__] do
       require Logger
 
-      Logger.warn(fn -> module.formatted_message(message, metadata) end)
+      Logger.warning(fn -> module.formatted_message(message, metadata) end)
     end
   end
 
   @spec warn_offline :: String.t()
   def warn_offline do
     message = "Client is in offline mode; it cannot initiate HTTP calls."
-    warn(message, event_id: 3200)
+    warning(message, event_id: 3200)
     message
   end
 

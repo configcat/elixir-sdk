@@ -19,7 +19,7 @@ defmodule ConfigCat.MixProject do
       deps: deps(),
       dialyzer: [
         list_unused_filters: true,
-        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+        plt_local_path: "priv/plts/dialyzer.plt"
       ],
       docs: [
         assets: "assets",
@@ -73,7 +73,7 @@ defmodule ConfigCat.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.3", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:elixir_uuid, "~> 1.2"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.5", only: :test},

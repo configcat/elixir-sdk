@@ -242,12 +242,12 @@ defmodule ConfigCat.Rollout do
     message =
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
 
-    ConfigCatLogger.warn(message)
+    ConfigCatLogger.warning(message)
     log(logs, message)
   end
 
   defp log_nil_user(key) do
-    ConfigCatLogger.warn(
+    ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is missing). " <>
         "You should pass a User Object to the evaluation functions like `get_value()` in order to make targeting work properly. " <>
         "Read more: https://configcat.com/docs/advanced/user-object/",
@@ -256,7 +256,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp log_invalid_user(key) do
-    ConfigCatLogger.warn(
+    ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is not an instance of User struct).",
       event_id: 4001
     )

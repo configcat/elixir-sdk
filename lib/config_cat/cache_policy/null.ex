@@ -27,7 +27,7 @@ defmodule ConfigCat.CachePolicy.Null do
 
   @impl Behaviour
   def set_online(_instance_id) do
-    ConfigCatLogger.warn(
+    ConfigCatLogger.warning(
       "Client is configured to use the `:local_only` override behavior, thus `set_online()` has no effect.",
       event_id: 3202
     )

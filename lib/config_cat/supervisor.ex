@@ -52,7 +52,7 @@ defmodule ConfigCat.Supervisor do
             "You can use the existing instance by passing `client: #{instance_id}` to the ConfigCat API functions. " <>
             "SDK Key: '#{sdk_key}'."
 
-        ConfigCatLogger.warn(message, event_id: 3000)
+        ConfigCatLogger.warning(message, event_id: 3000)
 
         raise ArgumentError, message
     end
