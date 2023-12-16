@@ -7,7 +7,7 @@ defmodule ConfigCat.HooksTest do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.Config
-  alias ConfigCat.Config.RolloutRule
+  alias ConfigCat.Config.TargetingRule
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks
@@ -140,7 +140,7 @@ defmodule ConfigCat.HooksTest do
     assert_received {:on_flag_evaluated, details}
 
     rule =
-      RolloutRule.new(
+      TargetingRule.new(
         comparator: 2,
         comparison_attribute: "Identifier",
         comparison_value: "@test1.com",

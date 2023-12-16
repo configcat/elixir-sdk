@@ -1,4 +1,4 @@
-defmodule ConfigCat.Config.RolloutRule do
+defmodule ConfigCat.Config.TargetingRule do
   @moduledoc false
   alias ConfigCat.Config
 

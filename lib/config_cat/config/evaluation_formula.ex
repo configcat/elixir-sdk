@@ -1,14 +1,16 @@
 defmodule ConfigCat.Config.EvaluationFormula do
   @moduledoc false
   alias ConfigCat.Config
-  alias ConfigCat.Config.PercentageRule
-  alias ConfigCat.Config.RolloutRule
+  alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.SettingType
+  alias ConfigCat.Config.TargetingRule
 
-  @type opt :: {:value, Config.value()}
+  @type opt :: {:setting_type, SettingType.t()} | {:value, Config.value()}
   @type t :: %{String.t() => term()}
 
-  @percentage_rules "p"
-  @rollout_rules "r"
+  @percentage_options "p"
+  @setting_type "t"
+  @targeting_rules "r"
   @value "v"
   @variation_id "i"
 
@@ -19,14 +21,19 @@ defmodule ConfigCat.Config.EvaluationFormula do
     }
   end
 
-  @spec percentage_rules(t()) :: [PercentageRule.t()]
-  def percentage_rules(formula) do
-    Map.get(formula, @percentage_rules, [])
+  @spec percentage_options(t()) :: [PercentageOption.t()]
+  def percentage_options(formula) do
+    Map.get(formula, @percentage_options, [])
   end
 
-  @spec rollout_rules(t()) :: [RolloutRule.t()]
-  def rollout_rules(formula) do
-    Map.get(formula, @rollout_rules, [])
+  @spec setting_type(t()) :: SettingType.t() | nil
+  def setting_type(formula) do
+    Map.get(formula, @setting_type)
+  end
+
+  @spec targeting_rules(t()) :: [TargetingRule.t()]
+  def targeting_rules(formula) do
+    Map.get(formula, @targeting_rules, [])
   end
 
   @spec value(t()) :: Config.value()
@@ -46,25 +53,25 @@ defmodule ConfigCat.Config.EvaluationFormula do
     if variation_id(formula) == variation_id do
       value(formula)
     else
-      rollout_value = rollout_rule_variation_value(formula, variation_id)
+      targeting_value = targeting_rule_variation_value(formula, variation_id)
 
-      if is_nil(rollout_value) do
+      if is_nil(targeting_value) do
         percentage_rule_variation_value(formula, variation_id)
       else
-        rollout_value
+        targeting_value
       end
     end
   end
 
-  defp rollout_rule_variation_value(formula, variation_id) do
+  defp targeting_rule_variation_value(formula, variation_id) do
     formula
-    |> rollout_rules()
-    |> Enum.find_value(nil, &RolloutRule.variation_value(&1, variation_id))
+    |> targeting_rules()
+    |> Enum.find_value(nil, &TargetingRule.variation_value(&1, variation_id))
   end
 
   defp percentage_rule_variation_value(formula, variation_id) do
     formula
-    |> percentage_rules()
-    |> Enum.find_value(nil, &PercentageRule.variation_value(&1, variation_id))
+    |> percentage_options()
+    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, variation_id))
   end
 end

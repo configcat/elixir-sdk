@@ -1,4 +1,4 @@
-defmodule ConfigCat.Config.PercentageRule do
+defmodule ConfigCat.Config.PercentageOption do
   @moduledoc false
   alias ConfigCat.Config
 
