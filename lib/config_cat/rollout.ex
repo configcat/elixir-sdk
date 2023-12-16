@@ -2,12 +2,14 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.EvaluationFormula
+  alias ConfigCat.Config.PercentageRule
+  alias ConfigCat.Config.RolloutRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
-  require ConfigCat.Constants, as: Constants
 
   @spec evaluate(
           Config.key(),
@@ -25,9 +27,9 @@ defmodule ConfigCat.Rollout do
       with {:ok, valid_user} <- validate_user(user),
            {:ok, setting_descriptor} <- setting_descriptor(feature_flags, key, default_value),
            setting_variation =
-             Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
-           rollout_rules = Map.get(setting_descriptor, Constants.rollout_rules(), []),
-           percentage_rules = Map.get(setting_descriptor, Constants.percentage_rules(), []),
+             EvaluationFormula.variation_id(setting_descriptor, default_variation_id),
+           rollout_rules = EvaluationFormula.rollout_rules(setting_descriptor),
+           percentage_rules = EvaluationFormula.percentage_rules(setting_descriptor),
            {value, variation, rule, percentage_rule} <-
              evaluate_rules(rollout_rules, percentage_rules, valid_user, key, logs) do
         variation = variation || setting_variation
@@ -121,11 +123,11 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_rollout_rule(rule, default, user, logs) do
-    comparison_attribute = Map.get(rule, Constants.comparison_attribute())
-    comparison_value = Map.get(rule, Constants.comparison_value())
-    comparator = Map.get(rule, Constants.comparator())
-    value = Map.get(rule, Constants.value())
-    variation = Map.get(rule, Constants.variation_id())
+    comparison_attribute = RolloutRule.comparison_attribute(rule)
+    comparison_value = RolloutRule.comparison_value(rule)
+    comparator = RolloutRule.comparator(rule)
+    value = RolloutRule.value(rule)
+    variation = RolloutRule.variation_id(rule)
 
     case User.get_attribute(user, comparison_attribute) do
       nil ->
@@ -182,8 +184,8 @@ defmodule ConfigCat.Rollout do
     bucket = increment_bucket(bucket, rule)
 
     if hash_val < bucket do
-      percentage_value = Map.get(rule, Constants.value())
-      variation_value = Map.get(rule, Constants.variation_id())
+      percentage_value = PercentageRule.value(rule)
+      variation_value = PercentageRule.variation_id(rule)
 
       {:halt, {percentage_value, variation_value, rule}}
     else
@@ -191,7 +193,7 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp increment_bucket(bucket, rule), do: bucket + Map.get(rule, Constants.percentage(), 0)
+  defp increment_bucket(bucket, rule), do: bucket + PercentageRule.percentage(rule)
 
   defp hash_user(user, key) do
     user_key = User.get_attribute(user, "Identifier")
@@ -208,7 +210,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp base_value(setting_descriptor, default_value, logs) do
-    result = Map.get(setting_descriptor, Constants.value(), default_value)
+    result = EvaluationFormula.value(setting_descriptor, default_value)
     log(logs, "Returning #{result}")
 
     result

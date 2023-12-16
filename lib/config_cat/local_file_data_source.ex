@@ -72,9 +72,8 @@ defmodule ConfigCat.LocalFileDataSource do
   end
 
   defimpl OverrideDataSource do
+    alias ConfigCat.Config.EvaluationFormula
     alias ConfigCat.LocalFileDataSource
-
-    require ConfigCat.Constants, as: Constants
 
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour
@@ -121,7 +120,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
     defp normalize(%{"flags" => source} = _data) do
       source
-      |> Enum.map(fn {key, value} -> {key, %{Constants.value() => value}} end)
+      |> Enum.map(fn {key, value} -> {key, EvaluationFormula.new(value: value)} end)
       |> Map.new()
     end
 

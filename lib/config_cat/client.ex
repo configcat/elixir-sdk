@@ -4,6 +4,7 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
@@ -198,8 +199,8 @@ defmodule ConfigCat.Client do
 
   defp entry_matching({key, setting}, variation_id) do
     value_matching(key, setting, variation_id) ||
-      value_matching(key, Map.get(setting, Constants.rollout_rules()), variation_id) ||
-      value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
+      value_matching(key, EvaluationFormula.rollout_rules(setting), variation_id) ||
+      value_matching(key, EvaluationFormula.percentage_rules(setting), variation_id)
   end
 
   defp value_matching(key, value, variation_id) when is_list(value) do
@@ -207,8 +208,8 @@ defmodule ConfigCat.Client do
   end
 
   defp value_matching(key, value, variation_id) do
-    if Map.get(value, Constants.variation_id(), nil) == variation_id do
-      {key, Map.get(value, Constants.value())}
+    if EvaluationFormula.variation_id(value) == variation_id do
+      {key, EvaluationFormula.value(value)}
     end
   end
 

@@ -4,11 +4,10 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
+  alias ConfigCat.Config.RolloutRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
   alias ConfigCat.User
-
-  require ConfigCat.Constants, as: Constants
 
   setup :verify_on_exit!
 
@@ -95,17 +94,21 @@ defmodule ConfigCatTest do
 
       {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
 
+      rule =
+        RolloutRule.new(
+          comparator: 2,
+          comparison_attribute: "Identifier",
+          comparison_value: "@test1.com",
+          value: "fake1",
+          variation_id: "id1"
+        )
+
       assert %EvaluationDetails{
                default_value?: false,
                error: nil,
                fetch_time: ^fetch_time,
                key: "testStringKey",
-               matched_evaluation_rule: %{
-                 Constants.comparator() => 2,
-                 Constants.comparison_attribute() => "Identifier",
-                 Constants.comparison_value() => "@test1.com",
-                 Constants.value() => "fake1"
-               },
+               matched_evaluation_rule: ^rule,
                matched_evaluation_percentage_rule: nil,
                user: ^user,
                value: "fake1",

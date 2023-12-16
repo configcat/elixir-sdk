@@ -2,13 +2,14 @@ defmodule ConfigCat.Config do
   @moduledoc """
   Defines configuration-related types used in the rest of the library.
   """
+  alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.Preferences
 
   @typedoc false
   @type comparator :: non_neg_integer()
 
   @typedoc false
-  @type feature_flags :: %{String.t() => map()}
+  @type feature_flags :: %{String.t() => EvaluationFormula.t()}
 
   @typedoc "The name of a configuration setting."
   @type key :: String.t()
@@ -17,7 +18,7 @@ defmodule ConfigCat.Config do
   @type opt :: {:feature_flags, feature_flags()} | {:preferences, Preferences.t()}
 
   @typedoc "A collection of feature flags and preferences."
-  @type t :: map()
+  @type t :: %{String.t() => map()}
 
   @typedoc false
   @type url :: String.t()
