@@ -55,59 +55,47 @@ defmodule ConfigCat.Rollout.Comparator do
 
   @spec compare(comparator(), String.t(), String.t()) :: result()
 
-  def compare(@is_one_of, user_value, comparison_value),
-    do: is_one_of(user_value, comparison_value)
+  def compare(@is_one_of, user_value, comparison_value), do: is_one_of(user_value, comparison_value)
 
-  def compare(@is_not_one_of, user_value, comparison_value),
-    do: is_one_of(user_value, comparison_value) |> negate()
+  def compare(@is_not_one_of, user_value, comparison_value), do: user_value |> is_one_of(comparison_value) |> negate()
 
-  def compare(@contains, user_value, comparison_value),
-    do: contains(user_value, comparison_value)
+  def compare(@contains, user_value, comparison_value), do: contains(user_value, comparison_value)
 
-  def compare(@does_not_contain, user_value, comparison_value),
-    do: contains(user_value, comparison_value) |> negate()
+  def compare(@does_not_contain, user_value, comparison_value), do: user_value |> contains(comparison_value) |> negate()
 
-  def compare(@is_one_of_semver, user_value, comparison_value),
-    do: is_one_of_semver(user_value, comparison_value)
+  def compare(@is_one_of_semver, user_value, comparison_value), do: is_one_of_semver(user_value, comparison_value)
 
   def compare(@is_not_one_of_semver, user_value, comparison_value),
-    do: is_one_of_semver(user_value, comparison_value) |> negate()
+    do: user_value |> is_one_of_semver(comparison_value) |> negate()
 
-  def compare(@less_than_semver, user_value, comparison_value),
-    do: compare_semver(user_value, comparison_value, [:lt])
+  def compare(@less_than_semver, user_value, comparison_value), do: compare_semver(user_value, comparison_value, [:lt])
 
   def compare(@less_than_equal_semver, user_value, comparison_value),
     do: compare_semver(user_value, comparison_value, [:lt, :eq])
 
-  def compare(@greater_than_semver, user_value, comparison_value),
-    do: compare_semver(user_value, comparison_value, [:gt])
+  def compare(@greater_than_semver, user_value, comparison_value), do: compare_semver(user_value, comparison_value, [:gt])
 
   def compare(@greater_than_equal_semver, user_value, comparison_value),
     do: compare_semver(user_value, comparison_value, [:gt, :eq])
 
-  def compare(@equals_number, user_value, comparison_value),
-    do: compare_numbers(user_value, comparison_value, &==/2)
+  def compare(@equals_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &==/2)
 
-  def compare(@not_equals_number, user_value, comparison_value),
-    do: compare_numbers(user_value, comparison_value, &!==/2)
+  def compare(@not_equals_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &!==/2)
 
-  def compare(@less_than_number, user_value, comparison_value),
-    do: compare_numbers(user_value, comparison_value, &</2)
+  def compare(@less_than_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &</2)
 
   def compare(@less_than_equal_number, user_value, comparison_value),
     do: compare_numbers(user_value, comparison_value, &<=/2)
 
-  def compare(@greater_than_number, user_value, comparison_value),
-    do: compare_numbers(user_value, comparison_value, &>/2)
+  def compare(@greater_than_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &>/2)
 
   def compare(@greater_than_equal_number, user_value, comparison_value),
     do: compare_numbers(user_value, comparison_value, &>=/2)
 
-  def compare(@is_one_of_sensitive, user_value, comparison_value),
-    do: is_one_of_sensitive(user_value, comparison_value)
+  def compare(@is_one_of_sensitive, user_value, comparison_value), do: is_one_of_sensitive(user_value, comparison_value)
 
   def compare(@is_not_one_of_sensitive, user_value, comparison_value),
-    do: is_one_of_sensitive(user_value, comparison_value) |> negate()
+    do: user_value |> is_one_of_sensitive(comparison_value) |> negate()
 
   def compare(_comparator, _user_value, _comparison_value) do
     {:ok, false}
@@ -152,7 +140,8 @@ defmodule ConfigCat.Rollout.Comparator do
   end
 
   defp hash_value(value) do
-    :crypto.hash(:sha, value)
+    :sha
+    |> :crypto.hash(value)
     |> Base.encode16()
     |> String.downcase()
   end

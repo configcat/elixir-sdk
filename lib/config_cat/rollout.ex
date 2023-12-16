@@ -6,8 +6,8 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
-  require ConfigCat.Constants, as: Constants
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+  require ConfigCat.Constants, as: Constants
 
   @spec evaluate(
           Config.key(),
@@ -24,10 +24,10 @@ defmodule ConfigCat.Rollout do
 
       with {:ok, valid_user} <- validate_user(user),
            {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
-           setting_variation <-
+           setting_variation =
              Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
-           rollout_rules <- Map.get(setting_descriptor, Constants.rollout_rules(), []),
-           percentage_rules <- Map.get(setting_descriptor, Constants.percentage_rules(), []),
+           rollout_rules = Map.get(setting_descriptor, Constants.rollout_rules(), []),
+           percentage_rules = Map.get(setting_descriptor, Constants.percentage_rules(), []),
            {value, variation, rule, percentage_rule} <-
              evaluate_rules(rollout_rules, percentage_rules, valid_user, key, logs) do
         variation = variation || setting_variation
@@ -121,47 +121,47 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_rollout_rule(rule, default, user, logs) do
-    with comparison_attribute <- Map.get(rule, Constants.comparison_attribute()),
-         comparison_value <- Map.get(rule, Constants.comparison_value()),
-         comparator <- Map.get(rule, Constants.comparator()),
-         value <- Map.get(rule, Constants.value()),
-         variation <- Map.get(rule, Constants.variation_id()) do
-      case User.get_attribute(user, comparison_attribute) do
-        nil ->
-          log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
-          {:cont, default}
+    comparison_attribute = Map.get(rule, Constants.comparison_attribute())
+    comparison_value = Map.get(rule, Constants.comparison_value())
+    comparator = Map.get(rule, Constants.comparator())
+    value = Map.get(rule, Constants.value())
+    variation = Map.get(rule, Constants.variation_id())
 
-        user_value ->
-          case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
-            {:ok, true} ->
-              log_match(
-                logs,
-                comparison_attribute,
-                user_value,
-                comparator,
-                comparison_value,
-                value
-              )
+    case User.get_attribute(user, comparison_attribute) do
+      nil ->
+        log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
+        {:cont, default}
 
-              {:halt, {value, variation, rule}}
+      user_value ->
+        case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
+          {:ok, true} ->
+            log_match(
+              logs,
+              comparison_attribute,
+              user_value,
+              comparator,
+              comparison_value,
+              value
+            )
 
-            {:ok, false} ->
-              log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
-              {:cont, default}
+            {:halt, {value, variation, rule}}
 
-            {:error, error} ->
-              log_validation_error(
-                logs,
-                comparison_attribute,
-                user_value,
-                comparator,
-                comparison_value,
-                error
-              )
+          {:ok, false} ->
+            log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
+            {:cont, default}
 
-              {:cont, default}
-          end
-      end
+          {:error, error} ->
+            log_validation_error(
+              logs,
+              comparison_attribute,
+              user_value,
+              comparator,
+              comparison_value,
+              error
+            )
+
+            {:cont, default}
+        end
     end
   end
 
@@ -198,7 +198,8 @@ defmodule ConfigCat.Rollout do
     hash_candidate = "#{key}#{user_key}"
 
     {hash_value, _} =
-      :crypto.hash(:sha, hash_candidate)
+      :sha
+      |> :crypto.hash(hash_candidate)
       |> Base.encode16()
       |> String.slice(0, 7)
       |> Integer.parse(16)
@@ -231,14 +232,7 @@ defmodule ConfigCat.Rollout do
     )
   end
 
-  defp log_validation_error(
-         logs,
-         comparison_attribute,
-         user_value,
-         comparator,
-         comparison_value,
-         error
-       ) do
+  defp log_validation_error(logs, comparison_attribute, user_value, comparator, comparison_value, error) do
     message =
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
 

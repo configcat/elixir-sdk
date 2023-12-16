@@ -78,8 +78,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       %{entry: old_entry, settings: old_settings} = make_old_entry()
       old_entry = Map.update!(old_entry, :fetch_time_ms, &(&1 - policy.poll_interval_ms - 1))
 
-      MockFetcher
-      |> expect(:fetch, fn _id, _etag ->
+      expect(MockFetcher, :fetch, fn _id, _etag ->
         Process.sleep(wait_time_ms * 5)
         {:ok, entry}
       end)
@@ -165,7 +164,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   describe "calling the config-changed callback" do
     setup do
       test_pid = self()
-      instance_id = UUID.uuid4() |> String.to_atom()
+      instance_id = String.to_atom(UUID.uuid4())
 
       %{entry: old_entry, settings: old_settings} = make_old_entry()
 
@@ -253,7 +252,6 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   end
 
   defp wait_for_poll(policy) do
-    (policy.poll_interval_ms + 50)
-    |> Process.sleep()
+    Process.sleep(policy.poll_interval_ms + 50)
   end
 end

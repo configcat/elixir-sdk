@@ -8,8 +8,8 @@ defmodule ConfigCat.Cache do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.Hooks
 
-  require ConfigCat.Constants, as: Constants
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+  require ConfigCat.Constants, as: Constants
 
   defmodule State do
     @moduledoc false
@@ -53,7 +53,8 @@ defmodule ConfigCat.Cache do
   def generate_key(sdk_key) do
     key = "#{sdk_key}_#{Constants.config_filename()}_#{Constants.serialization_format_version()}"
 
-    :crypto.hash(:sha, key)
+    :sha
+    |> :crypto.hash(key)
     |> Base.encode16(case: :lower)
   end
 

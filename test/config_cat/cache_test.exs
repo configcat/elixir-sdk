@@ -30,9 +30,7 @@ defmodule ConfigCat.CacheTest do
       start_supervised!({Hooks, hooks: [on_error: on_error], instance_id: instance_id})
 
       cache =
-        start_supervised!(
-          {Cache, cache: MockConfigCache, cache_key: cache_key, instance_id: instance_id}
-        )
+        start_supervised!({Cache, cache: MockConfigCache, cache_key: cache_key, instance_id: instance_id})
 
       Mox.allow(MockConfigCache, self(), cache)
 
@@ -43,9 +41,7 @@ defmodule ConfigCat.CacheTest do
       cache_key: cache_key,
       instance_id: instance_id
     } do
-      MockConfigCache
-      |> expect(:get, fn ^cache_key -> {:ok, @serialized} end)
-
+      expect(MockConfigCache, :get, fn ^cache_key -> {:ok, @serialized} end)
       refute_received {:on_error, _message}
 
       assert {:ok, @entry} = Cache.get(instance_id)
@@ -55,9 +51,7 @@ defmodule ConfigCat.CacheTest do
       cache_key: cache_key,
       instance_id: instance_id
     } do
-      MockConfigCache
-      |> expect(:get, 1, fn ^cache_key -> {:ok, @serialized} end)
-
+      expect(MockConfigCache, :get, 1, fn ^cache_key -> {:ok, @serialized} end)
       {:ok, @entry} = Cache.get(instance_id)
 
       assert {:ok, @entry} = Cache.get(instance_id)
@@ -67,9 +61,7 @@ defmodule ConfigCat.CacheTest do
       cache_key: cache_key,
       instance_id: instance_id
     } do
-      MockConfigCache
-      |> expect(:set, fn ^cache_key, @serialized -> :ok end)
-
+      expect(MockConfigCache, :set, fn ^cache_key, @serialized -> :ok end)
       assert :ok = Cache.set(instance_id, @entry)
     end
 
@@ -90,9 +82,7 @@ defmodule ConfigCat.CacheTest do
     test "calls on_error hook when cache format is invalid", %{
       instance_id: instance_id
     } do
-      MockConfigCache
-      |> stub(:get, fn _cache_key -> {:ok, ""} end)
-
+      stub(MockConfigCache, :get, fn _cache_key -> {:ok, ""} end)
       {:error, :not_found} = Cache.get(instance_id)
 
       assert_received {:on_error, message}

@@ -11,8 +11,8 @@ defmodule ConfigCat.Client do
   alias ConfigCat.Rollout
   alias ConfigCat.User
 
-  require ConfigCat.Constants, as: Constants
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+  require ConfigCat.Constants, as: Constants
 
   defmodule State do
     @moduledoc false
@@ -96,17 +96,19 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    with {:ok, settings, _fetch_time_ms} <- cached_settings(state),
-         result <- Enum.find_value(settings, nil, &entry_matching(&1, variation_id)) do
-      if is_nil(result) do
-        ConfigCatLogger.error(
-          "Could not find the setting for the specified variation ID: '#{variation_id}'",
-          event_id: 2011
-        )
-      end
+    case cached_settings(state) do
+      {:ok, settings, _fetch_time_ms} ->
+        result = Enum.find_value(settings, nil, &entry_matching(&1, variation_id))
 
-      {:reply, result, state}
-    else
+        if is_nil(result) do
+          ConfigCatLogger.error(
+            "Could not find the setting for the specified variation ID: '#{variation_id}'",
+            event_id: 2011
+          )
+        end
+
+        {:reply, result, state}
+
       _ ->
         ConfigCatLogger.error(
           "Config JSON is not present. Returning nil.",
@@ -207,8 +209,6 @@ defmodule ConfigCat.Client do
   defp value_matching(key, value, variation_id) do
     if Map.get(value, Constants.variation_id(), nil) == variation_id do
       {key, Map.get(value, Constants.value())}
-    else
-      nil
     end
   end
 

@@ -80,14 +80,16 @@ defmodule ConfigCat.Supervisor do
     override_behaviour = OverrideDataSource.behaviour(options[:flag_overrides])
 
     children =
-      [
-        hooks(options),
-        cache(options),
-        config_fetcher(options, override_behaviour),
-        cache_policy(options, override_behaviour),
-        client(options, override_behaviour)
-      ]
-      |> Enum.reject(&is_nil/1)
+      Enum.reject(
+        [
+          hooks(options),
+          cache(options),
+          config_fetcher(options, override_behaviour),
+          cache_policy(options, override_behaviour),
+          client(options, override_behaviour)
+        ],
+        &is_nil/1
+      )
 
     Supervisor.init(children, strategy: :one_for_one)
   end

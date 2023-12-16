@@ -36,14 +36,14 @@ defmodule ConfigCat.CachePolicy do
   See `manual/0` below for details.
   """
 
+  @behaviour ConfigCat.CachePolicy.Behaviour
+
   alias ConfigCat.CachePolicy.Auto
   alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.CachePolicy.Manual
 
   require ConfigCat.Constants, as: Constants
-
-  @behaviour Behaviour
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [
@@ -55,7 +55,7 @@ defmodule ConfigCat.CachePolicy do
   @type lazy_options :: [{:cache_refresh_interval_seconds, non_neg_integer()}]
 
   @typedoc "Callback to call when configuration changes."
-  @type on_changed_callback :: (() -> :ok)
+  @type on_changed_callback :: (-> :ok)
 
   @typedoc false
   @type option ::

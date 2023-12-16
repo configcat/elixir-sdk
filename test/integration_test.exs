@@ -11,12 +11,14 @@ defmodule ConfigCat.IntegrationTest do
   @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
 
   test "raises error if SDK key is missing" do
-    start_config_cat(nil)
+    nil
+    |> start_config_cat()
     |> assert_sdk_key_required()
   end
 
   test "raises error if SDK key is an empty string" do
-    start_config_cat("")
+    ""
+    |> start_config_cat()
     |> assert_sdk_key_required()
   end
 
@@ -117,7 +119,7 @@ defmodule ConfigCat.IntegrationTest do
     |> Cache.generate_key()
     |> InMemoryCache.clear()
 
-    name = UUID.uuid4() |> String.to_atom()
+    name = String.to_atom(UUID.uuid4())
     default_options = [name: name, sdk_key: sdk_key]
 
     with {:ok, _pid} <-

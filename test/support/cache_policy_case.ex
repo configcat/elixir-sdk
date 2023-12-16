@@ -52,7 +52,7 @@ defmodule ConfigCat.CachePolicyCase do
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}
   def start_cache_policy(policy, options \\ []) do
     instance_id =
-      Keyword.get_lazy(options, :instance_id, fn -> UUID.uuid4() |> String.to_atom() end)
+      Keyword.get_lazy(options, :instance_id, fn -> String.to_atom(UUID.uuid4()) end)
 
     if Keyword.get(options, :start_hooks?, true) do
       start_supervised!({Hooks, instance_id: instance_id})
@@ -87,17 +87,14 @@ defmodule ConfigCat.CachePolicyCase do
     cache_key = UUID.uuid4()
 
     {:ok, _pid} =
-      start_supervised(
-        {Cache, cache: InMemoryCache, cache_key: cache_key, instance_id: instance_id}
-      )
+      start_supervised({Cache, cache: InMemoryCache, cache_key: cache_key, instance_id: instance_id})
 
     {:ok, cache_key}
   end
 
   @spec expect_refresh(ConfigEntry.t(), pid() | nil) :: Mox.t()
   def expect_refresh(entry, test_pid \\ nil) do
-    MockFetcher
-    |> expect(:fetch, fn _id, _etag ->
+    expect(MockFetcher, :fetch, fn _id, _etag ->
       if test_pid, do: send(test_pid, :fetch_complete)
       {:ok, entry}
     end)
@@ -105,14 +102,12 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec expect_unchanged :: Mox.t()
   def expect_unchanged do
-    MockFetcher
-    |> expect(:fetch, fn _id, _etag -> {:ok, :unchanged} end)
+    expect(MockFetcher, :fetch, fn _id, _etag -> {:ok, :unchanged} end)
   end
 
   @spec expect_not_refreshed :: Mox.t()
   def expect_not_refreshed do
-    MockFetcher
-    |> expect(:fetch, 0, fn _id, _etag -> :not_called end)
+    expect(MockFetcher, :fetch, 0, fn _id, _etag -> :not_called end)
   end
 
   @spec assert_returns_error(function()) :: true
@@ -120,9 +115,7 @@ defmodule ConfigCat.CachePolicyCase do
     response = %Response{status_code: 503}
     error = FetchError.exception(reason: response, transient?: true)
 
-    MockFetcher
-    |> stub(:fetch, fn _id, _etag -> {:error, error} end)
-
+    stub(MockFetcher, :fetch, fn _id, _etag -> {:error, error} end)
     assert {:error, _message} = force_refresh_fn.()
   end
 end
