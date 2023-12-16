@@ -36,14 +36,14 @@ defmodule ConfigCat.CachePolicy do
   See `manual/0` below for details.
   """
 
+  @behaviour ConfigCat.CachePolicy.Behaviour
+
   alias ConfigCat.CachePolicy.Auto
   alias ConfigCat.CachePolicy.Behaviour
   alias ConfigCat.CachePolicy.Lazy
   alias ConfigCat.CachePolicy.Manual
 
   require ConfigCat.Constants, as: Constants
-
-  @behaviour Behaviour
 
   @typedoc "Options for auto-polling mode."
   @type auto_options :: [

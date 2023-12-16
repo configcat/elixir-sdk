@@ -25,7 +25,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   @fetcher_options %{mode: @mode, sdk_key: @sdk_key}
 
   defp start_fetcher(%{mode: mode, sdk_key: sdk_key}, options) do
-    instance_id = UUID.uuid4() |> String.to_atom()
+    instance_id = String.to_atom(UUID.uuid4())
 
     start_supervised!({Hooks, instance_id: instance_id})
 
@@ -272,7 +272,8 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   end
 
   defp stub_response(response_uri, redirect_mode) do
-    Config.new_with_preferences(response_uri, redirect_mode)
+    response_uri
+    |> Config.new_with_preferences(redirect_mode)
     |> Jason.encode!()
   end
 

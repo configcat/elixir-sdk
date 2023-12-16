@@ -23,8 +23,7 @@ defmodule ConfigCat.Hooks.ImplTest do
     end
 
     impl =
-      Impl.new()
-      |> Impl.add_hook(:on_error, callback)
+      Impl.add_hook(Impl.new(), :on_error, callback)
 
     assert :ok = Impl.invoke_hook(impl, :on_error, [message])
     assert_received {:on_error_called, ^message}
@@ -35,7 +34,8 @@ defmodule ConfigCat.Hooks.ImplTest do
     callback2 = fn -> send(self(), :callback2_called) end
 
     impl =
-      Impl.new(on_client_ready: callback1)
+      [on_client_ready: callback1]
+      |> Impl.new()
       |> Impl.add_hook(:on_client_ready, callback2)
 
     assert :ok = Impl.invoke_hook(impl, :on_client_ready, [])
@@ -50,7 +50,8 @@ defmodule ConfigCat.Hooks.ImplTest do
     good_callback = fn -> send(self(), :good_callback_called) end
 
     impl =
-      Impl.new(on_client_ready: fail_callback)
+      [on_client_ready: fail_callback]
+      |> Impl.new()
       |> Impl.add_hook(:on_client_ready, good_callback)
 
     assert :ok = Impl.invoke_hook(impl, :on_client_ready, [])

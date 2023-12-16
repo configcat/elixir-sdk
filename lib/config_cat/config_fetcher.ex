@@ -34,6 +34,8 @@ end
 defmodule ConfigCat.CacheControlConfigFetcher do
   @moduledoc false
 
+  @behaviour ConfigCat.ConfigFetcher
+
   use GenServer
 
   alias ConfigCat.Config
@@ -42,8 +44,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigCat.ConfigFetcher.FetchError
   alias HTTPoison.Response
 
-  require ConfigCat.Constants, as: Constants
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+  require ConfigCat.Constants, as: Constants
   require ConfigCat.RedirectMode, as: RedirectMode
 
   defmodule State do
@@ -107,8 +109,6 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           | {:read_timeout_milliseconds, non_neg_integer()}
           | {:sdk_key, String.t()}
   @type options :: [option]
-
-  @behaviour ConfigFetcher
 
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options) do
@@ -194,7 +194,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp base_headers(%State{mode: mode}) do
-    version = Application.spec(:configcat, :vsn) |> to_string()
+    version = :configcat |> Application.spec(:vsn) |> to_string()
     user_agent = "ConfigCat-Elixir/#{mode}-#{version}"
 
     [
@@ -221,18 +221,12 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(
-         %Response{status_code: code, body: raw_config, headers: headers},
-         %State{} = state,
-         etag
-       )
+  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, %State{} = state, etag)
        when code >= 200 and code < 300 do
-    ConfigCatLogger.debug(
-      "ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}"
-    )
+    ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
 
     with {:ok, config} <- Jason.decode(raw_config),
-         new_etag <- extract_etag(headers),
+         new_etag = extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state,
          {base_url, redirect_mode} <- Config.preferences(config) do
@@ -288,8 +282,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:ok, :unchanged, state}
   end
 
-  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag)
-       when status in [403, 404] do
+  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag) when status in [403, 404] do
     ConfigCatLogger.error(
       "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}",
       event_id: 1100
@@ -311,10 +304,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:error, error, state}
   end
 
-  defp handle_error(
-         {:error, %HTTPoison.Error{reason: :checkout_timeout} = error},
-         %State{} = state
-       ) do
+  defp handle_error({:error, %HTTPoison.Error{reason: :checkout_timeout} = error}, %State{} = state) do
     ConfigCatLogger.error(
       "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
       event_id: 1102

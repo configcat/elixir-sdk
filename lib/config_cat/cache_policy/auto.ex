@@ -37,8 +37,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   @default_poll_interval_seconds 60
 
   typedstruct enforce: true do
-    field :max_init_wait_time_ms, non_neg_integer(),
-      default: @default_max_init_wait_time_seconds * 1000
+    field :max_init_wait_time_ms, non_neg_integer(), default: @default_max_init_wait_time_seconds * 1000
 
     field :mode, String.t(), default: "a"
     field :poll_interval_ms, pos_integer(), default: @default_poll_interval_seconds * 1000
@@ -56,11 +55,13 @@ defmodule ConfigCat.CachePolicy.Auto do
       Keyword.pop(options, :poll_interval_seconds, @default_poll_interval_seconds)
 
     options =
-      [
-        max_init_wait_time_ms: rounded_ms(max_init_wait_time_seconds, 0),
-        poll_interval_ms: rounded_ms(poll_interval_seconds, 1)
-      ]
-      |> Keyword.merge(options)
+      Keyword.merge(
+        [
+          max_init_wait_time_ms: rounded_ms(max_init_wait_time_seconds, 0),
+          poll_interval_ms: rounded_ms(poll_interval_seconds, 1)
+        ],
+        options
+      )
 
     struct(__MODULE__, options)
   end
@@ -69,7 +70,7 @@ defmodule ConfigCat.CachePolicy.Auto do
     seconds
     |> max(min_value)
     |> Kernel.*(1000)
-    |> round
+    |> round()
   end
 
   @impl GenServer
