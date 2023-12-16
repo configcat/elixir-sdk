@@ -80,7 +80,7 @@ defmodule ConfigCat.MixProject do
       {:httpoison, "~> 1.7"},
       {:jason, "~> 1.2"},
       {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
-      {:mox, "~> 1.0", only: :test},
+      {:mox, "~> 1.1", only: :test},
       {:typed_struct, "~> 0.3.0"}
     ]
   end
