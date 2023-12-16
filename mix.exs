@@ -75,7 +75,7 @@ defmodule ConfigCat.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:elixir_uuid, "~> 1.2"},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.31.0", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.5", only: :test},
       {:httpoison, "~> 1.7"},
       {:jason, "~> 1.2"},
