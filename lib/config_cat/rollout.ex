@@ -3,8 +3,8 @@ defmodule ConfigCat.Rollout do
 
   alias ConfigCat.Config
   alias ConfigCat.Config.EvaluationFormula
-  alias ConfigCat.Config.PercentageRule
-  alias ConfigCat.Config.RolloutRule
+  alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.TargetingRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
@@ -29,10 +29,10 @@ defmodule ConfigCat.Rollout do
            {:ok, setting_descriptor} <- setting_descriptor(feature_flags, key, default_value),
            setting_variation =
              EvaluationFormula.variation_id(setting_descriptor, default_variation_id),
-           rollout_rules = EvaluationFormula.rollout_rules(setting_descriptor),
-           percentage_rules = EvaluationFormula.percentage_rules(setting_descriptor),
+           targeting_rules = EvaluationFormula.targeting_rules(setting_descriptor),
+           percentage_options = EvaluationFormula.percentage_options(setting_descriptor),
            {value, variation, rule, percentage_rule} <-
-             evaluate_rules(rollout_rules, percentage_rules, valid_user, key, logs) do
+             evaluate_rules(targeting_rules, percentage_options, valid_user, key, logs) do
         variation = variation || setting_variation
 
         value =
@@ -103,15 +103,15 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_rules([], [], _user, _key, _logs), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key, _logs) do
+  defp evaluate_rules(_targeting_rules, _percentage_options, nil, key, _logs) do
     log_nil_user(key)
     {:none, nil, nil, nil}
   end
 
-  defp evaluate_rules(rollout_rules, percentage_rules, user, key, logs) do
-    case evaluate_rollout_rules(rollout_rules, user, key, logs) do
+  defp evaluate_rules(targeting_rules, percentage_options, user, key, logs) do
+    case evaluate_targeting_rules(targeting_rules, user, key, logs) do
       {:none, _, _} ->
-        {value, variation, rule} = evaluate_percentage_rules(percentage_rules, user, key)
+        {value, variation, rule} = evaluate_percentage_options(percentage_options, user, key)
         {value, variation, nil, rule}
 
       {value, variation, rule} ->
@@ -119,16 +119,16 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rollout_rules(rules, user, _key, logs) do
+  defp evaluate_targeting_rules(rules, user, _key, logs) do
     Enum.reduce_while(rules, {:none, nil, nil}, &evaluate_rollout_rule(&1, &2, user, logs))
   end
 
   defp evaluate_rollout_rule(rule, default, user, logs) do
-    comparison_attribute = RolloutRule.comparison_attribute(rule)
-    comparison_value = RolloutRule.comparison_value(rule)
-    comparator = RolloutRule.comparator(rule)
-    value = RolloutRule.value(rule)
-    variation = RolloutRule.variation_id(rule)
+    comparison_attribute = TargetingRule.comparison_attribute(rule)
+    comparison_value = TargetingRule.comparison_value(rule)
+    comparator = TargetingRule.comparator(rule)
+    value = TargetingRule.value(rule)
+    variation = TargetingRule.variation_id(rule)
 
     case User.get_attribute(user, comparison_attribute) do
       nil ->
@@ -168,13 +168,13 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_percentage_rules([] = _percentage_rules, _user, _key), do: {:none, nil, nil}
+  defp evaluate_percentage_options([] = _percentage_options, _user, _key), do: {:none, nil, nil}
 
-  defp evaluate_percentage_rules(percentage_rules, user, key) do
+  defp evaluate_percentage_options(percentage_options, user, key) do
     hash_val = hash_user(user, key)
 
     Enum.reduce_while(
-      percentage_rules,
+      percentage_options,
       {0, nil, nil},
       &evaluate_percentage_rule(&1, &2, hash_val)
     )
@@ -185,8 +185,8 @@ defmodule ConfigCat.Rollout do
     bucket = increment_bucket(bucket, rule)
 
     if hash_val < bucket do
-      percentage_value = PercentageRule.value(rule)
-      variation_value = PercentageRule.variation_id(rule)
+      percentage_value = PercentageOption.value(rule)
+      variation_value = PercentageOption.variation_id(rule)
 
       {:halt, {percentage_value, variation_value, rule}}
     else
@@ -194,7 +194,7 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp increment_bucket(bucket, rule), do: bucket + PercentageRule.percentage(rule)
+  defp increment_bucket(bucket, rule), do: bucket + PercentageOption.percentage(rule)
 
   defp hash_user(user, key) do
     user_key = User.get_attribute(user, "Identifier")

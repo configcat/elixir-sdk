@@ -5,7 +5,7 @@ defmodule ConfigCatTest do
   import Mox
 
   alias ConfigCat.Config
-  alias ConfigCat.Config.RolloutRule
+  alias ConfigCat.Config.TargetingRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
   alias ConfigCat.User
@@ -98,7 +98,7 @@ defmodule ConfigCatTest do
       {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
 
       rule =
-        RolloutRule.new(
+        TargetingRule.new(
           comparator: 2,
           comparison_attribute: "Identifier",
           comparison_value: "@test1.com",
