@@ -40,4 +40,31 @@ defmodule ConfigCat.Config.EvaluationFormula do
   def variation_id(formula, default \\ nil) do
     Map.get(formula, @variation_id, default)
   end
+
+  @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
+  def variation_value(formula, variation_id) do
+    if variation_id(formula) == variation_id do
+      value(formula)
+    else
+      rollout_value = rollout_rule_variation_value(formula, variation_id)
+
+      if is_nil(rollout_value) do
+        percentage_rule_variation_value(formula, variation_id)
+      else
+        rollout_value
+      end
+    end
+  end
+
+  defp rollout_rule_variation_value(formula, variation_id) do
+    formula
+    |> rollout_rules()
+    |> Enum.find_value(nil, &RolloutRule.variation_value(&1, variation_id))
+  end
+
+  defp percentage_rule_variation_value(formula, variation_id) do
+    formula
+    |> percentage_rules()
+    |> Enum.find_value(nil, &PercentageRule.variation_value(&1, variation_id))
+  end
 end

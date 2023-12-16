@@ -13,7 +13,6 @@ defmodule ConfigCat.Client do
   alias ConfigCat.User
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
-  require ConfigCat.Constants, as: Constants
 
   defmodule State do
     @moduledoc false
@@ -197,19 +196,10 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp entry_matching({key, setting}, variation_id) do
-    value_matching(key, setting, variation_id) ||
-      value_matching(key, EvaluationFormula.rollout_rules(setting), variation_id) ||
-      value_matching(key, EvaluationFormula.percentage_rules(setting), variation_id)
-  end
-
-  defp value_matching(key, value, variation_id) when is_list(value) do
-    Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
-  end
-
-  defp value_matching(key, value, variation_id) do
-    if EvaluationFormula.variation_id(value) == variation_id do
-      {key, EvaluationFormula.value(value)}
+  defp entry_matching({key, formula}, variation_id) do
+    case EvaluationFormula.variation_value(formula, variation_id) do
+      nil -> nil
+      value -> {key, value}
     end
   end
 

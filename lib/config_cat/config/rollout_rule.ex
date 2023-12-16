@@ -51,4 +51,11 @@ defmodule ConfigCat.Config.RolloutRule do
   def variation_id(rule) do
     Map.get(rule, @variation_id)
   end
+
+  @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
+  def variation_value(rule, variation_id) do
+    if variation_id(rule) == variation_id do
+      value(rule)
+    end
+  end
 end
