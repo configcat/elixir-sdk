@@ -114,7 +114,7 @@ defmodule ConfigCat.Rollout do
   defp evaluate_rules(targeting_rules, percentage_options, setting_type, user, key, logs) do
     case evaluate_targeting_rules(targeting_rules, setting_type, user, key, logs) do
       {:none, _, _} ->
-        {value, variation, option} = evaluate_percentage_options(percentage_options, user, key)
+        {value, variation, option} = evaluate_percentage_options(percentage_options, setting_type, user, key)
         {value, variation, nil, option}
 
       {value, variation, rule} ->
@@ -190,33 +190,31 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_percentage_options([] = _percentage_options, _user, _key), do: {:none, nil, nil}
+  defp evaluate_percentage_options([] = _percentage_options, _setting_type, _user, _key), do: {:none, nil, nil}
 
-  defp evaluate_percentage_options(percentage_options, user, key) do
+  defp evaluate_percentage_options(percentage_options, setting_type, user, key) do
     hash_val = hash_user(user, key)
 
     Enum.reduce_while(
       percentage_options,
       {0, nil, nil},
-      &evaluate_percentage_option(&1, &2, hash_val)
+      &evaluate_percentage_option(&1, &2, setting_type, hash_val)
     )
   end
 
-  defp evaluate_percentage_option(rule, increment, hash_val) do
+  defp evaluate_percentage_option(option, increment, setting_type, hash_val) do
     {bucket, _v, _r} = increment
-    bucket = increment_bucket(bucket, rule)
+    bucket = bucket + PercentageOption.percentage(option)
 
     if hash_val < bucket do
-      percentage_value = PercentageOption.value(rule)
-      variation_value = PercentageOption.variation_id(rule)
+      value = PercentageOption.value(option, setting_type)
+      variation_id = PercentageOption.variation_id(option)
 
-      {:halt, {percentage_value, variation_value, rule}}
+      {:halt, {value, variation_id, option}}
     else
       {:cont, {bucket, nil, nil}}
     end
   end
-
-  defp increment_bucket(bucket, rule), do: bucket + PercentageOption.percentage(rule)
 
   defp hash_user(user, key) do
     user_key = User.get_attribute(user, "Identifier")
