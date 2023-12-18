@@ -10,6 +10,8 @@ defmodule ConfigCatTest do
   alias ConfigCat.FetchTime
   alias ConfigCat.User
 
+  require ConfigCat.Config.SettingType, as: SettingType
+
   setup :verify_on_exit!
 
   describe "when the configuration has been fetched" do
@@ -85,26 +87,20 @@ defmodule ConfigCatTest do
 
       {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
 
-      rule =
-        TargetingRule.new(
-          comparator: 2,
-          comparison_attribute: "Identifier",
-          comparison_value: "@test1.com",
-          value: "fake1",
-          variation_id: "id1"
-        )
-
       assert %EvaluationDetails{
                default_value?: false,
                error: nil,
                fetch_time: ^fetch_time,
                key: "testStringKey",
-               matched_evaluation_rule: ^rule,
+               matched_evaluation_rule: rule,
                matched_evaluation_percentage_rule: nil,
                user: ^user,
                value: "fake1",
                variation_id: "id1"
              } = ConfigCat.get_value_details("testStringKey", "", user, client: client)
+
+      assert TargetingRule.value(rule, SettingType.string()) == "fake1"
+      assert TargetingRule.variation_id(rule) == "id1"
     end
 
     @tag capture_log: true
