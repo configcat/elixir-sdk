@@ -15,6 +15,8 @@ defmodule ConfigCat.HooksTest do
   alias ConfigCat.NullDataSource
   alias ConfigCat.User
 
+  require ConfigCat.Config.SettingType, as: SettingType
+
   @moduletag capture_log: true
 
   @config Factory.config()
@@ -121,25 +123,19 @@ defmodule ConfigCat.HooksTest do
 
     assert_received {:on_flag_evaluated, details}
 
-    rule =
-      TargetingRule.new(
-        comparator: 2,
-        comparison_attribute: "Identifier",
-        comparison_value: "@test1.com",
-        value: "fake1",
-        variation_id: "id1"
-      )
-
     assert %EvaluationDetails{
              default_value?: false,
              error: nil,
              key: "testStringKey",
-             matched_evaluation_rule: ^rule,
+             matched_evaluation_rule: rule,
              matched_evaluation_percentage_rule: nil,
              user: ^user,
              value: "fake1",
              variation_id: "id1"
            } = details
+
+    assert TargetingRule.value(rule, SettingType.string()) == "fake1"
+    assert TargetingRule.variation_id(rule) == "id1"
   end
 
   test "doesn't fail when callbacks raise errors" do
