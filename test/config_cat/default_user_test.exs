@@ -36,18 +36,31 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the default user if no user is passed", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake1"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "fake1"
+        }
 
-      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client)
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
-      expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
+      expected = %{
+        "key1" => true,
+        "key2" => false,
+        "testBoolKey" => true,
+        "testIntKey" => 1,
+        "testDoubleKey" => 1.1,
+        "testStringKey" => "fake2"
+      }
 
       user = User.new("test@test2.com")
-      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client)
       assert actual == expected
     end
   end
@@ -74,18 +87,32 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the undefined user case if no user is passed", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "testValue"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "testValue"
+        }
 
-      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client)
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "fake2"
+        }
 
       user = User.new("test@test2.com")
-      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client)
       assert actual == expected
     end
   end
