@@ -5,7 +5,6 @@ defmodule ConfigCat.Rollout.Comparator do
   alias Version.InvalidVersionError
 
   @type comparator :: Config.comparator()
-  @type description :: String.t()
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
 
   @is_one_of 0
@@ -26,32 +25,6 @@ defmodule ConfigCat.Rollout.Comparator do
   @greater_than_equal_number 15
   @is_one_of_sensitive 16
   @is_not_one_of_sensitive 17
-
-  @descriptions %{
-    @is_one_of => "IS ONE OF",
-    @is_not_one_of => "IS NOT ONE OF",
-    @contains => "CONTAINS",
-    @does_not_contain => "DOES NOT CONTAIN",
-    @is_one_of_semver => "IS ONE OF (SemVer)",
-    @is_not_one_of_semver => "IS NOT ONE OF (SemVer)",
-    @less_than_semver => "< (SemVer)",
-    @less_than_equal_semver => "<= (SemVer)",
-    @greater_than_semver => "> (SemVer)",
-    @greater_than_equal_semver => ">= (SemVer)",
-    @equals_number => "= (Number)",
-    @not_equals_number => "<> (Number)",
-    @less_than_number => "< (Number)",
-    @less_than_equal_number => "<= (Number)",
-    @greater_than_number => "> (Number)",
-    @greater_than_equal_number => ">= (Number)",
-    @is_one_of_sensitive => "IS ONE OF (Sensitive)",
-    @is_not_one_of_sensitive => "IS NOT ONE OF (Sensitive)"
-  }
-
-  @spec description(comparator()) :: description()
-  def description(comparator) do
-    Map.get(@descriptions, comparator, "Unsupported comparator")
-  end
 
   @spec compare(comparator(), String.t(), String.t()) :: result()
 
