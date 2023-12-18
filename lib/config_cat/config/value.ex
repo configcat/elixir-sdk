@@ -16,7 +16,7 @@ defmodule ConfigCat.Config.Value do
     %{type_key(setting_type) => value}
   end
 
-  @spec get(t(), SettingType.t(), Config.value()) :: Config.value() | nil
+  @spec get(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
   def get(value, setting_type, default) do
     Map.get(value, type_key(setting_type), default)
   end
