@@ -7,6 +7,7 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.TargetingRule
+  alias ConfigCat.Config.UserComparator
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
@@ -149,8 +150,7 @@ defmodule ConfigCat.Rollout do
   defp evaluate_user_condition(comparison_rule, user, value, logs) do
     comparison_attribute = ComparisonRule.comparison_attribute(comparison_rule)
     comparator = ComparisonRule.comparator(comparison_rule)
-    # TODO: Get correct type based on comparator
-    comparison_value = ComparisonRule.string_value(comparison_rule)
+    comparison_value = ComparisonRule.comparison_value(comparison_rule)
 
     case User.get_attribute(user, comparison_attribute) do
       nil ->
@@ -245,20 +245,20 @@ defmodule ConfigCat.Rollout do
   defp log_match(logs, comparison_attribute, user_value, comparator, comparison_value, value) do
     log(
       logs,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
   defp log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value) do
     log(
       logs,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
 
   defp log_validation_error(logs, comparison_attribute, user_value, comparator, comparison_value, error) do
     message =
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
+      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
 
     ConfigCatLogger.warning(message)
     log(logs, message)
