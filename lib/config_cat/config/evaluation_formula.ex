@@ -4,6 +4,7 @@ defmodule ConfigCat.Config.EvaluationFormula do
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.TargetingRule
+  alias ConfigCat.Config.Value
 
   @type opt :: {:setting_type, SettingType.t()} | {:value, Config.value()}
   @type t :: %{String.t() => term()}
@@ -16,9 +17,18 @@ defmodule ConfigCat.Config.EvaluationFormula do
 
   @spec new([opt]) :: t()
   def new(opts \\ []) do
-    %{
-      @value => opts[:value]
-    }
+    case opts[:value] do
+      nil ->
+        %{@value => nil}
+
+      value ->
+        setting_type = SettingType.from_value(value)
+
+        %{
+          @setting_type => setting_type,
+          @value => Value.new(value, setting_type)
+        }
+    end
   end
 
   @spec percentage_options(t()) :: [PercentageOption.t()]
@@ -37,9 +47,12 @@ defmodule ConfigCat.Config.EvaluationFormula do
   end
 
   @spec value(t()) :: Config.value()
-  @spec value(t(), Config.value() | nil) :: Config.value() | nil
+  @spec value(t(), Config.value() | nil) :: Config.value()
   def value(formula, default \\ nil) do
-    Map.get(formula, @value, default)
+    case Map.get(formula, @value) do
+      nil -> default
+      value -> Value.get(value, setting_type(formula), default)
+    end
   end
 
   @spec variation_id(t()) :: Config.variation_id() | nil
