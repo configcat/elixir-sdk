@@ -10,7 +10,7 @@ defmodule ConfigCat.ConfigEntryTest do
       "r": 0
     },
     "f": {
-      "testKey": { "v": "testValue", "t": 1, "p": [], "r": []}
+      "testKey": { "v": {"s": "testValue"}, "t": 1}
     }
   }
   """

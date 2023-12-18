@@ -1,29 +1,14 @@
 defmodule ConfigCat.DefaultUserTest do
   use ConfigCat.ClientCase, async: true
 
-  import Jason.Sigil
-
-  alias ConfigCat.Config
+  alias ConfigCat.Factory
   alias ConfigCat.FetchTime
   alias ConfigCat.User
 
   @moduletag capture_log: true
 
   setup do
-    feature_flags = ~J"""
-      {
-        "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-        "testStringKey": {
-          "v": "testValue", "i": "id", "t": 1, "p": [], "r": [
-            {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-            {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-          ]
-        }
-      }
-    """
-
-    config = Config.new(feature_flags: feature_flags)
-
+    config = Factory.config()
     stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok

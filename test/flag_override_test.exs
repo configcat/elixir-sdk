@@ -13,7 +13,7 @@ defmodule ConfigCat.FlagOverrideTest do
   setup do
     feature_flags = ~J"""
       {
-        "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
+        "fakeKey": {"v": {"b": false}, "t": 0}
       }
     """
 
