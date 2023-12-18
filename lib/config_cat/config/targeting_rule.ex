@@ -1,61 +1,59 @@
 defmodule ConfigCat.Config.TargetingRule do
   @moduledoc false
   alias ConfigCat.Config
+  alias ConfigCat.Config.Condition
+  alias ConfigCat.Config.SettingType
+  alias ConfigCat.Config.ValueAndVariationId
 
   @type opt ::
-          {:comparator, Config.comparator()}
-          | {:comparison_attribute, String.t()}
-          | {:comparison_value, Config.value()}
-          | {:value, Config.value()}
-          | {:variation_id, Config.variation_id()}
+          {:conditions, [Condition.t()]}
+          | {:served_value, ValueAndVariationId.t()}
   @type t :: %{String.t() => term()}
 
-  @comparator "t"
-  @comparison_attribute "a"
-  @comparison_value "c"
-  @value "v"
-  @variation_id "i"
+  @conditions "c"
+  @served_value "s"
 
   @spec new([opt]) :: t()
   def new(opts \\ []) do
     %{
-      @comparator => opts[:comparator],
-      @comparison_attribute => opts[:comparison_attribute],
-      @comparison_value => opts[:comparison_value],
-      @value => opts[:value],
-      @variation_id => opts[:variation_id]
+      @conditions => opts[:conditions] || [],
+      @served_value => opts[:served_value]
     }
   end
 
-  @spec comparator(t()) :: Config.comparator() | nil
-  def comparator(rule) do
-    Map.get(rule, @comparator)
+  @spec conditions(t()) :: [Condition.t()]
+  def conditions(rule) do
+    Map.get(rule, @conditions, [])
   end
 
-  @spec comparison_attribute(t()) :: String.t() | nil
-  def comparison_attribute(rule) do
-    Map.get(rule, @comparison_attribute)
+  @spec served_value(t()) :: ValueAndVariationId.t() | nil
+  def served_value(rule) do
+    Map.get(rule, @served_value)
   end
 
-  @spec comparison_value(t()) :: Config.value() | nil
-  def comparison_value(rule) do
-    Map.get(rule, @comparison_value)
-  end
-
-  @spec value(t()) :: Config.value()
-  def value(rule) do
-    Map.get(rule, @value)
+  @spec value(t(), SettingType.t()) :: Config.value()
+  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value()
+  def value(rule, setting_type, default \\ nil) do
+    case served_value(rule) do
+      nil -> default
+      value -> ValueAndVariationId.value(value, setting_type, default)
+    end
   end
 
   @spec variation_id(t()) :: Config.variation_id() | nil
-  def variation_id(rule) do
-    Map.get(rule, @variation_id)
+  @spec variation_id(t(), Config.variation_id() | nil) :: Config.variation_id() | nil
+  def variation_id(rule, default \\ nil) do
+    case served_value(rule) do
+      nil -> default
+      value -> ValueAndVariationId.variation_id(value, default)
+    end
   end
 
   @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
   def variation_value(rule, variation_id) do
-    if variation_id(rule) == variation_id do
-      value(rule)
+    case served_value(rule) do
+      nil -> nil
+      value -> ValueAndVariationId.variation_value(value, variation_id)
     end
   end
 end
