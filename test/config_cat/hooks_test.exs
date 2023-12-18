@@ -1,7 +1,6 @@
 defmodule ConfigCat.HooksTest do
   use ConfigCat.CachePolicyCase, async: true
 
-  import Jason.Sigil
   import Mox
 
   alias ConfigCat.CachePolicy
@@ -10,6 +9,7 @@ defmodule ConfigCat.HooksTest do
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.Factory
   alias ConfigCat.Hooks
   alias ConfigCat.MockFetcher
   alias ConfigCat.NullDataSource
@@ -17,25 +17,7 @@ defmodule ConfigCat.HooksTest do
 
   @moduletag capture_log: true
 
-  @config ~J"""
-  {
-    "p": {
-      "u": "https://cdn-global.configcat.com",
-      "r": 0
-    },
-    "f": {
-      "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-      "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
-        {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-        {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-      ]},
-      "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
-      "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
-      "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
-      "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
-    }
-  }
-  """
+  @config Factory.config()
   @policy CachePolicy.manual()
 
   defmodule TestHooks do
