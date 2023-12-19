@@ -3,6 +3,7 @@ defmodule ConfigCat.FlagOverrideTest do
 
   import Jason.Sigil
 
+  alias ConfigCat.Config
   alias ConfigCat.FetchTime
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
@@ -16,7 +17,8 @@ defmodule ConfigCat.FlagOverrideTest do
       }
     """
 
-    stub_cached_feature_flags({:ok, feature_flags, FetchTime.now_ms()})
+    config = Config.new(feature_flags: feature_flags)
+    stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok
   end

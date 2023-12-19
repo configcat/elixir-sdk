@@ -4,6 +4,7 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
@@ -96,9 +97,12 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    case cached_feature_flags(state) do
-      {:ok, feature_flags, _fetch_time_ms} ->
-        result = Enum.find_value(feature_flags, nil, &entry_matching(&1, variation_id))
+    case cached_config(state) do
+      {:ok, config, _fetch_time_ms} ->
+        result =
+          config
+          |> Config.feature_flags()
+          |> Enum.find_value(nil, &entry_matching(&1, variation_id))
 
         if is_nil(result) do
           ConfigCatLogger.error(
@@ -183,9 +187,9 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_all_keys(%State{} = state) do
-    case cached_feature_flags(state) do
-      {:ok, feature_flags, _fetch_time_ms} ->
-        Map.keys(feature_flags)
+    case cached_config(state) do
+      {:ok, config, _fetch_time_ms} ->
+        config |> Config.feature_flags() |> Map.keys()
 
       _ ->
         ConfigCatLogger.error("Config JSON is not present. Returning empty result.",
@@ -207,20 +211,20 @@ defmodule ConfigCat.Client do
     user = if user != nil, do: user, else: state.default_user
 
     details =
-      case cached_feature_flags(state) do
-        {:ok, feature_flags, fetch_time_ms} ->
-          %EvaluationDetails{} =
-            details =
-            Rollout.evaluate(key, user, default_value, default_variation_id, feature_flags)
+      with {:ok, config, fetch_time_ms} <- cached_config(state),
+           {:ok, _feature_flags} <- Config.fetch_feature_flags(config) do
+        %EvaluationDetails{} =
+          details =
+          Rollout.evaluate(key, user, default_value, default_variation_id, config)
 
-          fetch_time =
-            case FetchTime.to_datetime(fetch_time_ms) do
-              {:ok, %DateTime{} = dt} -> dt
-              _ -> nil
-            end
+        fetch_time =
+          case FetchTime.to_datetime(fetch_time_ms) do
+            {:ok, %DateTime{} = dt} -> dt
+            _ -> nil
+          end
 
-          %{details | fetch_time: fetch_time}
-
+        %{details | fetch_time: fetch_time}
+      else
         _ ->
           message =
             "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
@@ -241,22 +245,22 @@ defmodule ConfigCat.Client do
     details
   end
 
-  defp cached_feature_flags(%State{} = state) do
+  defp cached_config(%State{} = state) do
     %{cache_policy: policy, flag_overrides: flag_overrides, instance_id: instance_id} = state
-    local_feature_flags = OverrideDataSource.overrides(flag_overrides)
+    local_config = OverrideDataSource.overrides(flag_overrides)
 
     case OverrideDataSource.behaviour(flag_overrides) do
       :local_only ->
-        {:ok, local_feature_flags, 0}
+        {:ok, local_config, 0}
 
       :local_over_remote ->
-        with {:ok, remote_feature_flags, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(remote_feature_flags, local_feature_flags), fetch_time_ms}
+        with {:ok, remote_config, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Config.merge(remote_config, local_config), fetch_time_ms}
         end
 
       :remote_over_local ->
-        with {:ok, remote_feature_flags, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(local_feature_flags, remote_feature_flags), fetch_time_ms}
+        with {:ok, remote_config, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Config.merge(local_config, remote_config), fetch_time_ms}
         end
     end
   end
