@@ -6,6 +6,9 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.Condition
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.Segment
+  alias ConfigCat.Config.SegmentComparator
+  alias ConfigCat.Config.SegmentCondition
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.Config.UserComparator
   alias ConfigCat.EvaluationDetails
@@ -138,12 +141,20 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_condition(condition, user, value, logs) do
+    # TODO: Pass in segments from the config
+    segments = []
+    segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
-    if user_condition do
-      evaluate_user_condition(user_condition, user, value, logs)
-    else
-      true
+    cond do
+      user_condition ->
+        evaluate_user_condition(user_condition, user, value, logs)
+
+      segment_condition ->
+        evaluate_segment_condition(segment_condition, user, value, segments, logs)
+
+      true ->
+        true
     end
   end
 
@@ -187,6 +198,21 @@ defmodule ConfigCat.Rollout do
 
             false
         end
+    end
+  end
+
+  defp evaluate_segment_condition(condition, user, value, segments, logs) do
+    index = SegmentCondition.segment_index(condition)
+
+    # TODO: Get rid of conditional once we're passing in proper segments
+    if index < length(segments) do
+      segment = Enum.fetch!(segments, index)
+      comparator = SegmentCondition.segment_comparator(condition)
+      rules = Segment.segment_rules(segment)
+      in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, value, logs))
+      SegmentComparator.compare(comparator, in_segment?)
+    else
+      false
     end
   end
 
