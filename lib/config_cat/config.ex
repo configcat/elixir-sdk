@@ -4,6 +4,7 @@ defmodule ConfigCat.Config do
   """
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.Preferences
+  alias ConfigCat.Config.Segment
 
   @typedoc false
   @type comparator :: non_neg_integer()
@@ -31,6 +32,7 @@ defmodule ConfigCat.Config do
 
   @feature_flags "f"
   @preferences "p"
+  @segments "s"
 
   @doc false
   @spec new([opt]) :: t()
@@ -60,6 +62,12 @@ defmodule ConfigCat.Config do
   @spec preferences(t()) :: Preferences.t()
   def preferences(config) do
     Map.get_lazy(config, @preferences, &Preferences.new/0)
+  end
+
+  @doc false
+  @spec segments(t()) :: [Segment.t()]
+  def segments(config) do
+    Map.get(config, @segments, [])
   end
 
   @doc false
