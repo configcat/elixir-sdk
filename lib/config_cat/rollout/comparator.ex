@@ -3,6 +3,7 @@ defmodule ConfigCat.Rollout.Comparator do
 
   alias ConfigCat.Config
   alias ConfigCat.Config.ComparisonRule
+  alias ConfigCat.Config.Preferences
   alias Version.InvalidVersionError
 
   @type comparator :: Config.comparator()
@@ -27,51 +28,67 @@ defmodule ConfigCat.Rollout.Comparator do
   @is_one_of_sensitive 16
   @is_not_one_of_sensitive 17
 
-  @spec compare(comparator(), Config.value(), ComparisonRule.comparison_value()) :: result()
+  @spec compare(
+          comparator(),
+          Config.value(),
+          ComparisonRule.comparison_value(),
+          context_salt :: Preferences.salt(),
+          salt :: Preferences.salt()
+        ) :: result()
 
-  def compare(@is_one_of, user_value, comparison_value), do: is_one_of(user_value, comparison_value)
+  def compare(@is_one_of, user_value, comparison_value, _context_salt, _salt), do: is_one_of(user_value, comparison_value)
 
-  def compare(@is_not_one_of, user_value, comparison_value), do: user_value |> is_one_of(comparison_value) |> negate()
+  def compare(@is_not_one_of, user_value, comparison_value, _context_salt, _salt),
+    do: user_value |> is_one_of(comparison_value) |> negate()
 
-  def compare(@contains, user_value, comparison_value), do: contains(user_value, comparison_value)
+  def compare(@contains, user_value, comparison_value, _context_salt, _salt), do: contains(user_value, comparison_value)
 
-  def compare(@does_not_contain, user_value, comparison_value), do: user_value |> contains(comparison_value) |> negate()
+  def compare(@does_not_contain, user_value, comparison_value, _context_salt, _salt),
+    do: user_value |> contains(comparison_value) |> negate()
 
-  def compare(@is_one_of_semver, user_value, comparison_value), do: is_one_of_semver(user_value, comparison_value)
+  def compare(@is_one_of_semver, user_value, comparison_value, _context_salt, _salt),
+    do: is_one_of_semver(user_value, comparison_value)
 
-  def compare(@is_not_one_of_semver, user_value, comparison_value),
+  def compare(@is_not_one_of_semver, user_value, comparison_value, _context_salt, _salt),
     do: user_value |> is_one_of_semver(comparison_value) |> negate()
 
-  def compare(@less_than_semver, user_value, comparison_value), do: compare_semver(user_value, comparison_value, [:lt])
+  def compare(@less_than_semver, user_value, comparison_value, _context_salt, _salt),
+    do: compare_semver(user_value, comparison_value, [:lt])
 
-  def compare(@less_than_equal_semver, user_value, comparison_value),
+  def compare(@less_than_equal_semver, user_value, comparison_value, _context_salt, _salt),
     do: compare_semver(user_value, comparison_value, [:lt, :eq])
 
-  def compare(@greater_than_semver, user_value, comparison_value), do: compare_semver(user_value, comparison_value, [:gt])
+  def compare(@greater_than_semver, user_value, comparison_value, _context_salt, _salt),
+    do: compare_semver(user_value, comparison_value, [:gt])
 
-  def compare(@greater_than_equal_semver, user_value, comparison_value),
+  def compare(@greater_than_equal_semver, user_value, comparison_value, _context_salt, _salt),
     do: compare_semver(user_value, comparison_value, [:gt, :eq])
 
-  def compare(@equals_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &==/2)
+  def compare(@equals_number, user_value, comparison_value, _context_salt, _salt),
+    do: compare_numbers(user_value, comparison_value, &==/2)
 
-  def compare(@not_equals_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &!==/2)
+  def compare(@not_equals_number, user_value, comparison_value, _context_salt, _salt),
+    do: compare_numbers(user_value, comparison_value, &!==/2)
 
-  def compare(@less_than_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &</2)
+  def compare(@less_than_number, user_value, comparison_value, _context_salt, _salt),
+    do: compare_numbers(user_value, comparison_value, &</2)
 
-  def compare(@less_than_equal_number, user_value, comparison_value),
+  def compare(@less_than_equal_number, user_value, comparison_value, _context_salt, _salt),
     do: compare_numbers(user_value, comparison_value, &<=/2)
 
-  def compare(@greater_than_number, user_value, comparison_value), do: compare_numbers(user_value, comparison_value, &>/2)
+  def compare(@greater_than_number, user_value, comparison_value, _context_salt, _salt),
+    do: compare_numbers(user_value, comparison_value, &>/2)
 
-  def compare(@greater_than_equal_number, user_value, comparison_value),
+  def compare(@greater_than_equal_number, user_value, comparison_value, _context_salt, _salt),
     do: compare_numbers(user_value, comparison_value, &>=/2)
 
-  def compare(@is_one_of_sensitive, user_value, comparison_value), do: is_one_of_sensitive(user_value, comparison_value)
+  def compare(@is_one_of_sensitive, user_value, comparison_value, context_salt, salt),
+    do: is_one_of_sensitive(user_value, comparison_value, context_salt, salt)
 
-  def compare(@is_not_one_of_sensitive, user_value, comparison_value),
-    do: user_value |> is_one_of_sensitive(comparison_value) |> negate()
+  def compare(@is_not_one_of_sensitive, user_value, comparison_value, context_salt, salt),
+    do: user_value |> is_one_of_sensitive(comparison_value, context_salt, salt) |> negate()
 
-  def compare(_comparator, _user_value, _comparison_value) do
+  def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
     {:ok, false}
   end
 
@@ -101,15 +118,17 @@ defmodule ConfigCat.Rollout.Comparator do
       {:error, error}
   end
 
-  defp is_one_of_sensitive(user_value, comparison_value) do
+  defp is_one_of_sensitive(user_value, comparison_value, context_salt, salt) do
     user_value
-    |> hash_value()
+    |> hash_value(context_salt, salt)
     |> is_one_of(comparison_value)
   end
 
-  defp hash_value(value) do
-    :sha
-    |> :crypto.hash(value)
+  defp hash_value(value, context_salt, salt) do
+    salted = to_string(value <> salt <> context_salt)
+
+    :sha256
+    |> :crypto.hash(salted)
     |> Base.encode16()
     |> String.downcase()
   end
