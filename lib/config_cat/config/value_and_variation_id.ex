@@ -4,9 +4,6 @@ defmodule ConfigCat.Config.ValueAndVariationId do
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.Value
 
-  @type opt ::
-          {:value, Config.value()}
-          | {:variation_id, Config.variation_id()}
   @type t :: %{String.t() => term()}
 
   @value "v"
