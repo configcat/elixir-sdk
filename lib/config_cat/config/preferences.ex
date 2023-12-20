@@ -3,11 +3,13 @@ defmodule ConfigCat.Config.Preferences do
   alias ConfigCat.RedirectMode
 
   @type opt :: {:base_url, url()} | {:redirect_mode, RedirectMode.t()}
+  @type salt :: String.t()
   @type t :: %{String.t() => term()}
   @type url :: String.t()
 
   @base_url "u"
   @redirect_mode "r"
+  @salt "s"
 
   @spec new([opt]) :: t()
   def new(opts \\ []) do
@@ -25,5 +27,10 @@ defmodule ConfigCat.Config.Preferences do
   @spec redirect_mode(t()) :: RedirectMode.t() | nil
   def redirect_mode(preferences) do
     Map.get(preferences, @redirect_mode)
+  end
+
+  @spec salt(t()) :: salt()
+  def salt(preferences) do
+    Map.get(preferences, @salt, "")
   end
 end
