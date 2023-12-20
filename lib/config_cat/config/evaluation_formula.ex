@@ -66,12 +66,12 @@ defmodule ConfigCat.Config.EvaluationFormula do
     if variation_id(formula) == variation_id do
       value(formula)
     else
-      targeting_value = targeting_rule_variation_value(formula, variation_id)
+      case targeting_rule_variation_value(formula, variation_id) do
+        nil ->
+          percentage_rule_variation_value(formula, variation_id)
 
-      if is_nil(targeting_value) do
-        percentage_rule_variation_value(formula, variation_id)
-      else
-        targeting_value
+        targeting_value ->
+          targeting_value
       end
     end
   end
