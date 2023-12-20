@@ -36,8 +36,8 @@ defmodule ConfigCat.Config.UserComparator do
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
     @is_not_one_of => %Metadata{description: "IS NOT ONE OF", value_type: :string_list},
-    @contains => %Metadata{description: "CONTAINS", value_type: :string},
-    @does_not_contain => %Metadata{description: "DOES NOT CONTAIN", value_type: :string},
+    @contains => %Metadata{description: "CONTAINS", value_type: :string_list},
+    @does_not_contain => %Metadata{description: "DOES NOT CONTAIN", value_type: :string_list},
     @is_one_of_semver => %Metadata{description: "IS ONE OF (SemVer)", value_type: :string_list},
     @is_not_one_of_semver => %Metadata{description: "IS NOT ONE OF (SemVer)", value_type: :string_list},
     @less_than_semver => %Metadata{description: "< (SemVer)", value_type: :string},
