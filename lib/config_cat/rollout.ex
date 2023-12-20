@@ -13,7 +13,6 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.Config.UserComparator
   alias ConfigCat.EvaluationDetails
-  alias ConfigCat.Rollout.Comparator
   alias ConfigCat.User
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
@@ -171,7 +170,7 @@ defmodule ConfigCat.Rollout do
         false
 
       user_value ->
-        case Comparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
+        case UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
           {:ok, true} ->
             log_match(
               logs,

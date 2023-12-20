@@ -1,13 +1,13 @@
-defmodule ConfigCat.Rollout.ComparatorTest do
+defmodule ConfigCat.Config.UserComparatorTest do
   @moduledoc """
-  All evaluators are tested exhaustively in ConfigCat.RolloutTest,
-  these are basic tests to ensure that we're using the correct
+  All evaluators are tested exhaustively in ConfigCat.RolloutTest.
+  These are basic tests to ensure that we're using the correct
   comparator type for the given comparator value.
   """
 
   use ExUnit.Case, async: true
 
-  alias ConfigCat.Rollout.Comparator
+  alias ConfigCat.Config.UserComparator
   alias Version.InvalidVersionError
 
   @context_salt "CONTEXT_SALT"
@@ -260,6 +260,6 @@ defmodule ConfigCat.Rollout.ComparatorTest do
   end
 
   defp compare(comparator, user_value, comparison_value) do
-    Comparator.compare(comparator, user_value, comparison_value, @context_salt, @salt)
+    UserComparator.compare(comparator, user_value, comparison_value, @context_salt, @salt)
   end
 end
