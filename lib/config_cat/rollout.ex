@@ -6,6 +6,7 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.Condition
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.Preferences
   alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentComparator
   alias ConfigCat.Config.SegmentCondition
@@ -126,7 +127,8 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_targeting_rules(rules, setting_type, user, _key, config, logs) do
+  defp evaluate_targeting_rules(rules, setting_type, user, key, config, logs) do
+    salt = config |> Config.preferences() |> Preferences.salt()
     segments = Config.segments(config)
 
     Enum.reduce_while(rules, {:none, nil, nil}, fn rule, acc ->
@@ -134,7 +136,7 @@ defmodule ConfigCat.Rollout do
       value = TargetingRule.value(rule, setting_type)
       variation_id = TargetingRule.variation_id(rule)
 
-      if Enum.all?(conditions, &evaluate_condition(&1, user, value, segments, logs)) do
+      if Enum.all?(conditions, &evaluate_condition(&1, user, key, salt, value, segments, logs)) do
         {:halt, {value, variation_id, rule}}
       else
         {:cont, acc}
@@ -142,23 +144,23 @@ defmodule ConfigCat.Rollout do
     end)
   end
 
-  defp evaluate_condition(condition, user, value, segments, logs) do
+  defp evaluate_condition(condition, user, key, salt, value, segments, logs) do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
     cond do
       user_condition ->
-        evaluate_user_condition(user_condition, user, value, logs)
+        evaluate_user_condition(user_condition, user, key, salt, value, logs)
 
       segment_condition ->
-        evaluate_segment_condition(segment_condition, user, value, segments, logs)
+        evaluate_segment_condition(segment_condition, user, salt, value, segments, logs)
 
       true ->
         true
     end
   end
 
-  defp evaluate_user_condition(comparison_rule, user, value, logs) do
+  defp evaluate_user_condition(comparison_rule, user, context_salt, salt, value, logs) do
     comparison_attribute = ComparisonRule.comparison_attribute(comparison_rule)
     comparator = ComparisonRule.comparator(comparison_rule)
     comparison_value = ComparisonRule.comparison_value(comparison_rule)
@@ -169,7 +171,7 @@ defmodule ConfigCat.Rollout do
         false
 
       user_value ->
-        case Comparator.compare(comparator, user_value, comparison_value) do
+        case Comparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
           {:ok, true} ->
             log_match(
               logs,
@@ -201,12 +203,13 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_segment_condition(condition, user, value, segments, logs) do
+  defp evaluate_segment_condition(condition, user, salt, value, segments, logs) do
     index = SegmentCondition.segment_index(condition)
     segment = Enum.fetch!(segments, index)
     comparator = SegmentCondition.segment_comparator(condition)
+    name = Segment.name(segment)
     rules = Segment.segment_rules(segment)
-    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, value, logs))
+    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, name, salt, value, logs))
     SegmentComparator.compare(comparator, in_segment?)
   end
 
