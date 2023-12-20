@@ -17,6 +17,21 @@ defmodule ConfigCat.Rollout do
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
+  defmodule Context do
+    @moduledoc false
+    use TypedStruct
+
+    alias ConfigCat.Config.SettingType
+
+    typedstruct enforce: true do
+      field :config, Config.t()
+      field :key, Config.key()
+      field :logs, pid()
+      field :setting_type, SettingType.t()
+      field :user, User.t(), enforce: false
+    end
+  end
+
   @spec evaluate(
           Config.key(),
           User.t() | nil,
@@ -33,12 +48,19 @@ defmodule ConfigCat.Rollout do
       with {:ok, valid_user} <- validate_user(user),
            feature_flags = Config.feature_flags(config),
            {:ok, formula} <- evaluation_formula(feature_flags, key, default_value) do
+        context = %Context{
+          config: config,
+          key: key,
+          logs: logs,
+          setting_type: EvaluationFormula.setting_type(formula),
+          user: valid_user
+        }
+
         percentage_options = EvaluationFormula.percentage_options(formula)
-        setting_type = EvaluationFormula.setting_type(formula)
         targeting_rules = EvaluationFormula.targeting_rules(formula)
 
         {value, variation, rule, percentage_option} =
-          evaluate_rules(targeting_rules, percentage_options, setting_type, valid_user, key, config, logs)
+          evaluate_rules(targeting_rules, percentage_options, context)
 
         if value == :none do
           EvaluationDetails.new(
@@ -108,17 +130,17 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rules([], [], _setting_type, _user, _key, _config, _logs), do: {:none, nil, nil, nil}
+  defp evaluate_rules([], [], _context), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_targeting_rules, _percentage_options, _setting_type, nil, key, _config, _logs) do
-    log_nil_user(key)
+  defp evaluate_rules(_targeting_rules, _percentage_options, %Context{user: nil} = context) do
+    log_nil_user(context.key)
     {:none, nil, nil, nil}
   end
 
-  defp evaluate_rules(targeting_rules, percentage_options, setting_type, user, key, config, logs) do
-    case evaluate_targeting_rules(targeting_rules, setting_type, user, key, config, logs) do
+  defp evaluate_rules(targeting_rules, percentage_options, context) do
+    case evaluate_targeting_rules(targeting_rules, context) do
       {:none, _, _} ->
-        {value, variation, option} = evaluate_percentage_options(percentage_options, setting_type, user, key)
+        {value, variation, option} = evaluate_percentage_options(percentage_options, context)
         {value, variation, nil, option}
 
       {value, variation, rule} ->
@@ -126,16 +148,16 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_targeting_rules(rules, setting_type, user, key, config, logs) do
-    salt = config |> Config.preferences() |> Preferences.salt()
-    segments = Config.segments(config)
+  defp evaluate_targeting_rules(rules, %Context{} = context) do
+    salt = context.config |> Config.preferences() |> Preferences.salt()
+    segments = Config.segments(context.config)
 
     Enum.reduce_while(rules, {:none, nil, nil}, fn rule, acc ->
       conditions = TargetingRule.conditions(rule)
-      value = TargetingRule.value(rule, setting_type)
+      value = TargetingRule.value(rule, context.setting_type)
       variation_id = TargetingRule.variation_id(rule)
 
-      if Enum.all?(conditions, &evaluate_condition(&1, user, key, salt, value, segments, logs)) do
+      if Enum.all?(conditions, &evaluate_condition(&1, salt, value, segments, context)) do
         {:halt, {value, variation_id, rule}}
       else
         {:cont, acc}
@@ -143,28 +165,29 @@ defmodule ConfigCat.Rollout do
     end)
   end
 
-  defp evaluate_condition(condition, user, key, salt, value, segments, logs) do
+  defp evaluate_condition(condition, salt, value, segments, %Context{} = context) do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
     cond do
       user_condition ->
-        evaluate_user_condition(user_condition, user, key, salt, value, logs)
+        evaluate_user_condition(user_condition, context.key, salt, value, context)
 
       segment_condition ->
-        evaluate_segment_condition(segment_condition, user, salt, value, segments, logs)
+        evaluate_segment_condition(segment_condition, salt, value, segments, context)
 
       true ->
         true
     end
   end
 
-  defp evaluate_user_condition(comparison_rule, user, context_salt, salt, value, logs) do
+  defp evaluate_user_condition(comparison_rule, context_salt, salt, value, %Context{} = context) do
+    %Context{logs: logs} = context
     comparison_attribute = ComparisonRule.comparison_attribute(comparison_rule)
     comparator = ComparisonRule.comparator(comparison_rule)
     comparison_value = ComparisonRule.comparison_value(comparison_rule)
 
-    case User.get_attribute(user, comparison_attribute) do
+    case User.get_attribute(context.user, comparison_attribute) do
       nil ->
         log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
         false
@@ -202,34 +225,34 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_segment_condition(condition, user, salt, value, segments, logs) do
+  defp evaluate_segment_condition(condition, salt, value, segments, %Context{} = context) do
     index = SegmentCondition.segment_index(condition)
     segment = Enum.fetch!(segments, index)
     comparator = SegmentCondition.segment_comparator(condition)
     name = Segment.name(segment)
     rules = Segment.segment_rules(segment)
-    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, name, salt, value, logs))
+    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, name, salt, value, context))
     SegmentComparator.compare(comparator, in_segment?)
   end
 
-  defp evaluate_percentage_options([] = _percentage_options, _setting_type, _user, _key), do: {:none, nil, nil}
+  defp evaluate_percentage_options([] = _percentage_options, _context), do: {:none, nil, nil}
 
-  defp evaluate_percentage_options(percentage_options, setting_type, user, key) do
-    hash_val = hash_user(user, key)
+  defp evaluate_percentage_options(percentage_options, %Context{} = context) do
+    hash_val = hash_user(context.user, context.key)
 
     Enum.reduce_while(
       percentage_options,
       {0, nil, nil},
-      &evaluate_percentage_option(&1, &2, setting_type, hash_val)
+      &evaluate_percentage_option(&1, &2, hash_val, context)
     )
   end
 
-  defp evaluate_percentage_option(option, increment, setting_type, hash_val) do
+  defp evaluate_percentage_option(option, increment, hash_val, %Context{} = context) do
     {bucket, _v, _r} = increment
     bucket = bucket + PercentageOption.percentage(option)
 
     if hash_val < bucket do
-      value = PercentageOption.value(option, setting_type)
+      value = PercentageOption.value(option, context.setting_type)
       variation_id = PercentageOption.variation_id(option)
 
       {:halt, {value, variation_id, option}}
