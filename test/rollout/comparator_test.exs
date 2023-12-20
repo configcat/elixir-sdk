@@ -11,39 +11,39 @@ defmodule ConfigCat.Rollout.ComparatorTest do
   alias Version.InvalidVersionError
 
   test "returns false if given an unknown comparator" do
-    assert {:ok, false} = Comparator.compare(-1, "b", "a, b, c")
+    assert {:ok, false} = Comparator.compare(-1, "b", ["a", "b", "c"])
   end
 
   describe "basic comparators" do
     test "is_one_of" do
       is_one_of = 0
 
-      assert {:ok, true} = Comparator.compare(is_one_of, "b", "a, b, c")
-      assert {:ok, false} = Comparator.compare(is_one_of, "x", "a, b, c")
+      assert {:ok, true} = Comparator.compare(is_one_of, "b", ["a", "b", "c"])
+      assert {:ok, false} = Comparator.compare(is_one_of, "x", ["a", "b", "c"])
     end
 
     test "is_not_one_of" do
       is_not_one_of = 1
 
-      assert {:ok, false} = Comparator.compare(is_not_one_of, "b", "a, b, c")
-      assert {:ok, true} = Comparator.compare(is_not_one_of, "x", "a, b, c")
+      assert {:ok, false} = Comparator.compare(is_not_one_of, "b", ["a", "b", "c"])
+      assert {:ok, true} = Comparator.compare(is_not_one_of, "x", ["a", "b", "c"])
     end
 
     test "contains" do
       contains = 2
 
-      assert {:ok, true} = Comparator.compare(contains, "jane@influxdata.com", "influxdata.com")
-      assert {:ok, false} = Comparator.compare(contains, "jane@email.com", "influxdata.com")
+      assert {:ok, true} = Comparator.compare(contains, "jane@configcat.com", "configcat.com")
+      assert {:ok, false} = Comparator.compare(contains, "jane@email.com", "configcat.com")
     end
 
     test "does_not_contain" do
       does_not_contain = 3
 
       assert {:ok, false} =
-               Comparator.compare(does_not_contain, "jane@influxdata.com", "influxdata.com")
+               Comparator.compare(does_not_contain, "jane@configcat.com", "configcat.com")
 
       assert {:ok, true} =
-               Comparator.compare(does_not_contain, "jane@email.com", "influxdata.com")
+               Comparator.compare(does_not_contain, "jane@email.com", "configcat.com")
     end
   end
 
@@ -51,33 +51,33 @@ defmodule ConfigCat.Rollout.ComparatorTest do
     test "is_one_of (semver)" do
       is_one_of_semver = 4
 
-      assert {:ok, true} = Comparator.compare(is_one_of_semver, "1.2.0", "1.2.0, 1.3.4")
-      assert {:ok, false} = Comparator.compare(is_one_of_semver, "2.0.0", "1.2.0, 1.3.4")
+      assert {:ok, true} = Comparator.compare(is_one_of_semver, "1.2.0", ["1.2.0", "1.3.4"])
+      assert {:ok, false} = Comparator.compare(is_one_of_semver, "2.0.0", ["1.2.0", "1.3.4"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_one_of_semver, "invalid", "1.2.0, 1.3.4")
+               Comparator.compare(is_one_of_semver, "invalid", ["1.2.0", "1.3.4"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_one_of_semver, "1.2.0", "invalid, 1.2.0")
+               Comparator.compare(is_one_of_semver, "1.2.0", ["invalid", "1.2.0"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_one_of_semver, "1.2.0", "1.2.0, invalid")
+               Comparator.compare(is_one_of_semver, "1.2.0", ["1.2.0", "invalid"])
     end
 
     test "is_not_one_of (semver)" do
       is_not_one_of_semver = 5
 
-      assert {:ok, true} = Comparator.compare(is_not_one_of_semver, "2.0.0", "1.2.0, 1.3.4")
-      assert {:ok, false} = Comparator.compare(is_not_one_of_semver, "1.2.0", "1.2.0, 1.3.4")
+      assert {:ok, true} = Comparator.compare(is_not_one_of_semver, "2.0.0", ["1.2.0", "1.3.4"])
+      assert {:ok, false} = Comparator.compare(is_not_one_of_semver, "1.2.0", ["1.2.0", "1.3.4"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_not_one_of_semver, "invalid", "1.2.0, 1.3.4")
+               Comparator.compare(is_not_one_of_semver, "invalid", ["1.2.0", "1.3.4"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_not_one_of_semver, "1.2.0", "invalid, 1.3.4")
+               Comparator.compare(is_not_one_of_semver, "1.2.0", ["invalid", "1.3.4"])
 
       assert {:error, %InvalidVersionError{}} =
-               Comparator.compare(is_not_one_of_semver, "1.2.0", "1.2.0, invalid")
+               Comparator.compare(is_not_one_of_semver, "1.2.0", ["1.2.0", "invalid"])
     end
 
     test "< (SemVer)" do
@@ -243,16 +243,16 @@ defmodule ConfigCat.Rollout.ComparatorTest do
       is_one_of_sensitive = 16
       %{a: a, b: b, c: c} = hashed
 
-      assert {:ok, true} = Comparator.compare(is_one_of_sensitive, "a", "#{a}, #{b}, #{c}")
-      assert {:ok, false} = Comparator.compare(is_one_of_sensitive, "x", "#{a}, #{b}, #{c}")
+      assert {:ok, true} = Comparator.compare(is_one_of_sensitive, "a", [a, b, c])
+      assert {:ok, false} = Comparator.compare(is_one_of_sensitive, "x", [a, b, c])
     end
 
     test "is_not_one_of (sensitive)", %{hashed: hashed} do
       is_not_one_of_sensitive = 17
       %{a: a, b: b, c: c} = hashed
 
-      assert {:ok, true} = Comparator.compare(is_not_one_of_sensitive, "x", "#{a}, #{b}, #{c}")
-      assert {:ok, false} = Comparator.compare(is_not_one_of_sensitive, "a", "#{a}, #{b}, #{c}")
+      assert {:ok, true} = Comparator.compare(is_not_one_of_sensitive, "x", [a, b, c])
+      assert {:ok, false} = Comparator.compare(is_not_one_of_sensitive, "a", [a, b, c])
     end
   end
 end

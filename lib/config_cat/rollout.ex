@@ -169,7 +169,7 @@ defmodule ConfigCat.Rollout do
         false
 
       user_value ->
-        case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
+        case Comparator.compare(comparator, user_value, comparison_value) do
           {:ok, true} ->
             log_match(
               logs,
