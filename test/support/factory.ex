@@ -30,9 +30,4 @@ defmodule ConfigCat.Factory do
     }
     """
   end
-
-  @spec feature_flags :: Config.feature_flags()
-  def feature_flags do
-    Config.feature_flags(config())
-  end
 end

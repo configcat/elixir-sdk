@@ -38,7 +38,7 @@ defmodule ConfigCat.Rollout do
         targeting_rules = EvaluationFormula.targeting_rules(formula)
 
         {value, variation, rule, percentage_option} =
-          evaluate_rules(targeting_rules, percentage_options, setting_type, valid_user, key, logs)
+          evaluate_rules(targeting_rules, percentage_options, setting_type, valid_user, key, config, logs)
 
         if value == :none do
           EvaluationDetails.new(
@@ -108,15 +108,15 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rules([], [], _setting_type, _user, _key, _logs), do: {:none, nil, nil, nil}
+  defp evaluate_rules([], [], _setting_type, _user, _key, _config, _logs), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_targeting_rules, _percentage_options, _setting_type, nil, key, _logs) do
+  defp evaluate_rules(_targeting_rules, _percentage_options, _setting_type, nil, key, _config, _logs) do
     log_nil_user(key)
     {:none, nil, nil, nil}
   end
 
-  defp evaluate_rules(targeting_rules, percentage_options, setting_type, user, key, logs) do
-    case evaluate_targeting_rules(targeting_rules, setting_type, user, key, logs) do
+  defp evaluate_rules(targeting_rules, percentage_options, setting_type, user, key, config, logs) do
+    case evaluate_targeting_rules(targeting_rules, setting_type, user, key, config, logs) do
       {:none, _, _} ->
         {value, variation, option} = evaluate_percentage_options(percentage_options, setting_type, user, key)
         {value, variation, nil, option}
@@ -126,13 +126,15 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_targeting_rules(rules, setting_type, user, _key, logs) do
+  defp evaluate_targeting_rules(rules, setting_type, user, _key, config, logs) do
+    segments = Config.segments(config)
+
     Enum.reduce_while(rules, {:none, nil, nil}, fn rule, acc ->
       conditions = TargetingRule.conditions(rule)
       value = TargetingRule.value(rule, setting_type)
       variation_id = TargetingRule.variation_id(rule)
 
-      if Enum.all?(conditions, &evaluate_condition(&1, user, value, logs)) do
+      if Enum.all?(conditions, &evaluate_condition(&1, user, value, segments, logs)) do
         {:halt, {value, variation_id, rule}}
       else
         {:cont, acc}
@@ -140,9 +142,7 @@ defmodule ConfigCat.Rollout do
     end)
   end
 
-  defp evaluate_condition(condition, user, value, logs) do
-    # TODO: Pass in segments from the config
-    segments = []
+  defp evaluate_condition(condition, user, value, segments, logs) do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
@@ -203,17 +203,11 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_segment_condition(condition, user, value, segments, logs) do
     index = SegmentCondition.segment_index(condition)
-
-    # TODO: Get rid of conditional once we're passing in proper segments
-    if index < length(segments) do
-      segment = Enum.fetch!(segments, index)
-      comparator = SegmentCondition.segment_comparator(condition)
-      rules = Segment.segment_rules(segment)
-      in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, value, logs))
-      SegmentComparator.compare(comparator, in_segment?)
-    else
-      false
-    end
+    segment = Enum.fetch!(segments, index)
+    comparator = SegmentCondition.segment_comparator(condition)
+    rules = Segment.segment_rules(segment)
+    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, user, value, logs))
+    SegmentComparator.compare(comparator, in_segment?)
   end
 
   defp evaluate_percentage_options([] = _percentage_options, _setting_type, _user, _key), do: {:none, nil, nil}
