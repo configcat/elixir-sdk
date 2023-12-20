@@ -5,21 +5,10 @@ defmodule ConfigCat.Config.TargetingRule do
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.ValueAndVariationId
 
-  @type opt ::
-          {:conditions, [Condition.t()]}
-          | {:served_value, ValueAndVariationId.t()}
   @type t :: %{String.t() => term()}
 
   @conditions "c"
   @served_value "s"
-
-  @spec new([opt]) :: t()
-  def new(opts \\ []) do
-    %{
-      @conditions => opts[:conditions] || [],
-      @served_value => opts[:served_value]
-    }
-  end
 
   @spec conditions(t()) :: [Condition.t()]
   def conditions(rule) do

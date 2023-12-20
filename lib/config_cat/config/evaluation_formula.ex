@@ -5,6 +5,7 @@ defmodule ConfigCat.Config.EvaluationFormula do
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.Config.Value
+  alias ConfigCat.Config.ValueAndVariationId
 
   @type opt :: {:setting_type, SettingType.t()} | {:value, Config.value()}
   @type t :: %{String.t() => term()}
@@ -13,7 +14,6 @@ defmodule ConfigCat.Config.EvaluationFormula do
   @setting_type "t"
   @targeting_rules "r"
   @value "v"
-  @variation_id "i"
 
   @spec new([opt]) :: t()
   def new(opts \\ []) do
@@ -49,17 +49,10 @@ defmodule ConfigCat.Config.EvaluationFormula do
   @spec value(t()) :: Config.value()
   @spec value(t(), Config.value() | nil) :: Config.value()
   def value(formula, default \\ nil) do
-    case Map.get(formula, @value) do
-      nil -> default
-      value -> Value.get(value, setting_type(formula), default)
-    end
+    ValueAndVariationId.value(formula, setting_type(formula), default)
   end
 
-  @spec variation_id(t()) :: Config.variation_id() | nil
-  @spec variation_id(t(), Config.variation_id() | nil) :: Config.variation_id() | nil
-  def variation_id(formula, default \\ nil) do
-    Map.get(formula, @variation_id, default)
-  end
+  defdelegate variation_id(formula, default \\ nil), to: ValueAndVariationId
 
   @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
   def variation_value(formula, variation_id) do
