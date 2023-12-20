@@ -2,6 +2,7 @@ defmodule ConfigCat.Rollout.Comparator do
   @moduledoc false
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.ComparisonRule
   alias Version.InvalidVersionError
 
   @type comparator :: Config.comparator()
@@ -26,7 +27,7 @@ defmodule ConfigCat.Rollout.Comparator do
   @is_one_of_sensitive 16
   @is_not_one_of_sensitive 17
 
-  @spec compare(comparator(), String.t(), String.t()) :: result()
+  @spec compare(comparator(), Config.value(), ComparisonRule.comparison_value()) :: result()
 
   def compare(@is_one_of, user_value, comparison_value), do: is_one_of(user_value, comparison_value)
 
@@ -78,17 +79,13 @@ defmodule ConfigCat.Rollout.Comparator do
   # so will go away soon.
   # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   defp is_one_of(user_value, comparison_value) do
-    result =
-      comparison_value
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
-      |> Enum.member?(user_value)
+    result = to_string(user_value) in comparison_value
 
     {:ok, result}
   end
 
   defp contains(user_value, comparison_value) do
-    result = String.contains?(user_value, comparison_value)
+    result = String.contains?(to_string(user_value), to_string(comparison_value))
     {:ok, result}
   end
 
@@ -96,12 +93,10 @@ defmodule ConfigCat.Rollout.Comparator do
   # so will go away soon.
   # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   defp is_one_of_semver(user_value, comparison_value) do
-    user_version = Version.parse!(user_value)
+    user_version = to_version(user_value)
 
     result =
       comparison_value
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
       |> Enum.reject(&(&1 == ""))
       |> Enum.map(&Version.parse!/1)
       |> Enum.any?(fn version -> Version.compare(user_version, version) == :eq end)
@@ -138,7 +133,7 @@ defmodule ConfigCat.Rollout.Comparator do
   end
 
   defp to_version(value) do
-    value |> String.trim() |> Version.parse!()
+    value |> to_string() |> String.trim() |> Version.parse!()
   end
 
   defp compare_numbers(user_value, comparison_value, operator) do
