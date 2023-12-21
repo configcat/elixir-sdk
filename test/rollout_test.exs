@@ -13,8 +13,7 @@ defmodule ConfigCat.RolloutTest do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-1927-4d6b-8fb9-b1472564e2d3/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix.csv",
-      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/AG6C1ngVb0CvM07un6JisQ",
-      @value_test_type
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/AG6C1ngVb0CvM07un6JisQ"
     )
   end
 
@@ -22,8 +21,7 @@ defmodule ConfigCat.RolloutTest do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-278c-4f83-8d36-db73ad6e2a3a/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix_semantic.csv",
-      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/iV8vH2MBakKxkFZylxHmTg",
-      @value_test_type
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/iV8vH2MBakKxkFZylxHmTg"
     )
   end
 
@@ -31,8 +29,7 @@ defmodule ConfigCat.RolloutTest do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-2b2b-451e-8359-abdef494c2a2/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix_semantic_2.csv",
-      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/U8nt3zEhDEO5S2ulubCopA",
-      @value_test_type
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/U8nt3zEhDEO5S2ulubCopA"
     )
   end
 
@@ -40,8 +37,7 @@ defmodule ConfigCat.RolloutTest do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-0fa3-48d0-8de8-9de55b67fb8b/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix_number.csv",
-      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw",
-      @value_test_type
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/FCWN-k1dV0iBf8QZrDgjdw"
     )
   end
 
@@ -49,8 +45,7 @@ defmodule ConfigCat.RolloutTest do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-2d62-4e1b-884b-6aa237b34764/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix_sensitive.csv",
-      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/-0YmVOUNgEGKkgRF-rU65g",
-      @value_test_type
+      "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/-0YmVOUNgEGKkgRF-rU65g"
     )
   end
 
@@ -71,7 +66,7 @@ defmodule ConfigCat.RolloutTest do
     assert actual == "Cat"
   end
 
-  defp test_matrix(filename, sdk_key, type) do
+  defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
     [header | test_lines] = read_test_matrix(filename)
     {custom_key, settings_keys} = parse_header(header)
 
