@@ -49,12 +49,66 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
+  @tag skip: "Not yet supported; needs new comparators"
+  test "v6 comparators" do
+    # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9a6b-4947-84e2-91529248278a/08dbc325-9ebd-4587-8171-88f76a3004cb
+    test_matrix(
+      "testmatrix_comparators_v6.csv",
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ"
+    )
+  end
+
+  @tag skip: "Not yet supported; needs value type parsing"
+  test "segments" do
+    # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9cfb-486f-8906-72a57c693615/08dbc325-9ebd-4587-8171-88f76a3004cb
+    test_matrix(
+      "testmatrix_segments.csv",
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/h99HYXWWNE2bH8eWyLAVMA"
+    )
+  end
+
+  @tag skip: "Not yet supported; needs value type parsing"
+  test "segments (old)" do
+    # https://app.configcat.com/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08d9f207-6883-43e5-868c-cbf677af3fe6/244cf8b0-f604-11e8-b543-f23c917f9d8d
+    test_matrix(
+      "testmatrix_segments_old.csv",
+      "PKDVCLf-Hq-h-kCzMp-L7Q/LcYz135LE0qbcacz2mgXnA"
+    )
+  end
+
+  @tag skip: "Not yet supported; needs prerequisite flag conditions and new comparators"
+  test "prerequisite flags" do
+    # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9b74-45cb-86d0-4d61c25af1aa/08dbc325-9ebd-4587-8171-88f76a3004cb
+    test_matrix(
+      "testmatrix_prerequisite_flag.csv",
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg"
+    )
+  end
+
+  @tag skip: "Not yet supported; needs new comparators"
+  test "and/or" do
+    # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9d5e-4988-891c-fd4a45790bd1/08dbc325-9ebd-4587-8171-88f76a3004cb
+    test_matrix(
+      "testmatrix_and_or.csv",
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/ByMO9yZNn02kXcm72lnY1A"
+    )
+  end
+
   test "variation id" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbc4dc-30c6-4969-8e4c-03f6a8764199/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
       "testmatrix_variationId.csv",
       "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/spQnkRTIPEWVivZkWM84lQ",
       @variation_test_type
+    )
+  end
+
+  @tag skip: "Not yet supported; needs new comparators"
+  test "unicode support" do
+    # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbd63c-9774-49d6-8187-5f2aab7bd606/08dbc325-9ebd-4587-8171-88f76a3004cb
+    test_matrix(
+      "testmatrix_unicode.csv",
+      "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/Da6w8dBbmUeMUBhh0iEeQQ"
     )
   end
 
