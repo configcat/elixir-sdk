@@ -12,8 +12,8 @@ defmodule ConfigCat.EvaluationDetails do
     field :error, String.t()
     field :fetch_time, DateTime.t()
     field :key, Config.key(), enforce: true
-    field :matched_evaluation_rule, map()
-    field :matched_evaluation_percentage_rule, map()
+    field :matched_targeting_rule, map()
+    field :matched_percentage_option, map()
     field :user, User.t()
     field :value, Config.value(), enforce: true
     field :variation_id, Config.variation_id()
