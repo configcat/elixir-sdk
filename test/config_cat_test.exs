@@ -89,8 +89,8 @@ defmodule ConfigCatTest do
                error: nil,
                fetch_time: ^fetch_time,
                key: "testStringKey",
-               matched_evaluation_rule: rule,
-               matched_evaluation_percentage_rule: nil,
+               matched_targeting_rule: rule,
+               matched_percentage_option: nil,
                user: ^user,
                value: "fake1",
                variation_id: "id1"

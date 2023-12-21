@@ -127,8 +127,8 @@ defmodule ConfigCat.HooksTest do
              default_value?: false,
              error: nil,
              key: "testStringKey",
-             matched_evaluation_rule: rule,
-             matched_evaluation_percentage_rule: nil,
+             matched_targeting_rule: rule,
+             matched_percentage_option: nil,
              user: ^user,
              value: "fake1",
              variation_id: "id1"
