@@ -72,8 +72,8 @@ defmodule ConfigCat.Rollout do
         else
           EvaluationDetails.new(
             key: key,
-            matched_evaluation_rule: rule,
-            matched_evaluation_percentage_rule: percentage_option,
+            matched_targeting_rule: rule,
+            matched_percentage_option: percentage_option,
             user: user,
             value: value,
             variation_id: variation
