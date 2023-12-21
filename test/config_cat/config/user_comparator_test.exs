@@ -32,21 +32,21 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(is_not_one_of, "x", ["a", "b", "c"])
     end
 
-    test "contains" do
-      contains = 2
+    test "contains_any_of" do
+      contains_any_of = 2
 
-      assert {:ok, true} = compare(contains, "jane@configcat.com", "configcat.com")
-      assert {:ok, false} = compare(contains, "jane@email.com", "configcat.com")
+      assert {:ok, true} = compare(contains_any_of, "jane@configcat.com", "configcat.com")
+      assert {:ok, false} = compare(contains_any_of, "jane@email.com", "configcat.com")
     end
 
-    test "does_not_contain" do
-      does_not_contain = 3
+    test "not_contains_any_of" do
+      not_contains_any_of = 3
 
       assert {:ok, false} =
-               compare(does_not_contain, "jane@configcat.com", "configcat.com")
+               compare(not_contains_any_of, "jane@configcat.com", "configcat.com")
 
       assert {:ok, true} =
-               compare(does_not_contain, "jane@email.com", "configcat.com")
+               compare(not_contains_any_of, "jane@email.com", "configcat.com")
     end
   end
 
@@ -231,7 +231,7 @@ defmodule ConfigCat.Config.UserComparatorTest do
     end
   end
 
-  describe "sensitive comparators" do
+  describe "hashed comparators" do
     setup do
       hashed = %{
         a: "d21ec0ebb63930d047bb48e94674ea2ae07b8c0e7fec9de888f31bb22444be85",
@@ -242,20 +242,20 @@ defmodule ConfigCat.Config.UserComparatorTest do
       {:ok, hashed: hashed}
     end
 
-    test "is_one_of (sensitive)", %{hashed: hashed} do
-      is_one_of_sensitive = 16
+    test "is_one_of (hashed)", %{hashed: hashed} do
+      is_one_of_hashed = 16
       %{a: a, b: b, c: c} = hashed
 
-      assert {:ok, true} = compare(is_one_of_sensitive, "a", [a, b, c])
-      assert {:ok, false} = compare(is_one_of_sensitive, "x", [a, b, c])
+      assert {:ok, true} = compare(is_one_of_hashed, "a", [a, b, c])
+      assert {:ok, false} = compare(is_one_of_hashed, "x", [a, b, c])
     end
 
-    test "is_not_one_of (sensitive)", %{hashed: hashed} do
-      is_not_one_of_sensitive = 17
+    test "is_not_one_of (hashed)", %{hashed: hashed} do
+      is_not_one_of_hashed = 17
       %{a: a, b: b, c: c} = hashed
 
-      assert {:ok, true} = compare(is_not_one_of_sensitive, "x", [a, b, c])
-      assert {:ok, false} = compare(is_not_one_of_sensitive, "a", [a, b, c])
+      assert {:ok, true} = compare(is_not_one_of_hashed, "x", [a, b, c])
+      assert {:ok, false} = compare(is_not_one_of_hashed, "a", [a, b, c])
     end
   end
 
