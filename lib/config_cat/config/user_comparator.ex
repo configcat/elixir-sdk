@@ -20,8 +20,8 @@ defmodule ConfigCat.Config.UserComparator do
 
   @is_one_of 0
   @is_not_one_of 1
-  @contains 2
-  @does_not_contain 3
+  @contains_any_of 2
+  @not_contains_any_of 3
   @is_one_of_semver 4
   @is_not_one_of_semver 5
   @less_than_semver 6
@@ -34,28 +34,28 @@ defmodule ConfigCat.Config.UserComparator do
   @less_than_equal_number 13
   @greater_than_number 14
   @greater_than_equal_number 15
-  @is_one_of_sensitive 16
-  @is_not_one_of_sensitive 17
+  @is_one_of_hashed 16
+  @is_not_one_of_hashed 17
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
     @is_not_one_of => %Metadata{description: "IS NOT ONE OF", value_type: :string_list},
-    @contains => %Metadata{description: "CONTAINS", value_type: :string_list},
-    @does_not_contain => %Metadata{description: "DOES NOT CONTAIN", value_type: :string_list},
-    @is_one_of_semver => %Metadata{description: "IS ONE OF (SemVer)", value_type: :string_list},
-    @is_not_one_of_semver => %Metadata{description: "IS NOT ONE OF (SemVer)", value_type: :string_list},
-    @less_than_semver => %Metadata{description: "< (SemVer)", value_type: :string},
-    @less_than_equal_semver => %Metadata{description: "<= (SemVer)", value_type: :string},
-    @greater_than_semver => %Metadata{description: "> (SemVer)", value_type: :string},
-    @greater_than_equal_semver => %Metadata{description: ">= (SemVer)", value_type: :string},
-    @equals_number => %Metadata{description: "= (Number)", value_type: :double},
-    @not_equals_number => %Metadata{description: "<> (Number)", value_type: :double},
-    @less_than_number => %Metadata{description: "< (Number)", value_type: :double},
-    @less_than_equal_number => %Metadata{description: "<= (Number)", value_type: :double},
-    @greater_than_number => %Metadata{description: "> (Number)", value_type: :double},
-    @greater_than_equal_number => %Metadata{description: ">= (Number)", value_type: :double},
-    @is_one_of_sensitive => %Metadata{description: "IS ONE OF (Sensitive)", value_type: :string_list},
-    @is_not_one_of_sensitive => %Metadata{description: "IS NOT ONE OF (Sensitive)", value_type: :string_list}
+    @contains_any_of => %Metadata{description: "CONTAINS ANY OF", value_type: :string_list},
+    @not_contains_any_of => %Metadata{description: "NOT CONTAINS ANY OF", value_type: :string_list},
+    @is_one_of_semver => %Metadata{description: "IS ONE OF", value_type: :string_list},
+    @is_not_one_of_semver => %Metadata{description: "IS NOT ONE OF", value_type: :string_list},
+    @less_than_semver => %Metadata{description: "<", value_type: :string},
+    @less_than_equal_semver => %Metadata{description: "<=", value_type: :string},
+    @greater_than_semver => %Metadata{description: ">", value_type: :string},
+    @greater_than_equal_semver => %Metadata{description: ">=", value_type: :string},
+    @equals_number => %Metadata{description: "=", value_type: :double},
+    @not_equals_number => %Metadata{description: "<>", value_type: :double},
+    @less_than_number => %Metadata{description: "<", value_type: :double},
+    @less_than_equal_number => %Metadata{description: "<=", value_type: :double},
+    @greater_than_number => %Metadata{description: ">", value_type: :double},
+    @greater_than_equal_number => %Metadata{description: ">=", value_type: :double},
+    @is_one_of_hashed => %Metadata{description: "IS ONE OF", value_type: :string_list},
+    @is_not_one_of_hashed => %Metadata{description: "IS NOT ONE OF", value_type: :string_list}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -89,10 +89,11 @@ defmodule ConfigCat.Config.UserComparator do
   def compare(@is_not_one_of, user_value, comparison_value, _context_salt, _salt),
     do: user_value |> is_one_of(comparison_value) |> negate()
 
-  def compare(@contains, user_value, comparison_value, _context_salt, _salt), do: contains(user_value, comparison_value)
+  def compare(@contains_any_of, user_value, comparison_value, _context_salt, _salt),
+    do: contains_any_of(user_value, comparison_value)
 
-  def compare(@does_not_contain, user_value, comparison_value, _context_salt, _salt),
-    do: user_value |> contains(comparison_value) |> negate()
+  def compare(@not_contains_any_of, user_value, comparison_value, _context_salt, _salt),
+    do: user_value |> contains_any_of(comparison_value) |> negate()
 
   def compare(@is_one_of_semver, user_value, comparison_value, _context_salt, _salt),
     do: is_one_of_semver(user_value, comparison_value)
@@ -130,11 +131,11 @@ defmodule ConfigCat.Config.UserComparator do
   def compare(@greater_than_equal_number, user_value, comparison_value, _context_salt, _salt),
     do: compare_numbers(user_value, comparison_value, &>=/2)
 
-  def compare(@is_one_of_sensitive, user_value, comparison_value, context_salt, salt),
-    do: is_one_of_sensitive(user_value, comparison_value, context_salt, salt)
+  def compare(@is_one_of_hashed, user_value, comparison_value, context_salt, salt),
+    do: is_one_of_hashed(user_value, comparison_value, context_salt, salt)
 
-  def compare(@is_not_one_of_sensitive, user_value, comparison_value, context_salt, salt),
-    do: user_value |> is_one_of_sensitive(comparison_value, context_salt, salt) |> negate()
+  def compare(@is_not_one_of_hashed, user_value, comparison_value, context_salt, salt),
+    do: user_value |> is_one_of_hashed(comparison_value, context_salt, salt) |> negate()
 
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
     {:ok, false}
@@ -146,7 +147,7 @@ defmodule ConfigCat.Config.UserComparator do
     {:ok, result}
   end
 
-  defp contains(user_value, comparison_value) do
+  defp contains_any_of(user_value, comparison_value) do
     result = String.contains?(to_string(user_value), to_string(comparison_value))
     {:ok, result}
   end
@@ -166,7 +167,7 @@ defmodule ConfigCat.Config.UserComparator do
       {:error, error}
   end
 
-  defp is_one_of_sensitive(user_value, comparison_value, context_salt, salt) do
+  defp is_one_of_hashed(user_value, comparison_value, context_salt, salt) do
     user_value
     |> hash_value(context_salt, salt)
     |> is_one_of(comparison_value)
