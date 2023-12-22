@@ -40,6 +40,10 @@ defmodule ConfigCat.Config.UserComparator do
   @after_datetime 19
   @equals_hashed 20
   @not_equals_hashed 21
+  @starts_with_any_of_hashed 22
+  @not_starts_with_any_of_hashed 23
+  @ends_with_any_of_hashed 24
+  @not_ends_with_any_of_hashed 25
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -63,7 +67,11 @@ defmodule ConfigCat.Config.UserComparator do
     @before_datetime => %Metadata{description: "BEFORE", value_type: :double},
     @after_datetime => %Metadata{description: "AFTER", value_type: :double},
     @equals_hashed => %Metadata{description: "EQUALS", value_type: :string},
-    @not_equals_hashed => %Metadata{description: "NOT EQUALS", value_type: :string}
+    @not_equals_hashed => %Metadata{description: "NOT EQUALS", value_type: :string},
+    @starts_with_any_of_hashed => %Metadata{description: "STARTS WITH ANY OF", value_type: :string_list},
+    @not_starts_with_any_of_hashed => %Metadata{description: "NOT STARTS WITH ANY OF", value_type: :string_list},
+    @ends_with_any_of_hashed => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
+    @not_ends_with_any_of_hashed => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -199,6 +207,42 @@ defmodule ConfigCat.Config.UserComparator do
     @equals_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
   end
 
+  def compare(@starts_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+    result =
+      Enum.any?(
+        comparison_value,
+        fn comparison ->
+          {length, comparison_string} = parse_comparison(comparison)
+          hashed = user_value |> String.slice(0, length) |> hash_value(context_salt, salt)
+          hashed == comparison_string
+        end
+      )
+
+    {:ok, result}
+  end
+
+  def compare(@not_starts_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+    @starts_with_any_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(@ends_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+    result =
+      Enum.any?(
+        comparison_value,
+        fn comparison ->
+          {length, comparison_string} = parse_comparison(comparison)
+          hashed = user_value |> String.slice(-length, length) |> hash_value(context_salt, salt)
+          hashed == comparison_string
+        end
+      )
+
+    {:ok, result}
+  end
+
+  def compare(@not_ends_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+    @ends_with_any_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
     {:ok, false}
   end
@@ -242,6 +286,12 @@ defmodule ConfigCat.Config.UserComparator do
     |> :crypto.hash(salted)
     |> Base.encode16()
     |> String.downcase()
+  end
+
+  defp parse_comparison(value) do
+    [length_string, comparison_string] = String.split(value, "_", parts: 2)
+
+    {String.to_integer(length_string), comparison_string}
   end
 
   defp to_float(value) do

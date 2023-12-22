@@ -273,6 +273,58 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(not_equals_hashed, "x", a)
       assert {:ok, false} = compare(not_equals_hashed, "a", a)
     end
+
+    test "starts_with_any_of (hashed)", %{hashed: hashed} do
+      starts_with_any_of_hashed = 22
+      %{a: a, b: b, c: c} = hashed
+      comparison = ["1_#{a}", "1_#{b}", "1_#{c}"]
+
+      assert {:ok, true} = compare(starts_with_any_of_hashed, "apple", comparison)
+      assert {:ok, true} = compare(starts_with_any_of_hashed, "banana", comparison)
+      assert {:ok, true} = compare(starts_with_any_of_hashed, "cherry", comparison)
+      assert {:ok, true} = compare(starts_with_any_of_hashed, "a", comparison)
+      assert {:ok, false} = compare(starts_with_any_of_hashed, "pear", comparison)
+      assert {:ok, false} = compare(starts_with_any_of_hashed, "", comparison)
+    end
+
+    test "not starts_with_any_of (hashed)", %{hashed: hashed} do
+      not_starts_with_any_of_hashed = 23
+      %{a: a, b: b, c: c} = hashed
+      comparison = ["1_#{a}", "1_#{b}", "1_#{c}"]
+
+      assert {:ok, true} = compare(not_starts_with_any_of_hashed, "pear", comparison)
+      assert {:ok, true} = compare(not_starts_with_any_of_hashed, "", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of_hashed, "apple", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of_hashed, "banana", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of_hashed, "cherry", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of_hashed, "a", comparison)
+    end
+
+    test "ends_with_any_of (hashed)", %{hashed: hashed} do
+      ends_with_any_of_hashed = 24
+      %{a: a, b: b, c: c} = hashed
+      comparison = ["1_#{a}", "1_#{b}", "1_#{c}"]
+
+      assert {:ok, true} = compare(ends_with_any_of_hashed, "banana", comparison)
+      assert {:ok, true} = compare(ends_with_any_of_hashed, "thumb", comparison)
+      assert {:ok, true} = compare(ends_with_any_of_hashed, "sonic", comparison)
+      assert {:ok, true} = compare(ends_with_any_of_hashed, "a", comparison)
+      assert {:ok, false} = compare(ends_with_any_of_hashed, "pear", comparison)
+      assert {:ok, false} = compare(ends_with_any_of_hashed, "", comparison)
+    end
+
+    test "not ends_with_any_of (hashed)", %{hashed: hashed} do
+      not_ends_with_any_of_hashed = 25
+      %{a: a, b: b, c: c} = hashed
+      comparison = ["1_#{a}", "1_#{b}", "1_#{c}"]
+
+      assert {:ok, true} = compare(not_ends_with_any_of_hashed, "pear", comparison)
+      assert {:ok, true} = compare(not_ends_with_any_of_hashed, "", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of_hashed, "banana", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of_hashed, "thumb", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of_hashed, "sonic", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of_hashed, "a", comparison)
+    end
   end
 
   describe "datetime comparators" do
