@@ -132,11 +132,6 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_rules([], [], _context), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_targeting_rules, _percentage_options, %Context{user: nil} = context) do
-    log_nil_user(context.key)
-    {:none, nil, nil, nil}
-  end
-
   defp evaluate_rules(targeting_rules, percentage_options, context) do
     case evaluate_targeting_rules(targeting_rules, context) do
       {:none, _, _} ->
@@ -181,15 +176,20 @@ defmodule ConfigCat.Rollout do
     end
   end
 
+  defp evaluate_user_condition(_comparison_rule, _context_salt, _salt, _value, %Context{user: nil} = context) do
+    log_nil_user(context.key)
+    false
+  end
+
   defp evaluate_user_condition(comparison_rule, context_salt, salt, value, %Context{} = context) do
-    %Context{logs: logs} = context
+    %Context{logs: logs, user: user} = context
     comparison_attribute = ComparisonRule.comparison_attribute(comparison_rule)
     comparator = ComparisonRule.comparator(comparison_rule)
     comparison_value = ComparisonRule.comparison_value(comparison_rule)
 
-    case User.get_attribute(context.user, comparison_attribute) do
-      nil ->
-        log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
+    case User.get_attribute(user, comparison_attribute) do
+      nil = user_value ->
+        log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
         false
 
       user_value ->
@@ -225,6 +225,11 @@ defmodule ConfigCat.Rollout do
     end
   end
 
+  defp evaluate_segment_condition(_condition, _salt, _value, _segments, %Context{user: nil} = context) do
+    log_nil_user(context.key)
+    false
+  end
+
   defp evaluate_segment_condition(condition, salt, value, segments, %Context{} = context) do
     index = SegmentCondition.segment_index(condition)
     segment = Enum.fetch!(segments, index)
@@ -236,6 +241,11 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_percentage_options([] = _percentage_options, _context), do: {:none, nil, nil}
+
+  defp evaluate_percentage_options(_percentage_options, %Context{user: nil} = context) do
+    log_nil_user(context.key)
+    {:none, nil, nil}
+  end
 
   defp evaluate_percentage_options(percentage_options, %Context{} = context) do
     hash_val = hash_user(context.user, context.key)
@@ -311,8 +321,10 @@ defmodule ConfigCat.Rollout do
 
   defp log_nil_user(key) do
     ConfigCatLogger.warning(
-      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is missing). " <>
-        "You should pass a User Object to the evaluation functions like `get_value()` in order to make targeting work properly. " <>
+      "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
+        "(User Object is missing). " <>
+        "You should pass a User Object to the evaluation functions like `get_value()` " <>
+        "in order to make targeting work properly. " <>
         "Read more: https://configcat.com/docs/advanced/user-object/",
       event_id: 3001
     )
@@ -320,7 +332,11 @@ defmodule ConfigCat.Rollout do
 
   defp log_invalid_user(key) do
     ConfigCatLogger.warning(
-      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is not an instance of User struct).",
+      "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
+        "(User Object is not an instance of User struct)." <>
+        "You should pass a User Object to the evaluation functions like `get_value()` " <>
+        "in order to make targeting work properly. " <>
+        "Read more: https://configcat.com/docs/advanced/user-object/",
       event_id: 4001
     )
   end
