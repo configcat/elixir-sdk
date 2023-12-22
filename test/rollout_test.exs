@@ -49,7 +49,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs new comparators"
+  @tag skip: "Not yet supported; needs value type parsing and custom percentage attributes"
   test "v6 comparators" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9a6b-4947-84e2-91529248278a/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -85,7 +85,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs new comparators"
+  @tag skip: "Not yet supported; needs dependent features"
   test "and/or" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9d5e-4988-891c-fd4a45790bd1/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -103,7 +103,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs new comparators"
+  @tag skip: "Not yet supported; needs value parsing"
   test "unicode support" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbd63c-9774-49d6-8187-5f2aab7bd606/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
