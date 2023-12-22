@@ -52,6 +52,8 @@ defmodule ConfigCat.Config.UserComparator do
   @not_starts_with_any_of 31
   @ends_with_any_of 32
   @not_ends_with_any_of 33
+  @array_contains_any_of 34
+  @array_not_contains_any_of 35
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -87,7 +89,9 @@ defmodule ConfigCat.Config.UserComparator do
     @starts_with_any_of => %Metadata{description: "STARTS WITH ANY OF", value_type: :string_list},
     @not_starts_with_any_of => %Metadata{description: "NOT STARTS WITH ANY OF", value_type: :string_list},
     @ends_with_any_of => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
-    @not_ends_with_any_of => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list}
+    @not_ends_with_any_of => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list},
+    @array_contains_any_of => %Metadata{description: "ARRAY CONTAINS ANY OF", value_type: :string_list},
+    @array_not_contains_any_of => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -299,6 +303,17 @@ defmodule ConfigCat.Config.UserComparator do
 
   def compare(@not_ends_with_any_of, user_value, comparison_values, context_salt, salt) do
     @ends_with_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  end
+
+  def compare(@array_contains_any_of, user_value, comparison_values, _context_salt, _salt) do
+    with {:ok, user_values} <- to_string_list(user_value) do
+      result = Enum.any?(comparison_values, &(&1 in user_values))
+      {:ok, result}
+    end
+  end
+
+  def compare(@array_not_contains_any_of, user_value, comparison_values, context_salt, salt) do
+    @array_contains_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
