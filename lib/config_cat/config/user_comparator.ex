@@ -44,6 +44,8 @@ defmodule ConfigCat.Config.UserComparator do
   @not_starts_with_any_of_hashed 23
   @ends_with_any_of_hashed 24
   @not_ends_with_any_of_hashed 25
+  @array_contains_any_of_hashed 26
+  @array_not_contains_any_of_hashed 27
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -71,7 +73,9 @@ defmodule ConfigCat.Config.UserComparator do
     @starts_with_any_of_hashed => %Metadata{description: "STARTS WITH ANY OF", value_type: :string_list},
     @not_starts_with_any_of_hashed => %Metadata{description: "NOT STARTS WITH ANY OF", value_type: :string_list},
     @ends_with_any_of_hashed => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
-    @not_ends_with_any_of_hashed => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list}
+    @not_ends_with_any_of_hashed => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list},
+    @array_contains_any_of_hashed => %Metadata{description: "ARRAY CONTAINS ANY OF", value_type: :string_list},
+    @array_not_contains_any_of_hashed => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -243,6 +247,19 @@ defmodule ConfigCat.Config.UserComparator do
     @ends_with_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
+  def compare(@array_contains_any_of_hashed, user_value, comparison_values, context_salt, salt) do
+    with {:ok, user_values} <- to_string_list(user_value) do
+      hashed_user_values = Enum.map(user_values, &hash_value(&1, context_salt, salt))
+      result = Enum.any?(comparison_values, &(&1 in hashed_user_values))
+
+      {:ok, result}
+    end
+  end
+
+  def compare(@array_not_contains_any_of_hashed, user_value, comparison_values, context_salt, salt) do
+    @array_contains_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  end
+
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
     {:ok, false}
   end
@@ -304,6 +321,17 @@ defmodule ConfigCat.Config.UserComparator do
       _ -> {:error, :invalid_float}
     end
   end
+
+  defp to_string_list(value) when is_list(value), do: {:ok, value}
+
+  defp to_string_list(value) when is_binary(value) do
+    case Jason.decode(value) do
+      {:ok, decoded} when is_list(decoded) -> {:ok, decoded}
+      _ -> {:error, :invalid_string_list}
+    end
+  end
+
+  defp to_string_list(_value), do: {:error, :invalid_string_list}
 
   defp to_unix_seconds(%DateTime{} = value) do
     {:ok, DateTime.to_unix(value)}

@@ -329,6 +329,32 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(not_ends_with_any_of_hashed, "sonic", comparison)
       assert {:ok, false} = compare(not_ends_with_any_of_hashed, "a", comparison)
     end
+
+    test "array_contains_any_of", %{hashed: hashed} do
+      array_contains_any_of_hashed = 26
+      %{a: a, b: b, c: c} = hashed
+
+      assert {:ok, true} = compare(array_contains_any_of_hashed, ["a", "x"], [a, b, c])
+      assert {:ok, true} = compare(array_contains_any_of_hashed, ["x", "b"], [a, b, c])
+      assert {:ok, true} = compare(array_contains_any_of_hashed, ["c"], [a, b, c])
+      assert {:ok, true} = compare(array_contains_any_of_hashed, Jason.encode!(["c"]), [a, b, c])
+      assert {:ok, false} = compare(array_contains_any_of_hashed, ["x"], [a, b, c])
+      assert {:error, :invalid_string_list} = compare(array_contains_any_of_hashed, "a", [a, b, c])
+      assert {:error, :invalid_string_list} = compare(array_contains_any_of_hashed, :not_a_list, [a, b, c])
+    end
+
+    test "array_not_contains_any_of", %{hashed: hashed} do
+      array_not_contains_any_of_hashed = 27
+      %{a: a, b: b, c: c} = hashed
+
+      assert {:ok, true} = compare(array_not_contains_any_of_hashed, ["x"], [a, b, c])
+      assert {:ok, false} = compare(array_not_contains_any_of_hashed, ["a", "x"], [a, b, c])
+      assert {:ok, false} = compare(array_not_contains_any_of_hashed, ["x", "b"], [a, b, c])
+      assert {:ok, false} = compare(array_not_contains_any_of_hashed, ["c"], [a, b, c])
+      assert {:ok, false} = compare(array_not_contains_any_of_hashed, Jason.encode!(["c"]), [a, b, c])
+      assert {:error, :invalid_string_list} = compare(array_not_contains_any_of_hashed, "a", [a, b, c])
+      assert {:error, :invalid_string_list} = compare(array_not_contains_any_of_hashed, :not_a_list, [a, b, c])
+    end
   end
 
   describe "datetime comparators" do
