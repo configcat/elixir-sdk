@@ -100,29 +100,29 @@ defmodule ConfigCat.Config.UserComparator do
           salt :: Preferences.salt()
         ) :: result()
 
-  def compare(@is_one_of, user_value, comparison_value, _context_salt, _salt) do
-    result = to_string(user_value) in comparison_value
+  def compare(@is_one_of, user_value, comparison_values, _context_salt, _salt) do
+    result = to_string(user_value) in comparison_values
     {:ok, result}
   end
 
-  def compare(@is_not_one_of, user_value, comparison_value, context_salt, salt) do
-    @is_one_of |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@is_not_one_of, user_value, comparison_values, context_salt, salt) do
+    @is_one_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
-  def compare(@contains_any_of, user_value, comparison_value, _context_salt, _salt) do
-    result = String.contains?(to_string(user_value), to_string(comparison_value))
+  def compare(@contains_any_of, user_value, comparison_values, _context_salt, _salt) do
+    result = Enum.any?(comparison_values, &String.contains?(to_string(user_value), to_string(&1)))
     {:ok, result}
   end
 
-  def compare(@not_contains_any_of, user_value, comparison_value, context_salt, salt) do
-    @contains_any_of |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@not_contains_any_of, user_value, comparison_values, context_salt, salt) do
+    @contains_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
-  def compare(@is_one_of_semver, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@is_one_of_semver, user_value, comparison_values, _context_salt, _salt) do
     user_version = to_version!(user_value)
 
     result =
-      comparison_value
+      comparison_values
       |> Enum.reject(&(&1 == ""))
       |> Enum.map(&to_version!/1)
       |> Enum.any?(fn version -> Version.compare(user_version, version) == :eq end)
@@ -133,8 +133,8 @@ defmodule ConfigCat.Config.UserComparator do
       {:error, error}
   end
 
-  def compare(@is_not_one_of_semver, user_value, comparison_value, context_salt, salt) do
-    @is_one_of_semver |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@is_not_one_of_semver, user_value, comparison_values, context_salt, salt) do
+    @is_one_of_semver |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
   def compare(@less_than_semver, user_value, comparison_value, _context_salt, _salt) do
@@ -177,17 +177,17 @@ defmodule ConfigCat.Config.UserComparator do
     compare_numbers(user_value, comparison_value, &>=/2)
   end
 
-  def compare(@is_one_of_hashed, user_value, comparison_value, context_salt, salt) do
+  def compare(@is_one_of_hashed, user_value, comparison_values, context_salt, salt) do
     result =
       user_value
       |> hash_value(context_salt, salt)
-      |> Kernel.in(comparison_value)
+      |> Kernel.in(comparison_values)
 
     {:ok, result}
   end
 
-  def compare(@is_not_one_of_hashed, user_value, comparison_value, context_salt, salt) do
-    @is_one_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@is_not_one_of_hashed, user_value, comparison_values, context_salt, salt) do
+    @is_one_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
   def compare(@before_datetime, user_value, comparison_value, _context_salt, _salt) do
@@ -207,10 +207,10 @@ defmodule ConfigCat.Config.UserComparator do
     @equals_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
   end
 
-  def compare(@starts_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+  def compare(@starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
     result =
       Enum.any?(
-        comparison_value,
+        comparison_values,
         fn comparison ->
           {length, comparison_string} = parse_comparison(comparison)
           hashed = user_value |> String.slice(0, length) |> hash_value(context_salt, salt)
@@ -221,14 +221,14 @@ defmodule ConfigCat.Config.UserComparator do
     {:ok, result}
   end
 
-  def compare(@not_starts_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
-    @starts_with_any_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@not_starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
+    @starts_with_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
-  def compare(@ends_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
+  def compare(@ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
     result =
       Enum.any?(
-        comparison_value,
+        comparison_values,
         fn comparison ->
           {length, comparison_string} = parse_comparison(comparison)
           hashed = user_value |> String.slice(-length, length) |> hash_value(context_salt, salt)
@@ -239,8 +239,8 @@ defmodule ConfigCat.Config.UserComparator do
     {:ok, result}
   end
 
-  def compare(@not_ends_with_any_of_hashed, user_value, comparison_value, context_salt, salt) do
-    @ends_with_any_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@not_ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
+    @ends_with_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
   end
 
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do

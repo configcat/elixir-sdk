@@ -35,18 +35,22 @@ defmodule ConfigCat.Config.UserComparatorTest do
     test "contains_any_of" do
       contains_any_of = 2
 
-      assert {:ok, true} = compare(contains_any_of, "jane@configcat.com", "configcat.com")
-      assert {:ok, false} = compare(contains_any_of, "jane@email.com", "configcat.com")
+      assert {:ok, true} = compare(contains_any_of, "jane@configcat.com", ["configcat.com", "example.com"])
+      assert {:ok, true} = compare(contains_any_of, "jane@example.com", ["configcat.com", "example.com"])
+      assert {:ok, false} = compare(contains_any_of, "jane@email.com", ["configcat.com"])
     end
 
     test "not_contains_any_of" do
       not_contains_any_of = 3
 
       assert {:ok, false} =
-               compare(not_contains_any_of, "jane@configcat.com", "configcat.com")
+               compare(not_contains_any_of, "jane@configcat.com", ["configcat.com", "example.com"])
+
+      assert {:ok, false} =
+               compare(not_contains_any_of, "jane@example.com", ["configcat.com", "example.com"])
 
       assert {:ok, true} =
-               compare(not_contains_any_of, "jane@email.com", "configcat.com")
+               compare(not_contains_any_of, "jane@email.com", ["configcat.com"])
     end
   end
 
