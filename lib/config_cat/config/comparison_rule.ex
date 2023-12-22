@@ -38,9 +38,7 @@ defmodule ConfigCat.Config.ComparisonRule do
   end
 
   defp string_list_value(rule) do
-    rule
-    |> Map.get(@string_list_value, [])
-    |> Enum.map(&String.trim/1)
+    Map.get(rule, @string_list_value, [])
   end
 
   defp string_value(rule) do

@@ -36,6 +36,8 @@ defmodule ConfigCat.User do
   """
   use TypedStruct
 
+  alias ConfigCat.Config
+
   typedstruct do
     @typedoc "The ConfigCat user object."
 
@@ -78,15 +80,11 @@ defmodule ConfigCat.User do
   end
 
   @doc false
-  @spec get_attribute(t(), String.t()) :: String.t() | nil
-  def get_attribute(user, attribute) do
-    do_get_attribute(user, attribute)
-  end
-
-  defp do_get_attribute(user, "Identifier"), do: user.identifier
-  defp do_get_attribute(user, "Country"), do: user.country
-  defp do_get_attribute(user, "Email"), do: user.email
-  defp do_get_attribute(user, attribute), do: custom_attribute(user.custom, attribute)
+  @spec get_attribute(t(), String.t()) :: Config.value() | nil
+  def get_attribute(user, "Identifier"), do: user.identifier
+  def get_attribute(user, "Country"), do: user.country
+  def get_attribute(user, "Email"), do: user.email
+  def get_attribute(user, attribute), do: custom_attribute(user.custom, attribute)
 
   defp custom_attribute(custom, attribute) do
     case Enum.find(custom, fn {key, _value} ->
