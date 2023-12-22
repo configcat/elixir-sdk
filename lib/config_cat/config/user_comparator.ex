@@ -46,6 +46,8 @@ defmodule ConfigCat.Config.UserComparator do
   @not_ends_with_any_of_hashed 25
   @array_contains_any_of_hashed 26
   @array_not_contains_any_of_hashed 27
+  @equals 28
+  @not_equals 29
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -75,7 +77,9 @@ defmodule ConfigCat.Config.UserComparator do
     @ends_with_any_of_hashed => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
     @not_ends_with_any_of_hashed => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list},
     @array_contains_any_of_hashed => %Metadata{description: "ARRAY CONTAINS ANY OF", value_type: :string_list},
-    @array_not_contains_any_of_hashed => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list}
+    @array_not_contains_any_of_hashed => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list},
+    @equals => %Metadata{description: "EQUALS", value_type: :string},
+    @not_equals => %Metadata{description: "NOT EQUALS", value_type: :string}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -258,6 +262,15 @@ defmodule ConfigCat.Config.UserComparator do
 
   def compare(@array_not_contains_any_of_hashed, user_value, comparison_values, context_salt, salt) do
     @array_contains_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  end
+
+  def compare(@equals, user_value, comparison_value, _context_salt, _salt) do
+    result = to_string(user_value) == comparison_value
+    {:ok, result}
+  end
+
+  def compare(@not_equals, user_value, comparison_value, context_salt, salt) do
+    @equals |> compare(user_value, comparison_value, context_salt, salt) |> negate()
   end
 
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
