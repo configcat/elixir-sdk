@@ -383,6 +383,10 @@ defmodule ConfigCat.Config.UserComparator do
     end
   end
 
+  defp user_value_to_string(%NaiveDateTime{} = naive) do
+    naive |> DateTime.from_naive!("Etc/UTC") |> user_value_to_string()
+  end
+
   defp user_value_to_string(value) when is_list(value) do
     with {:ok, list} <- to_string_list(value) do
       {:ok, to_string(list)}
@@ -419,6 +423,10 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp to_unix_seconds(%DateTime{} = value) do
     {:ok, DateTime.to_unix(value)}
+  end
+
+  defp to_unix_seconds(%NaiveDateTime{} = value) do
+    value |> DateTime.from_naive!("Etc/UTC") |> to_unix_seconds()
   end
 
   defp to_unix_seconds(value) do

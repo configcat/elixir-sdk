@@ -446,45 +446,47 @@ defmodule ConfigCat.Config.UserComparatorTest do
 
   describe "datetime comparators" do
     test "before" do
-      before = 18
+      before_datetime = 18
       now = DateTime.utc_now()
       earlier = DateTime.add(now, -1, :second)
       later = DateTime.add(now, 1, :second)
       now_unix = DateTime.to_unix(now)
       earlier_unix = DateTime.to_unix(earlier)
 
-      assert {:ok, true} = compare(before, earlier, now_unix)
-      assert {:ok, true} = compare(before, earlier_unix, now_unix)
-      assert {:ok, true} = compare(before, to_string(earlier_unix), now_unix)
-      assert {:ok, true} = compare(before, earlier, to_string(now_unix))
-      assert {:ok, false} = compare(before, now, now_unix)
-      assert {:ok, false} = compare(before, later, now_unix)
+      assert {:ok, true} = compare(before_datetime, earlier, now_unix)
+      assert {:ok, true} = compare(before_datetime, earlier_unix, now_unix)
+      assert {:ok, true} = compare(before_datetime, DateTime.to_naive(earlier), now_unix)
+      assert {:ok, true} = compare(before_datetime, to_string(earlier_unix), now_unix)
+      assert {:ok, true} = compare(before_datetime, earlier, to_string(now_unix))
+      assert {:ok, false} = compare(before_datetime, now, now_unix)
+      assert {:ok, false} = compare(before_datetime, later, now_unix)
 
       assert {:error, :invalid_datetime} =
-               compare(before, "not a datetime", now_unix)
+               compare(before_datetime, "not a datetime", now_unix)
 
-      assert {:error, :invalid_datetime} = compare(before, earlier, "not a datetime")
+      assert {:error, :invalid_datetime} = compare(before_datetime, earlier, "not a datetime")
     end
 
     test "after" do
-      after_datimetime = 19
+      after_datetime = 19
       now = DateTime.utc_now()
       earlier = DateTime.add(now, -1, :second)
       later = DateTime.add(now, 1, :second)
       now_unix = DateTime.to_unix(now)
       later_unix = DateTime.to_unix(later)
 
-      assert {:ok, true} = compare(after_datimetime, later, now_unix)
-      assert {:ok, true} = compare(after_datimetime, later_unix, now_unix)
-      assert {:ok, true} = compare(after_datimetime, to_string(later_unix), now_unix)
-      assert {:ok, true} = compare(after_datimetime, later, to_string(now_unix))
-      assert {:ok, false} = compare(after_datimetime, now, now_unix)
-      assert {:ok, false} = compare(after_datimetime, earlier, now_unix)
+      assert {:ok, true} = compare(after_datetime, later, now_unix)
+      assert {:ok, true} = compare(after_datetime, later_unix, now_unix)
+      assert {:ok, true} = compare(after_datetime, to_string(later_unix), now_unix)
+      assert {:ok, true} = compare(after_datetime, later, to_string(now_unix))
+      assert {:ok, false} = compare(after_datetime, now, now_unix)
+      assert {:ok, false} = compare(after_datetime, earlier, now_unix)
+      assert {:ok, false} = compare(after_datetime, DateTime.to_naive(earlier), now_unix)
 
       assert {:error, :invalid_datetime} =
-               compare(after_datimetime, "not a datetime", now_unix)
+               compare(after_datetime, "not a datetime", now_unix)
 
-      assert {:error, :invalid_datetime} = compare(after_datimetime, later, "not a datetime")
+      assert {:error, :invalid_datetime} = compare(after_datetime, later, "not a datetime")
     end
   end
 
