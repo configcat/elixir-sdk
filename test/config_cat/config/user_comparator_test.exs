@@ -8,7 +8,6 @@ defmodule ConfigCat.Config.UserComparatorTest do
   use ExUnit.Case, async: true
 
   alias ConfigCat.Config.UserComparator
-  alias Version.InvalidVersionError
 
   @context_salt "CONTEXT_SALT"
   @salt "SALT"
@@ -149,13 +148,13 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(is_one_of_semver, "1.2.0", ["1.2.0", "1.3.4"])
       assert {:ok, false} = compare(is_one_of_semver, "2.0.0", ["1.2.0", "1.3.4"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_one_of_semver, "invalid", ["1.2.0", "1.3.4"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_one_of_semver, "1.2.0", ["invalid", "1.2.0"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_one_of_semver, "1.2.0", ["1.2.0", "invalid"])
     end
 
@@ -165,13 +164,13 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(is_not_one_of_semver, "2.0.0", ["1.2.0", "1.3.4"])
       assert {:ok, false} = compare(is_not_one_of_semver, "1.2.0", ["1.2.0", "1.3.4"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_not_one_of_semver, "invalid", ["1.2.0", "1.3.4"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_not_one_of_semver, "1.2.0", ["invalid", "1.3.4"])
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(is_not_one_of_semver, "1.2.0", ["1.2.0", "invalid"])
     end
 
@@ -182,10 +181,10 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(less_than_semver, "1.3.0", "1.2.0")
       assert {:ok, false} = compare(less_than_semver, "1.2.0", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(less_than_semver, "invalid", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(less_than_semver, "1.3.0", "invalid")
     end
 
@@ -196,10 +195,10 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(less_than_equal_semver, "1.3.0", "1.2.0")
       assert {:ok, true} = compare(less_than_equal_semver, "1.2.0", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(less_than_equal_semver, "invalid", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(less_than_equal_semver, "1.3.0", "invalid")
     end
 
@@ -210,10 +209,10 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(greater_than_semver, "1.2.0", "1.3.0")
       assert {:ok, false} = compare(greater_than_semver, "1.2.0", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(greater_than_semver, "invalid", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(greater_than_semver, "1.3.0", "invalid")
     end
 
@@ -224,10 +223,10 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(greater_than_equal_semver, "1.2.0", "1.3.0")
       assert {:ok, true} = compare(greater_than_equal_semver, "1.2.0", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(greater_than_equal_semver, "invalid", "1.2.0")
 
-      assert {:error, %InvalidVersionError{}} =
+      assert {:error, :invalid_version} =
                compare(greater_than_equal_semver, "1.3.0", "invalid")
     end
   end
