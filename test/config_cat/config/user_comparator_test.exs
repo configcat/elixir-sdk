@@ -114,6 +114,32 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(not_ends_with_any_of, "sonic", comparison)
       assert {:ok, false} = compare(not_ends_with_any_of, "a", comparison)
     end
+
+    test "array_contains_any_of" do
+      array_contains_any_of = 34
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(array_contains_any_of, ["a", "x"], comparison)
+      assert {:ok, true} = compare(array_contains_any_of, ["x", "b"], comparison)
+      assert {:ok, true} = compare(array_contains_any_of, ["c"], comparison)
+      assert {:ok, true} = compare(array_contains_any_of, Jason.encode!(["c"]), comparison)
+      assert {:ok, false} = compare(array_contains_any_of, ["x"], comparison)
+      assert {:error, :invalid_string_list} = compare(array_contains_any_of, "a", comparison)
+      assert {:error, :invalid_string_list} = compare(array_contains_any_of, :not_a_list, comparison)
+    end
+
+    test "array_not_contains_any_of" do
+      array_not_contains_any_of = 35
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(array_not_contains_any_of, ["x"], comparison)
+      assert {:ok, false} = compare(array_not_contains_any_of, ["a", "x"], comparison)
+      assert {:ok, false} = compare(array_not_contains_any_of, ["x", "b"], comparison)
+      assert {:ok, false} = compare(array_not_contains_any_of, ["c"], comparison)
+      assert {:ok, false} = compare(array_not_contains_any_of, Jason.encode!(["c"]), comparison)
+      assert {:error, :invalid_string_list} = compare(array_not_contains_any_of, "a", comparison)
+      assert {:error, :invalid_string_list} = compare(array_not_contains_any_of, :not_a_list, comparison)
+    end
   end
 
   describe "semantic version comparators" do
@@ -392,7 +418,7 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, false} = compare(not_ends_with_any_of_hashed, "a", comparison)
     end
 
-    test "array_contains_any_of", %{hashed: hashed} do
+    test "array_contains_any_of (hashed)", %{hashed: hashed} do
       array_contains_any_of_hashed = 26
       %{a: a, b: b, c: c} = hashed
 
@@ -405,7 +431,7 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:error, :invalid_string_list} = compare(array_contains_any_of_hashed, :not_a_list, [a, b, c])
     end
 
-    test "array_not_contains_any_of", %{hashed: hashed} do
+    test "array_not_contains_any_of (hashed)", %{hashed: hashed} do
       array_not_contains_any_of_hashed = 27
       %{a: a, b: b, c: c} = hashed
 
