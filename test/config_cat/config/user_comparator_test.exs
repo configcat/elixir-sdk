@@ -66,6 +66,54 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(not_equals, "abc", "def")
       assert {:ok, false} = compare(not_equals, "abc", "abc")
     end
+
+    test "starts_with_any_of" do
+      starts_with_any_of = 30
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(starts_with_any_of, "apple", comparison)
+      assert {:ok, true} = compare(starts_with_any_of, "banana", comparison)
+      assert {:ok, true} = compare(starts_with_any_of, "cherry", comparison)
+      assert {:ok, true} = compare(starts_with_any_of, "a", comparison)
+      assert {:ok, false} = compare(starts_with_any_of, "pear", comparison)
+      assert {:ok, false} = compare(starts_with_any_of, "", comparison)
+    end
+
+    test "not starts_with_any_of" do
+      not_starts_with_any_of = 31
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(not_starts_with_any_of, "pear", comparison)
+      assert {:ok, true} = compare(not_starts_with_any_of, "", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of, "apple", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of, "banana", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of, "cherry", comparison)
+      assert {:ok, false} = compare(not_starts_with_any_of, "a", comparison)
+    end
+
+    test "ends_with_any_of" do
+      ends_with_any_of = 32
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(ends_with_any_of, "banana", comparison)
+      assert {:ok, true} = compare(ends_with_any_of, "thumb", comparison)
+      assert {:ok, true} = compare(ends_with_any_of, "sonic", comparison)
+      assert {:ok, true} = compare(ends_with_any_of, "a", comparison)
+      assert {:ok, false} = compare(ends_with_any_of, "pear", comparison)
+      assert {:ok, false} = compare(ends_with_any_of, "", comparison)
+    end
+
+    test "not ends_with_any_of" do
+      not_ends_with_any_of = 33
+      comparison = ["a", "b", "c"]
+
+      assert {:ok, true} = compare(not_ends_with_any_of, "pear", comparison)
+      assert {:ok, true} = compare(not_ends_with_any_of, "", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of, "banana", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of, "thumb", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of, "sonic", comparison)
+      assert {:ok, false} = compare(not_ends_with_any_of, "a", comparison)
+    end
   end
 
   describe "semantic version comparators" do
