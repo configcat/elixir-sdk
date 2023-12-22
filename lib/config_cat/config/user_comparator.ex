@@ -38,6 +38,8 @@ defmodule ConfigCat.Config.UserComparator do
   @is_not_one_of_hashed 17
   @before_datetime 18
   @after_datetime 19
+  @equals_hashed 20
+  @not_equals_hashed 21
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -59,7 +61,9 @@ defmodule ConfigCat.Config.UserComparator do
     @is_one_of_hashed => %Metadata{description: "IS ONE OF", value_type: :string_list},
     @is_not_one_of_hashed => %Metadata{description: "IS NOT ONE OF", value_type: :string_list},
     @before_datetime => %Metadata{description: "BEFORE", value_type: :double},
-    @after_datetime => %Metadata{description: "AFTER", value_type: :double}
+    @after_datetime => %Metadata{description: "AFTER", value_type: :double},
+    @equals_hashed => %Metadata{description: "EQUALS", value_type: :string},
+    @not_equals_hashed => %Metadata{description: "NOT EQUALS", value_type: :string}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -88,87 +92,31 @@ defmodule ConfigCat.Config.UserComparator do
           salt :: Preferences.salt()
         ) :: result()
 
-  def compare(@is_one_of, user_value, comparison_value, _context_salt, _salt), do: is_one_of(user_value, comparison_value)
-
-  def compare(@is_not_one_of, user_value, comparison_value, _context_salt, _salt),
-    do: user_value |> is_one_of(comparison_value) |> negate()
-
-  def compare(@contains_any_of, user_value, comparison_value, _context_salt, _salt),
-    do: contains_any_of(user_value, comparison_value)
-
-  def compare(@not_contains_any_of, user_value, comparison_value, _context_salt, _salt),
-    do: user_value |> contains_any_of(comparison_value) |> negate()
-
-  def compare(@is_one_of_semver, user_value, comparison_value, _context_salt, _salt),
-    do: is_one_of_semver(user_value, comparison_value)
-
-  def compare(@is_not_one_of_semver, user_value, comparison_value, _context_salt, _salt),
-    do: user_value |> is_one_of_semver(comparison_value) |> negate()
-
-  def compare(@less_than_semver, user_value, comparison_value, _context_salt, _salt),
-    do: compare_semver(user_value, comparison_value, [:lt])
-
-  def compare(@less_than_equal_semver, user_value, comparison_value, _context_salt, _salt),
-    do: compare_semver(user_value, comparison_value, [:lt, :eq])
-
-  def compare(@greater_than_semver, user_value, comparison_value, _context_salt, _salt),
-    do: compare_semver(user_value, comparison_value, [:gt])
-
-  def compare(@greater_than_equal_semver, user_value, comparison_value, _context_salt, _salt),
-    do: compare_semver(user_value, comparison_value, [:gt, :eq])
-
-  def compare(@equals_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &==/2)
-
-  def compare(@not_equals_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &!==/2)
-
-  def compare(@less_than_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &</2)
-
-  def compare(@less_than_equal_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &<=/2)
-
-  def compare(@greater_than_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &>/2)
-
-  def compare(@greater_than_equal_number, user_value, comparison_value, _context_salt, _salt),
-    do: compare_numbers(user_value, comparison_value, &>=/2)
-
-  def compare(@is_one_of_hashed, user_value, comparison_value, context_salt, salt),
-    do: is_one_of_hashed(user_value, comparison_value, context_salt, salt)
-
-  def compare(@is_not_one_of_hashed, user_value, comparison_value, context_salt, salt),
-    do: user_value |> is_one_of_hashed(comparison_value, context_salt, salt) |> negate()
-
-  def compare(@before_datetime, user_value, comparison_value, _context_salt, _salt),
-    do: compare_datetimes(user_value, comparison_value, [:lt])
-
-  def compare(@after_datetime, user_value, comparison_value, _context_salt, _salt),
-    do: compare_datetimes(user_value, comparison_value, [:gt])
-
-  def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
-    {:ok, false}
-  end
-
-  defp is_one_of(user_value, comparison_value) do
+  def compare(@is_one_of, user_value, comparison_value, _context_salt, _salt) do
     result = to_string(user_value) in comparison_value
-
     {:ok, result}
   end
 
-  defp contains_any_of(user_value, comparison_value) do
+  def compare(@is_not_one_of, user_value, comparison_value, context_salt, salt) do
+    @is_one_of |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(@contains_any_of, user_value, comparison_value, _context_salt, _salt) do
     result = String.contains?(to_string(user_value), to_string(comparison_value))
     {:ok, result}
   end
 
-  defp is_one_of_semver(user_value, comparison_value) do
-    user_version = to_version(user_value)
+  def compare(@not_contains_any_of, user_value, comparison_value, context_salt, salt) do
+    @contains_any_of |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(@is_one_of_semver, user_value, comparison_value, _context_salt, _salt) do
+    user_version = to_version!(user_value)
 
     result =
       comparison_value
       |> Enum.reject(&(&1 == ""))
-      |> Enum.map(&Version.parse!/1)
+      |> Enum.map(&to_version!/1)
       |> Enum.any?(fn version -> Version.compare(user_version, version) == :eq end)
 
     {:ok, result}
@@ -177,9 +125,87 @@ defmodule ConfigCat.Config.UserComparator do
       {:error, error}
   end
 
+  def compare(@is_not_one_of_semver, user_value, comparison_value, context_salt, salt) do
+    @is_one_of_semver |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(@less_than_semver, user_value, comparison_value, _context_salt, _salt) do
+    compare_semver(user_value, comparison_value, [:lt])
+  end
+
+  def compare(@less_than_equal_semver, user_value, comparison_value, _context_salt, _salt) do
+    compare_semver(user_value, comparison_value, [:lt, :eq])
+  end
+
+  def compare(@greater_than_semver, user_value, comparison_value, _context_salt, _salt) do
+    compare_semver(user_value, comparison_value, [:gt])
+  end
+
+  def compare(@greater_than_equal_semver, user_value, comparison_value, _context_salt, _salt) do
+    compare_semver(user_value, comparison_value, [:gt, :eq])
+  end
+
+  def compare(@equals_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &==/2)
+  end
+
+  def compare(@not_equals_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &!==/2)
+  end
+
+  def compare(@less_than_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &</2)
+  end
+
+  def compare(@less_than_equal_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &<=/2)
+  end
+
+  def compare(@greater_than_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &>/2)
+  end
+
+  def compare(@greater_than_equal_number, user_value, comparison_value, _context_salt, _salt) do
+    compare_numbers(user_value, comparison_value, &>=/2)
+  end
+
+  def compare(@is_one_of_hashed, user_value, comparison_value, context_salt, salt) do
+    result =
+      user_value
+      |> hash_value(context_salt, salt)
+      |> Kernel.in(comparison_value)
+
+    {:ok, result}
+  end
+
+  def compare(@is_not_one_of_hashed, user_value, comparison_value, context_salt, salt) do
+    @is_one_of_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(@before_datetime, user_value, comparison_value, _context_salt, _salt) do
+    compare_datetimes(user_value, comparison_value, [:lt])
+  end
+
+  def compare(@after_datetime, user_value, comparison_value, _context_salt, _salt) do
+    compare_datetimes(user_value, comparison_value, [:gt])
+  end
+
+  def compare(@equals_hashed, user_value, comparison_value, context_salt, salt) do
+    result = hash_value(user_value, context_salt, salt) == comparison_value
+    {:ok, result}
+  end
+
+  def compare(@not_equals_hashed, user_value, comparison_value, context_salt, salt) do
+    @equals_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  end
+
+  def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
+    {:ok, false}
+  end
+
   defp compare_semver(user_value, comparison_value, valid_comparisons) do
-    user_version = to_version(user_value)
-    comparison_version = to_version(comparison_value)
+    user_version = to_version!(user_value)
+    comparison_version = to_version!(comparison_value)
     result = Version.compare(user_version, comparison_version)
     {:ok, result in valid_comparisons}
   rescue
@@ -207,12 +233,6 @@ defmodule ConfigCat.Config.UserComparator do
     else
       {:error, :invalid_float} -> {:error, :invalid_datetime}
     end
-  end
-
-  defp is_one_of_hashed(user_value, comparison_value, context_salt, salt) do
-    user_value
-    |> hash_value(context_salt, salt)
-    |> is_one_of(comparison_value)
   end
 
   defp hash_value(value, context_salt, salt) do
@@ -243,7 +263,7 @@ defmodule ConfigCat.Config.UserComparator do
     to_float(value)
   end
 
-  defp to_version(value) do
+  defp to_version!(value) do
     value |> to_string() |> String.trim() |> Version.parse!()
   end
 

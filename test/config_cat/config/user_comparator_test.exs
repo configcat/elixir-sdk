@@ -257,6 +257,22 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} = compare(is_not_one_of_hashed, "x", [a, b, c])
       assert {:ok, false} = compare(is_not_one_of_hashed, "a", [a, b, c])
     end
+
+    test "equals (hashed)", %{hashed: hashed} do
+      equals_hashed = 20
+      %{a: a} = hashed
+
+      assert {:ok, true} = compare(equals_hashed, "a", a)
+      assert {:ok, false} = compare(equals_hashed, "x", a)
+    end
+
+    test "not equals (hashed)", %{hashed: hashed} do
+      not_equals_hashed = 21
+      %{a: a} = hashed
+
+      assert {:ok, true} = compare(not_equals_hashed, "x", a)
+      assert {:ok, false} = compare(not_equals_hashed, "a", a)
+    end
   end
 
   describe "datetime comparators" do
