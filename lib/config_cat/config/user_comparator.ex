@@ -16,7 +16,6 @@ defmodule ConfigCat.Config.UserComparator do
   alias ConfigCat.Config.ComparatorMetadata, as: Metadata
   alias ConfigCat.Config.ComparisonRule
   alias ConfigCat.Config.Preferences
-  alias Version.InvalidVersionError
 
   @is_one_of 0
   @is_not_one_of 1
@@ -121,8 +120,9 @@ defmodule ConfigCat.Config.UserComparator do
         ) :: result()
 
   def compare(@is_one_of, user_value, comparison_values, _context_salt, _salt) do
-    result = to_string(user_value) in comparison_values
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      {:ok, text in comparison_values}
+    end
   end
 
   def compare(@is_not_one_of, user_value, comparison_values, context_salt, salt) do
@@ -130,8 +130,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@contains_any_of, user_value, comparison_values, _context_salt, _salt) do
-    result = Enum.any?(comparison_values, &String.contains?(to_string(user_value), to_string(&1)))
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = Enum.any?(comparison_values, &String.contains?(text, &1))
+      {:ok, result}
+    end
   end
 
   def compare(@not_contains_any_of, user_value, comparison_values, context_salt, salt) do
@@ -139,18 +141,11 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@is_one_of_semver, user_value, comparison_values, _context_salt, _salt) do
-    user_version = to_version!(user_value)
-
-    result =
-      comparison_values
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.map(&to_version!/1)
-      |> Enum.any?(fn version -> Version.compare(user_version, version) == :eq end)
-
-    {:ok, result}
-  rescue
-    error in InvalidVersionError ->
-      {:error, error}
+    with {:ok, user_version} <- to_version(user_value),
+         {:ok, comparison_versions} <- to_versions(comparison_values) do
+      result = Enum.any?(comparison_versions, &(Version.compare(user_version, &1) == :eq))
+      {:ok, result}
+    end
   end
 
   def compare(@is_not_one_of_semver, user_value, comparison_values, context_salt, salt) do
@@ -198,12 +193,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@is_one_of_hashed, user_value, comparison_values, context_salt, salt) do
-    result =
-      user_value
-      |> hash_value(context_salt, salt)
-      |> Kernel.in(comparison_values)
-
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = hash_value(text, context_salt, salt) in comparison_values
+      {:ok, result}
+    end
   end
 
   def compare(@is_not_one_of_hashed, user_value, comparison_values, context_salt, salt) do
@@ -219,8 +212,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@equals_hashed, user_value, comparison_value, context_salt, salt) do
-    result = hash_value(user_value, context_salt, salt) == comparison_value
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = hash_value(text, context_salt, salt) == comparison_value
+      {:ok, result}
+    end
   end
 
   def compare(@not_equals_hashed, user_value, comparison_value, context_salt, salt) do
@@ -228,17 +223,19 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    result =
-      Enum.any?(
-        comparison_values,
-        fn comparison ->
-          {length, comparison_string} = parse_comparison(comparison)
-          hashed = user_value |> String.slice(0, length) |> hash_value(context_salt, salt)
-          hashed == comparison_string
-        end
-      )
+    with {:ok, text} <- as_text(user_value) do
+      result =
+        Enum.any?(
+          comparison_values,
+          fn comparison ->
+            {length, comparison_string} = parse_comparison(comparison)
+            hashed = text |> String.slice(0, length) |> hash_value(context_salt, salt)
+            hashed == comparison_string
+          end
+        )
 
-    {:ok, result}
+      {:ok, result}
+    end
   end
 
   def compare(@not_starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
@@ -246,17 +243,19 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    result =
-      Enum.any?(
-        comparison_values,
-        fn comparison ->
-          {length, comparison_string} = parse_comparison(comparison)
-          hashed = user_value |> String.slice(-length, length) |> hash_value(context_salt, salt)
-          hashed == comparison_string
-        end
-      )
+    with {:ok, text} <- as_text(user_value) do
+      result =
+        Enum.any?(
+          comparison_values,
+          fn comparison ->
+            {length, comparison_string} = parse_comparison(comparison)
+            hashed = text |> String.slice(-length, length) |> hash_value(context_salt, salt)
+            hashed == comparison_string
+          end
+        )
 
-    {:ok, result}
+      {:ok, result}
+    end
   end
 
   def compare(@not_ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
@@ -277,8 +276,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@equals, user_value, comparison_value, _context_salt, _salt) do
-    result = to_string(user_value) == comparison_value
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = text == comparison_value
+      {:ok, result}
+    end
   end
 
   def compare(@not_equals, user_value, comparison_value, context_salt, salt) do
@@ -286,9 +287,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@starts_with_any_of, user_value, comparison_values, _context_salt, _salt) do
-    user_value_string = to_string(user_value)
-    result = Enum.any?(comparison_values, &String.starts_with?(user_value_string, &1))
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = Enum.any?(comparison_values, &String.starts_with?(text, &1))
+      {:ok, result}
+    end
   end
 
   def compare(@not_starts_with_any_of, user_value, comparison_values, context_salt, salt) do
@@ -296,9 +298,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def compare(@ends_with_any_of, user_value, comparison_values, _context_salt, _salt) do
-    user_value_string = to_string(user_value)
-    result = Enum.any?(comparison_values, &String.ends_with?(user_value_string, &1))
-    {:ok, result}
+    with {:ok, text} <- as_text(user_value) do
+      result = Enum.any?(comparison_values, &String.ends_with?(text, &1))
+      {:ok, result}
+    end
   end
 
   def compare(@not_ends_with_any_of, user_value, comparison_values, context_salt, salt) do
@@ -321,12 +324,11 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   defp compare_semver(user_value, comparison_value, valid_comparisons) do
-    user_version = to_version!(user_value)
-    comparison_version = to_version!(comparison_value)
-    result = Version.compare(user_version, comparison_version)
-    {:ok, result in valid_comparisons}
-  rescue
-    error in InvalidVersionError -> {:error, error}
+    with {:ok, user_version} <- to_version(user_value),
+         {:ok, comparison_version} <- to_version(comparison_value) do
+      result = Version.compare(user_version, comparison_version)
+      {:ok, result in valid_comparisons}
+    end
   end
 
   defp compare_numbers(user_value, comparison_value, operator) do
@@ -353,7 +355,7 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   defp hash_value(value, context_salt, salt) do
-    salted = to_string(value <> salt <> context_salt)
+    salted = value <> salt <> context_salt
 
     :sha256
     |> :crypto.hash(salted)
@@ -367,9 +369,33 @@ defmodule ConfigCat.Config.UserComparator do
     {String.to_integer(length_string), comparison_string}
   end
 
-  defp to_float(value) do
+  defp as_text(value) when is_binary(value), do: {:ok, value}
+
+  defp as_text(value) do
+    user_value_to_string(value)
+  end
+
+  defp user_value_to_string(nil), do: {:ok, nil}
+
+  defp user_value_to_string(%DateTime{} = dt) do
+    with {:ok, seconds} <- to_unix_seconds(dt) do
+      {:ok, to_string(seconds)}
+    end
+  end
+
+  defp user_value_to_string(value) when is_list(value) do
+    with {:ok, list} <- to_string_list(value) do
+      {:ok, to_string(list)}
+    end
+  end
+
+  defp user_value_to_string(value), do: {:ok, to_string(value)}
+
+  defp to_float(value) when is_float(value), do: {:ok, value}
+  defp to_float(value) when is_integer(value), do: {:ok, value * 1.0}
+
+  defp to_float(value) when is_binary(value) do
     value
-    |> to_string()
     |> String.replace(",", ".")
     |> Float.parse()
     |> case do
@@ -377,6 +403,8 @@ defmodule ConfigCat.Config.UserComparator do
       _ -> {:error, :invalid_float}
     end
   end
+
+  defp to_float(_value), do: {:error, :invalid_float}
 
   defp to_string_list(value) when is_list(value), do: {:ok, value}
 
@@ -397,8 +425,30 @@ defmodule ConfigCat.Config.UserComparator do
     to_float(value)
   end
 
-  defp to_version!(value) do
-    value |> to_string() |> String.trim() |> Version.parse!()
+  defp to_versions(values) do
+    values
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.reduce_while({:ok, []}, fn value, {:ok, versions} ->
+      case to_version(value) do
+        {:ok, version} -> {:cont, {:ok, [version | versions]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, versions} -> {:ok, Enum.reverse(versions)}
+      error -> error
+    end
+  end
+
+  defp to_version(value) do
+    value
+    |> to_string()
+    |> String.trim()
+    |> Version.parse()
+    |> case do
+      {:ok, version} -> {:ok, version}
+      :error -> {:error, :invalid_version}
+    end
   end
 
   defp negate({:ok, result}), do: {:ok, !result}
