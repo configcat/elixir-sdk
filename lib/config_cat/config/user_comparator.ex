@@ -36,6 +36,8 @@ defmodule ConfigCat.Config.UserComparator do
   @greater_than_equal_number 15
   @is_one_of_hashed 16
   @is_not_one_of_hashed 17
+  @before_datetime 18
+  @after_datetime 19
 
   @metadata %{
     @is_one_of => %Metadata{description: "IS ONE OF", value_type: :string_list},
@@ -55,7 +57,9 @@ defmodule ConfigCat.Config.UserComparator do
     @greater_than_number => %Metadata{description: ">", value_type: :double},
     @greater_than_equal_number => %Metadata{description: ">=", value_type: :double},
     @is_one_of_hashed => %Metadata{description: "IS ONE OF", value_type: :string_list},
-    @is_not_one_of_hashed => %Metadata{description: "IS NOT ONE OF", value_type: :string_list}
+    @is_not_one_of_hashed => %Metadata{description: "IS NOT ONE OF", value_type: :string_list},
+    @before_datetime => %Metadata{description: "BEFORE", value_type: :double},
+    @after_datetime => %Metadata{description: "AFTER", value_type: :double}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
@@ -137,6 +141,12 @@ defmodule ConfigCat.Config.UserComparator do
   def compare(@is_not_one_of_hashed, user_value, comparison_value, context_salt, salt),
     do: user_value |> is_one_of_hashed(comparison_value, context_salt, salt) |> negate()
 
+  def compare(@before_datetime, user_value, comparison_value, _context_salt, _salt),
+    do: compare_datetimes(user_value, comparison_value, [:lt])
+
+  def compare(@after_datetime, user_value, comparison_value, _context_salt, _salt),
+    do: compare_datetimes(user_value, comparison_value, [:gt])
+
   def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
     {:ok, false}
   end
@@ -163,8 +173,40 @@ defmodule ConfigCat.Config.UserComparator do
 
     {:ok, result}
   rescue
-    error in Version.InvalidVersionError ->
+    error in InvalidVersionError ->
       {:error, error}
+  end
+
+  defp compare_semver(user_value, comparison_value, valid_comparisons) do
+    user_version = to_version(user_value)
+    comparison_version = to_version(comparison_value)
+    result = Version.compare(user_version, comparison_version)
+    {:ok, result in valid_comparisons}
+  rescue
+    error in InvalidVersionError -> {:error, error}
+  end
+
+  defp compare_numbers(user_value, comparison_value, operator) do
+    with {:ok, user_float} <- to_float(user_value),
+         {:ok, comparison_float} <- to_float(comparison_value) do
+      {:ok, operator.(user_float, comparison_float)}
+    end
+  end
+
+  defp compare_datetimes(user_value, comparison_value, valid_comparisons) do
+    with {:ok, user_seconds} <- to_unix_seconds(user_value),
+         {:ok, comparison_seconds} <- to_float(comparison_value) do
+      result =
+        cond do
+          user_seconds < comparison_seconds -> :lt
+          user_seconds > comparison_seconds -> :gt
+          true -> :eq
+        end
+
+      {:ok, result in valid_comparisons}
+    else
+      {:error, :invalid_float} -> {:error, :invalid_datetime}
+    end
   end
 
   defp is_one_of_hashed(user_value, comparison_value, context_salt, salt) do
@@ -182,30 +224,27 @@ defmodule ConfigCat.Config.UserComparator do
     |> String.downcase()
   end
 
-  defp compare_semver(user_value, comparison_value, valid_comparisons) do
-    user_version = to_version(user_value)
-    comparison_version = to_version(comparison_value)
-    result = Version.compare(user_version, comparison_version) in valid_comparisons
-    {:ok, result}
-  rescue
-    error in InvalidVersionError -> {:error, error}
+  defp to_float(value) do
+    value
+    |> to_string()
+    |> String.replace(",", ".")
+    |> Float.parse()
+    |> case do
+      {float, ""} -> {:ok, float}
+      _ -> {:error, :invalid_float}
+    end
+  end
+
+  defp to_unix_seconds(%DateTime{} = value) do
+    {:ok, DateTime.to_unix(value)}
+  end
+
+  defp to_unix_seconds(value) do
+    to_float(value)
   end
 
   defp to_version(value) do
     value |> to_string() |> String.trim() |> Version.parse!()
-  end
-
-  defp compare_numbers(user_value, comparison_value, operator) do
-    with {user_float, _} <- to_float(user_value),
-         {comparison_float, _} <- to_float(comparison_value) do
-      {:ok, operator.(user_float, comparison_float)}
-    else
-      :error -> {:error, :invalid_float}
-    end
-  end
-
-  defp to_float(value) do
-    value |> to_string() |> String.replace(",", ".") |> Float.parse()
   end
 
   defp negate({:ok, result}), do: {:ok, !result}

@@ -259,6 +259,50 @@ defmodule ConfigCat.Config.UserComparatorTest do
     end
   end
 
+  describe "datetime comparators" do
+    test "before" do
+      before = 18
+      now = DateTime.utc_now()
+      earlier = DateTime.add(now, -1, :second)
+      later = DateTime.add(now, 1, :second)
+      now_unix = DateTime.to_unix(now)
+      earlier_unix = DateTime.to_unix(earlier)
+
+      assert {:ok, true} = compare(before, earlier, now_unix)
+      assert {:ok, true} = compare(before, earlier_unix, now_unix)
+      assert {:ok, true} = compare(before, to_string(earlier_unix), now_unix)
+      assert {:ok, true} = compare(before, earlier, to_string(now_unix))
+      assert {:ok, false} = compare(before, now, now_unix)
+      assert {:ok, false} = compare(before, later, now_unix)
+
+      assert {:error, :invalid_datetime} =
+               compare(before, "not a datetime", now_unix)
+
+      assert {:error, :invalid_datetime} = compare(before, earlier, "not a datetime")
+    end
+
+    test "after" do
+      after_datimetime = 19
+      now = DateTime.utc_now()
+      earlier = DateTime.add(now, -1, :second)
+      later = DateTime.add(now, 1, :second)
+      now_unix = DateTime.to_unix(now)
+      later_unix = DateTime.to_unix(later)
+
+      assert {:ok, true} = compare(after_datimetime, later, now_unix)
+      assert {:ok, true} = compare(after_datimetime, later_unix, now_unix)
+      assert {:ok, true} = compare(after_datimetime, to_string(later_unix), now_unix)
+      assert {:ok, true} = compare(after_datimetime, later, to_string(now_unix))
+      assert {:ok, false} = compare(after_datimetime, now, now_unix)
+      assert {:ok, false} = compare(after_datimetime, earlier, now_unix)
+
+      assert {:error, :invalid_datetime} =
+               compare(after_datimetime, "not a datetime", now_unix)
+
+      assert {:error, :invalid_datetime} = compare(after_datimetime, later, "not a datetime")
+    end
+  end
+
   defp compare(comparator, user_value, comparison_value) do
     UserComparator.compare(comparator, user_value, comparison_value, @context_salt, @salt)
   end
