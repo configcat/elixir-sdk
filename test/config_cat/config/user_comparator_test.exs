@@ -52,6 +52,20 @@ defmodule ConfigCat.Config.UserComparatorTest do
       assert {:ok, true} =
                compare(not_contains_any_of, "jane@email.com", ["configcat.com"])
     end
+
+    test "equals" do
+      equals = 28
+
+      assert {:ok, true} = compare(equals, "abc", "abc")
+      assert {:ok, false} = compare(equals, "abc", "def")
+    end
+
+    test "not equals" do
+      not_equals = 29
+
+      assert {:ok, true} = compare(not_equals, "abc", "def")
+      assert {:ok, false} = compare(not_equals, "abc", "abc")
+    end
   end
 
   describe "semantic version comparators" do
