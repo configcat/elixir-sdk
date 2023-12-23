@@ -2,6 +2,7 @@ defmodule ConfigCat.RolloutTest do
   use ExUnit.Case, async: true
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.EvaluationDetails
   alias ConfigCat.User
 
   @moduletag capture_log: true
@@ -49,7 +50,6 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs custom percentage attributes"
   test "v6 comparators" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9a6b-4947-84e2-91529248278a/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -127,6 +127,40 @@ defmodule ConfigCat.RolloutTest do
     errors = Enum.flat_map(test_lines, &run_tests(&1, client, custom_key, settings_keys, type))
 
     assert errors == []
+  end
+
+  # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9e4e-4f59-86b2-5da50924b6ca/08dbc325-9ebd-4587-8171-88f76a3004cb
+  for {user_id, email, percentage_base, expected_return_value, expected_matched_targeting_rule,
+       expected_matched_percentage_option} <- [
+        {nil, nil, nil, "Cat", false, false},
+        {"12345", nil, nil, "Cat", false, false},
+        {"12345", "a@example.com", nil, "Dog", true, false},
+        {"12345", "a@configcat.com", nil, "Cat", false, false},
+        {"12345", "a@configcat.com", "", "Frog", true, true},
+        {"12345", "a@configcat.com", "US", "Fish", true, true},
+        {"12345", "b@configcat.com", nil, "Cat", false, false},
+        {"12345", "b@configcat.com", "", "Falcon", false, true},
+        {"12345", "b@configcat.com", "US", "Spider", false, true}
+      ] do
+    test "matched evaluation rule and percentage option with user_id: #{inspect(user_id)} email: #{inspect(email)} percentage_base: #{inspect(percentage_base)}" do
+      sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/P4e3fAz_1ky2-Zg2e4cbkw"
+      key = "stringMatchedTargetingRuleAndOrPercentageOption"
+      user_id = unquote(user_id)
+      email = unquote(email)
+      percentage_base = unquote(percentage_base)
+      expected_return_value = unquote(expected_return_value)
+      expected_matched_targeting_rule = unquote(expected_matched_targeting_rule)
+      expected_matched_percentage_option = unquote(expected_matched_percentage_option)
+
+      {:ok, client} = start_config_cat(sdk_key)
+
+      user = User.new(user_id, email: email, custom: %{"PercentageBase" => percentage_base})
+
+      %EvaluationDetails{} = evaluation_details = ConfigCat.get_value_details(key, nil, user, client: client)
+      assert evaluation_details.value == expected_return_value
+      assert !is_nil(evaluation_details.matched_targeting_rule) == expected_matched_targeting_rule
+      assert !is_nil(evaluation_details.matched_percentage_option) == expected_matched_percentage_option
+    end
   end
 
   for {sdk_key, key, custom_attribute_value, expected_return_value} <- [

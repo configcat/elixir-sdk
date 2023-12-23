@@ -27,6 +27,7 @@ defmodule ConfigCat.Rollout do
       field :config, Config.t()
       field :key, Config.key()
       field :logs, pid()
+      field :percentage_option_attribute, String.t(), enforce: false
       field :setting_type, SettingType.t()
       field :user, User.t(), enforce: false
     end
@@ -52,6 +53,7 @@ defmodule ConfigCat.Rollout do
           config: config,
           key: key,
           logs: logs,
+          percentage_option_attribute: EvaluationFormula.percentage_option_attribute(formula),
           setting_type: EvaluationFormula.setting_type(formula),
           user: valid_user
         }
@@ -263,13 +265,19 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_percentage_options(percentage_options, %Context{} = context) do
-    hash_val = hash_user(context.user, context.key)
+    case extract_user_key(context) do
+      {:ok, user_key} ->
+        hash_val = hash_user(user_key, context.key)
 
-    Enum.reduce_while(
-      percentage_options,
-      {0, nil, nil},
-      &evaluate_percentage_option(&1, &2, hash_val, context)
-    )
+        Enum.reduce_while(
+          percentage_options,
+          {0, nil, nil},
+          &evaluate_percentage_option(&1, &2, hash_val, context)
+        )
+
+      {:error, :missing_user_key} ->
+        {:none, nil, nil}
+    end
   end
 
   defp evaluate_percentage_option(option, increment, hash_val, %Context{} = context) do
@@ -286,8 +294,23 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp hash_user(user, key) do
-    user_key = User.get_attribute(user, "Identifier")
+  defp extract_user_key(%Context{} = context) do
+    attribute = context.percentage_option_attribute
+
+    case User.get_attribute(context.user, attribute || "Identifier") do
+      nil ->
+        if is_nil(attribute) do
+          {:ok, nil}
+        else
+          {:error, :missing_user_key}
+        end
+
+      value ->
+        {:ok, value}
+    end
+  end
+
+  defp hash_user(user_key, key) do
     hash_candidate = "#{key}#{user_key}"
 
     {hash_value, _} =
