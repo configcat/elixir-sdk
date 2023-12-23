@@ -134,12 +134,12 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_rules(targeting_rules, percentage_options, context) do
     case evaluate_targeting_rules(targeting_rules, context) do
-      {:none, _, _} ->
+      {:none, _, _, _} ->
         {value, variation, option} = evaluate_percentage_options(percentage_options, context)
         {value, variation, nil, option}
 
-      {value, variation, rule} ->
-        {value, variation, rule, nil}
+      {value, variation, rule, option} ->
+        {value, variation, rule, option}
     end
   end
 
@@ -147,17 +147,32 @@ defmodule ConfigCat.Rollout do
     salt = context.config |> Config.preferences() |> Preferences.salt()
     segments = Config.segments(context.config)
 
-    Enum.reduce_while(rules, {:none, nil, nil}, fn rule, acc ->
-      conditions = TargetingRule.conditions(rule)
-      value = TargetingRule.value(rule, context.setting_type)
-      variation_id = TargetingRule.variation_id(rule)
-
-      if Enum.all?(conditions, &evaluate_condition(&1, salt, value, segments, context)) do
-        {:halt, {value, variation_id, rule}}
-      else
-        {:cont, acc}
+    Enum.reduce_while(rules, {:none, nil, nil, nil}, fn rule, acc ->
+      case evaluate_targeting_rule(rule, salt, segments, context) do
+        {:none, _, _, _} -> {:cont, acc}
+        result -> {:halt, result}
       end
     end)
+  end
+
+  defp evaluate_targeting_rule(rule, salt, segments, %Context{} = context) do
+    conditions = TargetingRule.conditions(rule)
+    value = TargetingRule.value(rule, context.setting_type)
+
+    if Enum.all?(conditions, &evaluate_condition(&1, salt, value, segments, context)) do
+      case TargetingRule.served_value(rule) do
+        nil ->
+          percentage_options = TargetingRule.percentage_options(rule)
+          {value, variation_id, option} = evaluate_percentage_options(percentage_options, context)
+          {value, variation_id, rule, option}
+
+        _ ->
+          variation_id = TargetingRule.variation_id(rule)
+          {value, variation_id, rule, nil}
+      end
+    else
+      {:none, nil, nil, nil}
+    end
   end
 
   defp evaluate_condition(condition, salt, value, segments, %Context{} = context) do

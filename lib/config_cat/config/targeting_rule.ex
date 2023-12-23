@@ -2,17 +2,24 @@ defmodule ConfigCat.Config.TargetingRule do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.Condition
+  alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.ValueAndVariationId
 
   @type t :: %{String.t() => term()}
 
   @conditions "c"
+  @percentage_options "p"
   @served_value "s"
 
   @spec conditions(t()) :: [Condition.t()]
   def conditions(rule) do
     Map.get(rule, @conditions, [])
+  end
+
+  @spec percentage_options(t()) :: [PercentageOption.t()]
+  def percentage_options(rule) do
+    Map.get(rule, @percentage_options, [])
   end
 
   @spec served_value(t()) :: ValueAndVariationId.t() | nil
