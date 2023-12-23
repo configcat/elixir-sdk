@@ -10,6 +10,7 @@ defmodule ConfigCat.Config.EvaluationFormula do
   @type opt :: {:setting_type, SettingType.t()} | {:value, Config.value()}
   @type t :: %{String.t() => term()}
 
+  @percentage_option_attribute "a"
   @percentage_options "p"
   @setting_type "t"
   @targeting_rules "r"
@@ -29,6 +30,11 @@ defmodule ConfigCat.Config.EvaluationFormula do
           @value => Value.new(value, setting_type)
         }
     end
+  end
+
+  @spec percentage_option_attribute(t()) :: String.t() | nil
+  def percentage_option_attribute(formula) do
+    Map.get(formula, @percentage_option_attribute)
   end
 
   @spec percentage_options(t()) :: [PercentageOption.t()]
