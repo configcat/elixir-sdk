@@ -450,8 +450,8 @@ defmodule ConfigCat.Config.UserComparatorTest do
       now = DateTime.utc_now()
       earlier = DateTime.add(now, -1, :second)
       later = DateTime.add(now, 1, :second)
-      now_unix = DateTime.to_unix(now)
-      earlier_unix = DateTime.to_unix(earlier)
+      {:ok, now_unix} = UserComparator.to_unix_seconds(now)
+      {:ok, earlier_unix} = UserComparator.to_unix_seconds(earlier)
 
       assert {:ok, true} = compare(before_datetime, earlier, now_unix)
       assert {:ok, true} = compare(before_datetime, earlier_unix, now_unix)
@@ -472,8 +472,8 @@ defmodule ConfigCat.Config.UserComparatorTest do
       now = DateTime.utc_now()
       earlier = DateTime.add(now, -1, :second)
       later = DateTime.add(now, 1, :second)
-      now_unix = DateTime.to_unix(now)
-      later_unix = DateTime.to_unix(later)
+      {:ok, now_unix} = UserComparator.to_unix_seconds(now)
+      {:ok, later_unix} = UserComparator.to_unix_seconds(later)
 
       assert {:ok, true} = compare(after_datetime, later, now_unix)
       assert {:ok, true} = compare(after_datetime, later_unix, now_unix)

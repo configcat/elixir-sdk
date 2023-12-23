@@ -82,7 +82,8 @@ defmodule ConfigCat.MixProject do
       {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
       {:mox, "~> 1.1", only: :test},
       {:styler, "~> 0.11", only: [:dev, :test], runtime: false},
-      {:typed_struct, "~> 0.3.0"}
+      {:typed_struct, "~> 0.3.0"},
+      {:tz, "~> 0.26.5", only: :test}
     ]
   end
 
