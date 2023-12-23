@@ -292,12 +292,7 @@ defmodule ConfigCat.Rollout do
     case extract_user_key(context) do
       {:ok, user_key} ->
         hash_val = hash_user(user_key, context.key)
-
-        Enum.reduce_while(
-          percentage_options,
-          {0, nil, nil},
-          &evaluate_percentage_option(&1, &2, hash_val, context)
-        )
+        Enum.reduce_while(percentage_options, 0, &evaluate_percentage_option(&1, &2, hash_val, context))
 
       {:error, :missing_user_key} ->
         {:none, nil, nil}
@@ -305,8 +300,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_percentage_option(option, increment, hash_val, %Context{} = context) do
-    {bucket, _v, _r} = increment
-    bucket = bucket + PercentageOption.percentage(option)
+    bucket = increment + PercentageOption.percentage(option)
 
     if hash_val < bucket do
       value = PercentageOption.value(option, context.setting_type)
@@ -314,7 +308,7 @@ defmodule ConfigCat.Rollout do
 
       {:halt, {value, variation_id, option}}
     else
-      {:cont, {bucket, nil, nil}}
+      {:cont, bucket}
     end
   end
 
