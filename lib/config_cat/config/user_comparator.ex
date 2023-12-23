@@ -431,15 +431,17 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp to_string_list(_value), do: {:error, :invalid_string_list}
 
-  defp to_unix_seconds(%DateTime{} = value) do
-    {:ok, DateTime.to_unix(value)}
+  @spec to_unix_seconds(DateTime.t() | NaiveDateTime.t() | number() | String.t()) ::
+          {:ok, float()} | {:error, :invalid_float}
+  def to_unix_seconds(%DateTime{} = value) do
+    {:ok, DateTime.to_unix(value, :millisecond) / 1000.0}
   end
 
-  defp to_unix_seconds(%NaiveDateTime{} = value) do
+  def to_unix_seconds(%NaiveDateTime{} = value) do
     value |> DateTime.from_naive!("Etc/UTC") |> to_unix_seconds()
   end
 
-  defp to_unix_seconds(value) do
+  def to_unix_seconds(value) do
     to_float(value)
   end
 
