@@ -229,8 +229,13 @@ defmodule ConfigCat.Config.UserComparator do
           comparison_values,
           fn comparison ->
             {length, comparison_string} = parse_comparison(comparison)
-            hashed = text |> String.slice(0, length) |> hash_value(context_salt, salt)
-            hashed == comparison_string
+
+            if byte_size(text) >= length do
+              hashed = text |> binary_part(0, length) |> hash_value(context_salt, salt)
+              hashed == comparison_string
+            else
+              false
+            end
           end
         )
 
@@ -249,8 +254,13 @@ defmodule ConfigCat.Config.UserComparator do
           comparison_values,
           fn comparison ->
             {length, comparison_string} = parse_comparison(comparison)
-            hashed = text |> String.slice(-length, length) |> hash_value(context_salt, salt)
-            hashed == comparison_string
+
+            if byte_size(text) >= length do
+              hashed = text |> binary_part(byte_size(text), -length) |> hash_value(context_salt, salt)
+              hashed == comparison_string
+            else
+              false
+            end
           end
         )
 

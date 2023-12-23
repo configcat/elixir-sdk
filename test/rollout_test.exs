@@ -102,7 +102,6 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs value parsing"
   test "unicode support" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbd63c-9774-49d6-8187-5f2aab7bd606/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
