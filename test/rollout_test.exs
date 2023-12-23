@@ -49,7 +49,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs value type parsing and custom percentage attributes"
+  @tag skip: "Not yet supported; needs custom percentage attributes"
   test "v6 comparators" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9a6b-4947-84e2-91529248278a/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -58,7 +58,6 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs value type parsing"
   test "segments" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9cfb-486f-8906-72a57c693615/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -67,7 +66,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs value type parsing"
+  @tag skip: "Not yet supported; needs missing user attribute handling"
   test "segments (old)" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08dbd6ca-a85f-4ed0-888a-2da18def92b5/244cf8b0-f604-11e8-b543-f23c917f9d8d
     test_matrix(
@@ -76,7 +75,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs prerequisite flag conditions and new comparators"
+  @tag skip: "Not yet supported; needs prerequisite flag conditions"
   test "prerequisite flags" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9b74-45cb-86d0-4d61c25af1aa/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -85,7 +84,7 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs dependent features"
+  @tag skip: "Not yet supported; needs prerequisite flag conditions"
   test "and/or" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9d5e-4988-891c-fd4a45790bd1/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -195,7 +194,7 @@ defmodule ConfigCat.RolloutTest do
           ConfigCat.get_value_details(setting_key, nil, user, client: client).variation_id
       end
 
-    if to_string(actual) !== to_string(expected) do
+    unless equal?(actual, expected) do
       %{
         identifier: user && user.identifier,
         setting_key: setting_key,
@@ -204,6 +203,27 @@ defmodule ConfigCat.RolloutTest do
       }
     end
   end
+
+  defp equal?(actual, expected) when is_boolean(actual) do
+    parsed = String.downcase(expected) == "true"
+    parsed == actual
+  end
+
+  defp equal?(actual, expected) when is_integer(actual) do
+    case Integer.parse(expected, 10) do
+      {parsed, ""} -> parsed == actual
+      _ -> false
+    end
+  end
+
+  defp equal?(actual, expected) when is_float(actual) do
+    case Float.parse(expected) do
+      {parsed, ""} -> parsed == actual
+      _ -> false
+    end
+  end
+
+  defp equal?(actual, expected), do: actual == expected
 
   defp build_custom(_custom_key, nil), do: %{}
   defp build_custom(custom_key, custom_value), do: %{custom_key => custom_value}
