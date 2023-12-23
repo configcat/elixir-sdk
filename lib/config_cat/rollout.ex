@@ -161,7 +161,7 @@ defmodule ConfigCat.Rollout do
     conditions = TargetingRule.conditions(rule)
     value = TargetingRule.value(rule, context.setting_type)
 
-    if Enum.all?(conditions, &evaluate_condition(&1, salt, value, segments, context)) do
+    if evaluate_conditions(conditions, salt, value, segments, context) do
       case TargetingRule.served_value(rule) do
         nil ->
           percentage_options = TargetingRule.percentage_options(rule)
@@ -177,6 +177,16 @@ defmodule ConfigCat.Rollout do
     end
   end
 
+  defp evaluate_conditions(conditions, salt, value, segments, context) do
+    Enum.reduce_while(conditions, true, fn condition, acc ->
+      case evaluate_condition(condition, salt, value, segments, context) do
+        {:ok, true} -> {:cont, acc}
+        {:ok, false} -> {:halt, false}
+        {:error, _error} -> {:halt, false}
+      end
+    end)
+  end
+
   defp evaluate_condition(condition, salt, value, segments, %Context{} = context) do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
@@ -189,13 +199,13 @@ defmodule ConfigCat.Rollout do
         evaluate_segment_condition(segment_condition, salt, value, segments, context)
 
       true ->
-        true
+        {:ok, true}
     end
   end
 
   defp evaluate_user_condition(_comparison_rule, _context_salt, _salt, _value, %Context{user: nil} = context) do
     log_nil_user(context.key)
-    false
+    {:ok, false}
   end
 
   defp evaluate_user_condition(comparison_rule, context_salt, salt, value, %Context{} = context) do
@@ -207,7 +217,7 @@ defmodule ConfigCat.Rollout do
     case User.get_attribute(user, comparison_attribute) do
       nil = user_value ->
         log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
-        false
+        {:error, :missing_comparison_attribute}
 
       user_value ->
         case UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
@@ -221,11 +231,11 @@ defmodule ConfigCat.Rollout do
               value
             )
 
-            true
+            {:ok, true}
 
           {:ok, false} ->
             log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
-            false
+            {:ok, false}
 
           {:error, error} ->
             log_validation_error(
@@ -237,14 +247,14 @@ defmodule ConfigCat.Rollout do
               error
             )
 
-            false
+            {:error, error}
         end
     end
   end
 
   defp evaluate_segment_condition(_condition, _salt, _value, _segments, %Context{user: nil} = context) do
     log_nil_user(context.key)
-    false
+    {:ok, false}
   end
 
   defp evaluate_segment_condition(condition, salt, value, segments, %Context{} = context) do
@@ -252,9 +262,23 @@ defmodule ConfigCat.Rollout do
     segment = Enum.fetch!(segments, index)
     comparator = SegmentCondition.segment_comparator(condition)
     name = Segment.name(segment)
-    rules = Segment.segment_rules(segment)
-    in_segment? = Enum.all?(rules, &evaluate_user_condition(&1, name, salt, value, context))
-    SegmentComparator.compare(comparator, in_segment?)
+
+    segment
+    |> Segment.segment_rules()
+    |> Enum.reduce_while({:ok, true}, fn rule, acc ->
+      case evaluate_user_condition(rule, name, salt, value, context) do
+        {:ok, true} -> {:cont, acc}
+        {:ok, false} -> {:halt, {:ok, false}}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
+    |> case do
+      {:ok, in_segment?} ->
+        {:ok, SegmentComparator.compare(comparator, in_segment?)}
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   defp evaluate_percentage_options([] = _percentage_options, _context), do: {:none, nil, nil}
