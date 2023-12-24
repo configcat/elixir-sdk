@@ -78,7 +78,7 @@ defmodule ConfigCat.LocalFileDataSource do
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour
 
-    @spec overrides(LocalFileDataSource.t()) :: Config.feature_flags()
+    @spec overrides(LocalFileDataSource.t()) :: Config.t()
     def overrides(%{cache: cache} = data_source) do
       refresh_cache(cache, data_source.filename)
 

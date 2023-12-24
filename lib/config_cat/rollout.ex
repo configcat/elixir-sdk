@@ -19,6 +19,33 @@ defmodule ConfigCat.Rollout do
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
+  defmodule CircularDependency do
+    @moduledoc false
+    @enforce_keys [:prerequisite_key, :visited_keys]
+    defexception [:prerequisite_key, :visited_keys]
+
+    @type option :: {:prerequisite_key, String.t()} | {:visited_keys, [String.t()]}
+    @type t :: %__MODULE__{
+            prerequisite_key: String.t(),
+            visited_keys: [String.t()]
+          }
+
+    @impl Exception
+    def exception(options) do
+      struct!(__MODULE__, options)
+    end
+
+    @impl Exception
+    def message(%__MODULE__{} = error) do
+      depending_flags =
+        [error.prerequisite_key | error.visited_keys]
+        |> Enum.reverse()
+        |> Enum.map_join(" -> ", &"'#{&1}'")
+
+      "Circular dependency detected between the following depending flags: #{depending_flags}"
+    end
+  end
+
   defmodule Context do
     @moduledoc false
     use TypedStruct
@@ -28,10 +55,11 @@ defmodule ConfigCat.Rollout do
     typedstruct enforce: true do
       field :config, Config.t()
       field :key, Config.key()
-      field :logs, pid()
+      field :logs, pid() | nil
       field :percentage_option_attribute, String.t(), enforce: false
       field :setting_type, SettingType.t()
       field :user, User.t(), enforce: false
+      field :visited_keys, [String.t()]
     end
   end
 
@@ -41,9 +69,10 @@ defmodule ConfigCat.Rollout do
           Config.value() | nil,
           Config.variation_id() | nil,
           Config.t(),
-          pid()
+          pid() | nil,
+          [String.t()]
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, config, logs) do
+  def evaluate(key, user, default_value, default_variation_id, config, logs \\ nil, visited_keys \\ []) do
     log_evaluating(logs, key, user)
 
     with {:ok, valid_user} <- validate_user(user),
@@ -55,7 +84,8 @@ defmodule ConfigCat.Rollout do
         logs: logs,
         percentage_option_attribute: EvaluationFormula.percentage_option_attribute(formula),
         setting_type: EvaluationFormula.setting_type(formula),
-        user: valid_user
+        user: valid_user,
+        visited_keys: visited_keys
       }
 
       percentage_options = EvaluationFormula.percentage_options(formula)
@@ -84,7 +114,7 @@ defmodule ConfigCat.Rollout do
     else
       {:error, :invalid_user} ->
         log_invalid_user(key)
-        evaluate(key, nil, default_value, default_variation_id, config, logs)
+        evaluate(key, nil, default_value, default_variation_id, config, logs, visited_keys)
 
       {:error, message} ->
         ConfigCatLogger.error(message, event_id: 1001)
@@ -97,6 +127,25 @@ defmodule ConfigCat.Rollout do
           variation_id: default_variation_id
         )
     end
+  rescue
+    error ->
+      if visited_keys == [] do
+        message =
+          "Failed to evaluate setting '#{key}'. (#{Exception.message(error)}). " <>
+            "Returning the default_value parameter that you specified in your application: '#{default_value}'."
+
+        ConfigCatLogger.error(message, event_id: 2001)
+
+        EvaluationDetails.new(
+          default_value?: true,
+          error: message,
+          key: key,
+          value: default_value,
+          variation_id: default_variation_id
+        )
+      else
+        reraise(error, __STACKTRACE__)
+      end
   end
 
   defp validate_user(nil), do: {:ok, nil}
@@ -277,7 +326,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
-    %Context{config: config, logs: logs, user: user} = context
+    %Context{config: config, logs: logs, user: user, visited_keys: visited_keys} = context
     feature_flags = Config.feature_flags(config)
     prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
     comparator = PrerequisiteFlagCondition.comparator(condition)
@@ -290,9 +339,16 @@ defmodule ConfigCat.Rollout do
         setting_type = EvaluationFormula.setting_type(formula)
         # TODO: Type mismatch check
         comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
-        # TODO: Circular dependency check
-        %EvaluationDetails{value: prerequisite_value} = evaluate(prerequisite_key, user, nil, nil, config, logs)
-        {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
+        next_visited_keys = [context.key | visited_keys]
+
+        if prerequisite_key in visited_keys do
+          raise CircularDependency, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
+        else
+          %EvaluationDetails{value: prerequisite_value} =
+            evaluate(prerequisite_key, user, nil, nil, config, logs, next_visited_keys)
+
+          {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
+        end
     end
   end
 
@@ -411,6 +467,8 @@ defmodule ConfigCat.Rollout do
       event_id: 4001
     )
   end
+
+  defp log(nil, _message), do: :ok
 
   defp log(logs, message) do
     Agent.update(logs, &[message | &1])

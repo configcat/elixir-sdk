@@ -1,8 +1,13 @@
 defmodule ConfigCat.RolloutTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias ConfigCat.CachePolicy
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.LocalFileDataSource
+  alias ConfigCat.OverrideDataSource
+  alias ConfigCat.Rollout
   alias ConfigCat.User
 
   @moduletag capture_log: true
@@ -244,6 +249,32 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
+  for {key, dependency_cycle} <- [
+        {"key1", "'key1' -> 'key1'"},
+        {"key2", "'key2' -> 'key3' -> 'key2'"},
+        {"key4", "'key4' -> 'key3' -> 'key2' -> 'key3'"}
+      ] do
+    test "prerequisite flag circular dependency for key: #{key}" do
+      key = unquote(key)
+      dependency_cycle = unquote(dependency_cycle)
+
+      config =
+        "test_circulardependency_v6.json"
+        |> fixture_file()
+        |> LocalFileDataSource.new(:local_only)
+        |> OverrideDataSource.overrides()
+
+      {details, logs} =
+        with_log(fn ->
+          Rollout.evaluate(key, nil, "default_value", "default_variation_id", config)
+        end)
+
+      assert %EvaluationDetails{value: "default_value"} = details
+      assert logs =~ "Circular dependency detected"
+      assert logs =~ dependency_cycle
+    end
+  end
+
   defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
     [header | test_lines] = read_test_matrix(filename)
     {custom_key, settings_keys} = parse_header(header)
@@ -256,11 +287,16 @@ defmodule ConfigCat.RolloutTest do
   end
 
   defp read_test_matrix(filename) do
+    filename
+    |> fixture_file()
+    |> File.read!()
+    |> String.split("\n", trim: true)
+  end
+
+  defp fixture_file(filename) do
     __ENV__.file
     |> Path.dirname()
     |> Path.join("fixtures/#{filename}")
-    |> File.read!()
-    |> String.split("\n", trim: true)
   end
 
   defp parse_header(header) do
