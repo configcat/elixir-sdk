@@ -18,7 +18,7 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
 
   @spec comparison_value(t(), SettingType.t()) :: Config.value() | nil
   def comparison_value(condition, setting_type) do
-    case Map.get(condition, @comparison_value) do
+    case raw_value(condition) do
       nil -> nil
       value -> Value.get(value, setting_type, nil)
     end
@@ -27,5 +27,17 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
   @spec prerequisite_flag_key(t()) :: String.t()
   def prerequisite_flag_key(condition) do
     Map.fetch!(condition, @prerequisite_flag_key)
+  end
+
+  @spec inferred_setting_type(t()) :: SettingType.t() | nil
+  def inferred_setting_type(condition) do
+    case raw_value(condition) do
+      nil -> nil
+      value -> Value.inferred_setting_type(value)
+    end
+  end
+
+  defp raw_value(condition) do
+    Map.get(condition, @comparison_value)
   end
 end
