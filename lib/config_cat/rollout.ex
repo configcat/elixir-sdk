@@ -40,73 +40,62 @@ defmodule ConfigCat.Rollout do
           User.t() | nil,
           Config.value() | nil,
           Config.variation_id() | nil,
-          Config.t()
+          Config.t(),
+          pid()
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, config) do
-    {:ok, logs} = Agent.start(fn -> [] end)
+  def evaluate(key, user, default_value, default_variation_id, config, logs) do
+    log_evaluating(logs, key, user)
 
-    try do
-      log_evaluating(logs, key, user)
+    with {:ok, valid_user} <- validate_user(user),
+         feature_flags = Config.feature_flags(config),
+         {:ok, formula} <- evaluation_formula(feature_flags, key, default_value) do
+      context = %Context{
+        config: config,
+        key: key,
+        logs: logs,
+        percentage_option_attribute: EvaluationFormula.percentage_option_attribute(formula),
+        setting_type: EvaluationFormula.setting_type(formula),
+        user: valid_user
+      }
 
-      with {:ok, valid_user} <- validate_user(user),
-           feature_flags = Config.feature_flags(config),
-           {:ok, formula} <- evaluation_formula(feature_flags, key, default_value) do
-        context = %Context{
-          config: config,
+      percentage_options = EvaluationFormula.percentage_options(formula)
+      targeting_rules = EvaluationFormula.targeting_rules(formula)
+
+      {value, variation, rule, percentage_option} =
+        evaluate_rules(targeting_rules, percentage_options, context)
+
+      if value == :none do
+        EvaluationDetails.new(
           key: key,
-          logs: logs,
-          percentage_option_attribute: EvaluationFormula.percentage_option_attribute(formula),
-          setting_type: EvaluationFormula.setting_type(formula),
-          user: valid_user
-        }
-
-        percentage_options = EvaluationFormula.percentage_options(formula)
-        targeting_rules = EvaluationFormula.targeting_rules(formula)
-
-        {value, variation, rule, percentage_option} =
-          evaluate_rules(targeting_rules, percentage_options, context)
-
-        if value == :none do
-          EvaluationDetails.new(
-            key: key,
-            user: user,
-            value: base_value(formula, default_value, logs),
-            variation_id: EvaluationFormula.variation_id(formula, default_variation_id)
-          )
-        else
-          EvaluationDetails.new(
-            key: key,
-            matched_targeting_rule: rule,
-            matched_percentage_option: percentage_option,
-            user: user,
-            value: value,
-            variation_id: variation
-          )
-        end
+          user: user,
+          value: base_value(formula, default_value, logs),
+          variation_id: EvaluationFormula.variation_id(formula, default_variation_id)
+        )
       else
-        {:error, :invalid_user} ->
-          log_invalid_user(key)
-          evaluate(key, nil, default_value, default_variation_id, config)
-
-        {:error, message} ->
-          ConfigCatLogger.error(message, event_id: 1001)
-
-          EvaluationDetails.new(
-            default_value?: true,
-            error: message,
-            key: key,
-            value: default_value,
-            variation_id: default_variation_id
-          )
+        EvaluationDetails.new(
+          key: key,
+          matched_targeting_rule: rule,
+          matched_percentage_option: percentage_option,
+          user: user,
+          value: value,
+          variation_id: variation
+        )
       end
-    after
-      logs
-      |> Agent.get(& &1)
-      |> Enum.reverse()
-      |> Enum.join("\n")
-      |> ConfigCatLogger.debug(event_id: 5000)
+    else
+      {:error, :invalid_user} ->
+        log_invalid_user(key)
+        evaluate(key, nil, default_value, default_variation_id, config, logs)
 
-      Agent.stop(logs)
+      {:error, message} ->
+        ConfigCatLogger.error(message, event_id: 1001)
+
+        EvaluationDetails.new(
+          default_value?: true,
+          error: message,
+          key: key,
+          value: default_value,
+          variation_id: default_variation_id
+        )
     end
   end
 
@@ -288,7 +277,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
-    %Context{config: config} = context
+    %Context{config: config, logs: logs, user: user} = context
     feature_flags = Config.feature_flags(config)
     prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
     comparator = PrerequisiteFlagCondition.comparator(condition)
@@ -302,8 +291,7 @@ defmodule ConfigCat.Rollout do
         # TODO: Type mismatch check
         comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
         # TODO: Circular dependency check
-        # TODO: Use same log instance for recursive calls
-        %EvaluationDetails{value: prerequisite_value} = evaluate(prerequisite_key, context.user, nil, nil, config)
+        %EvaluationDetails{value: prerequisite_value} = evaluate(prerequisite_key, user, nil, nil, config, logs)
         {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
     end
   end
