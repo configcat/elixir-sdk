@@ -7,6 +7,8 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.Preferences
+  alias ConfigCat.Config.PrerequisiteFlagComparator
+  alias ConfigCat.Config.PrerequisiteFlagCondition
   alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentComparator
   alias ConfigCat.Config.SegmentCondition
@@ -36,7 +38,7 @@ defmodule ConfigCat.Rollout do
   @spec evaluate(
           Config.key(),
           User.t() | nil,
-          Config.value(),
+          Config.value() | nil,
           Config.variation_id() | nil,
           Config.t()
         ) :: EvaluationDetails.t()
@@ -188,6 +190,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_condition(condition, salt, value, segments, %Context{} = context) do
+    prerequisite_flag_condition = Condition.prerequisite_flag_condition(condition)
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
@@ -197,6 +200,9 @@ defmodule ConfigCat.Rollout do
 
       segment_condition ->
         evaluate_segment_condition(segment_condition, salt, value, segments, context)
+
+      prerequisite_flag_condition ->
+        evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context)
 
       true ->
         {:ok, true}
@@ -278,6 +284,27 @@ defmodule ConfigCat.Rollout do
 
       {:error, error} ->
         {:error, error}
+    end
+  end
+
+  defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
+    %Context{config: config} = context
+    feature_flags = Config.feature_flags(config)
+    prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
+    comparator = PrerequisiteFlagCondition.comparator(condition)
+
+    case Map.get(feature_flags, prerequisite_key) do
+      nil ->
+        {:error, :prerequisite_flag_key_missing_or_invalid}
+
+      formula ->
+        setting_type = EvaluationFormula.setting_type(formula)
+        # TODO: Type mismatch check
+        comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
+        # TODO: Circular dependency check
+        # TODO: Use same log instance for recursive calls
+        %EvaluationDetails{value: prerequisite_value} = evaluate(prerequisite_key, context.user, nil, nil, config)
+        {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
     end
   end
 

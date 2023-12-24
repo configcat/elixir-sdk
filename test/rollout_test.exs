@@ -74,7 +74,6 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs prerequisite flag conditions"
   test "prerequisite flags" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9b74-45cb-86d0-4d61c25af1aa/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -83,7 +82,6 @@ defmodule ConfigCat.RolloutTest do
     )
   end
 
-  @tag skip: "Not yet supported; needs prerequisite flag conditions"
   test "and/or" do
     # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9d5e-4988-891c-fd4a45790bd1/08dbc325-9ebd-4587-8171-88f76a3004cb
     test_matrix(
@@ -115,17 +113,6 @@ defmodule ConfigCat.RolloutTest do
     actual = ConfigCat.get_value("stringContainsDogDefaultCat", "Lion", user, client: client)
 
     assert actual == "Cat"
-  end
-
-  defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
-    [header | test_lines] = read_test_matrix(filename)
-    {custom_key, settings_keys} = parse_header(header)
-
-    {:ok, client} = start_config_cat(sdk_key)
-
-    errors = Enum.flat_map(test_lines, &run_tests(&1, client, custom_key, settings_keys, type))
-
-    assert errors == []
   end
 
   # https://app.configcat.com/v2/e7a75611-4256-49a5-9320-ce158755e3ba/08dbc325-7f69-4fd4-8af4-cf9f24ec8ac9/08dbc325-9e4e-4f59-86b2-5da50924b6ca/08dbc325-9ebd-4587-8171-88f76a3004cb
@@ -255,6 +242,17 @@ defmodule ConfigCat.RolloutTest do
 
       assert expected_return_value == actual
     end
+  end
+
+  defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
+    [header | test_lines] = read_test_matrix(filename)
+    {custom_key, settings_keys} = parse_header(header)
+
+    {:ok, client} = start_config_cat(sdk_key)
+
+    errors = Enum.flat_map(test_lines, &run_tests(&1, client, custom_key, settings_keys, type))
+
+    assert errors == []
   end
 
   defp read_test_matrix(filename) do
