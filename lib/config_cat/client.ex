@@ -210,20 +210,32 @@ defmodule ConfigCat.Client do
   defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
     user = if user != nil, do: user, else: state.default_user
 
-    details =
+    %EvaluationDetails{} =
+      details =
       with {:ok, config, fetch_time_ms} <- cached_config(state),
-           {:ok, _feature_flags} <- Config.fetch_feature_flags(config) do
-        %EvaluationDetails{} =
-          details =
-          Rollout.evaluate(key, user, default_value, default_variation_id, config)
+           {:ok, _feature_flags} <- Config.fetch_feature_flags(config),
+           {:ok, logs} <- Agent.start(fn -> [] end) do
+        try do
+          %EvaluationDetails{} =
+            details =
+            Rollout.evaluate(key, user, default_value, default_variation_id, config, logs)
 
-        fetch_time =
-          case FetchTime.to_datetime(fetch_time_ms) do
-            {:ok, %DateTime{} = dt} -> dt
-            _ -> nil
-          end
+          fetch_time =
+            case FetchTime.to_datetime(fetch_time_ms) do
+              {:ok, %DateTime{} = dt} -> dt
+              _ -> nil
+            end
 
-        %{details | fetch_time: fetch_time}
+          %{details | fetch_time: fetch_time}
+        after
+          logs
+          |> Agent.get(& &1)
+          |> Enum.reverse()
+          |> Enum.join("\n")
+          |> ConfigCatLogger.debug(event_id: 5000)
+
+          Agent.stop(logs)
+        end
       else
         _ ->
           message =
