@@ -4,8 +4,10 @@ defmodule ConfigCat.RolloutTest do
   import ExUnit.CaptureLog
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config.SettingType
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.LocalFileDataSource
+  alias ConfigCat.LocalMapDataSource
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
@@ -275,6 +277,66 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
+  for {key, comparison_value_type, prerequisite_flag_key, prerequisite_flag_value, expected_value} <- [
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", true, "Dog"},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", false, "Cat"},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", "1", nil},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", 1, nil},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", 1.0, nil},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", [true], nil},
+        {"stringDependsOnBool", "boolean()", "mainBoolFlag", nil, nil},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", "private", "Dog"},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", "Private", "Cat"},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", true, nil},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", 1, nil},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", 1.0, nil},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", ["private"], nil},
+        {"stringDependsOnString", "String.t()", "mainStringFlag", nil, nil},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", 2, "Dog"},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", 1, "Cat"},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", "2", nil},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", true, nil},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", 2.0, nil},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", [2], nil},
+        {"stringDependsOnInt", "integer()", "mainIntFlag", nil, nil},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", 0.1, "Dog"},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", 0.11, "Cat"},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", "0.1", nil},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", true, nil},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", 1, nil},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", [0.1], nil},
+        {"stringDependsOnDouble", "float()", "mainDoubleFlag", nil, nil}
+      ] do
+    test "prerequisite flag value type mismatch with key: #{key} type: #{comparison_value_type} flag_key: #{prerequisite_flag_key} value: #{inspect(prerequisite_flag_value)}" do
+      sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg"
+      key = unquote(key)
+      comparison_value_type = unquote(comparison_value_type)
+      flag_key = unquote(prerequisite_flag_key)
+      flag_value = unquote(prerequisite_flag_value)
+      expected_value = unquote(expected_value)
+
+      flag_overrides = LocalMapDataSource.new(%{flag_key => flag_value}, :local_over_remote)
+
+      {:ok, client} = start_config_cat(sdk_key, flag_overrides: flag_overrides)
+
+      {value, logs} =
+        with_log(fn ->
+          ConfigCat.get_value(key, nil, client: client)
+        end)
+
+      assert value == expected_value
+
+      unless expected_value do
+        flag_value_type = flag_value |> SettingType.from_value() |> SettingType.to_elixir_type()
+
+        expected_message =
+          "Type mismatch between comparison value type #{comparison_value_type} and type #{flag_value_type} of prerequisite flag '#{flag_key}'"
+
+        assert logs =~ expected_message
+      end
+    end
+  end
+
   defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
     [header | test_lines] = read_test_matrix(filename)
     {custom_key, settings_keys} = parse_header(header)
@@ -394,19 +456,16 @@ defmodule ConfigCat.RolloutTest do
   defp normalize("##null##"), do: nil
   defp normalize(value), do: value
 
-  defp start_config_cat(sdk_key) do
+  defp start_config_cat(sdk_key, options \\ []) do
     name = String.to_atom(UUID.uuid4())
 
-    with {:ok, _pid} <-
-           start_supervised(
-             {ConfigCat,
-              [
-                fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
-                name: name,
-                sdk_key: sdk_key
-              ]}
-           ) do
-      {:ok, name}
-    end
+    default_options = [
+      fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
+      name: name,
+      sdk_key: sdk_key
+    ]
+
+    start_supervised!({ConfigCat, Keyword.merge(default_options, options)})
+    {:ok, name}
   end
 end

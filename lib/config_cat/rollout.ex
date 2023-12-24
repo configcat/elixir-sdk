@@ -12,6 +12,7 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentComparator
   alias ConfigCat.Config.SegmentCondition
+  alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.Config.UserComparator
   alias ConfigCat.EvaluationDetails
@@ -19,7 +20,7 @@ defmodule ConfigCat.Rollout do
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
-  defmodule CircularDependency do
+  defmodule CircularDependencyError do
     @moduledoc false
     @enforce_keys [:prerequisite_key, :visited_keys]
     defexception [:prerequisite_key, :visited_keys]
@@ -44,6 +45,16 @@ defmodule ConfigCat.Rollout do
 
       "Circular dependency detected between the following depending flags: #{depending_flags}"
     end
+  end
+
+  defmodule EvaluationError do
+    @moduledoc false
+    @enforce_keys [:message]
+    defexception [:message]
+
+    @type t :: %__MODULE__{
+            message: String.t()
+          }
   end
 
   defmodule Context do
@@ -337,12 +348,18 @@ defmodule ConfigCat.Rollout do
 
       formula ->
         setting_type = EvaluationFormula.setting_type(formula)
-        # TODO: Type mismatch check
+        comparison_value_type = PrerequisiteFlagCondition.inferred_setting_type(condition)
+
+        unless setting_type == comparison_value_type do
+          raise EvaluationError,
+                "Type mismatch between comparison value type #{SettingType.to_elixir_type(comparison_value_type)} and type #{SettingType.to_elixir_type(setting_type)} of prerequisite flag '#{prerequisite_key}'"
+        end
+
         comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
         next_visited_keys = [context.key | visited_keys]
 
         if prerequisite_key in visited_keys do
-          raise CircularDependency, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
+          raise CircularDependencyError, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
         else
           %EvaluationDetails{value: prerequisite_value} =
             evaluate(prerequisite_key, user, nil, nil, config, logs, next_visited_keys)
