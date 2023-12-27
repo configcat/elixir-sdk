@@ -3,6 +3,7 @@ defmodule ConfigCatTest do
 
   import Mox
 
+  alias ConfigCat.Config
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Factory
@@ -15,7 +16,7 @@ defmodule ConfigCatTest do
 
   describe "when the configuration has been fetched" do
     setup do
-      config = Factory.config()
+      config = Config.inline_salt_and_segments(Factory.config())
 
       {:ok, client} = start_client()
 
