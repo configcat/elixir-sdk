@@ -9,8 +9,10 @@ defmodule ConfigCat.ClientCase do
   alias ConfigCat.MockCachePolicy
   alias ConfigCat.NullDataSource
 
-  using do
+  using opts do
     quote do
+      use ConfigCat.Case, unquote(opts)
+
       import unquote(__MODULE__)
     end
   end
