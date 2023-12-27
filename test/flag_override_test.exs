@@ -3,7 +3,6 @@ defmodule ConfigCat.FlagOverrideTest do
 
   import Jason.Sigil
 
-  alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.FetchTime
   alias ConfigCat.LocalFileDataSource
@@ -239,24 +238,18 @@ defmodule ConfigCat.FlagOverrideTest do
     end
   end
 
-  defp start_config_cat(sdk_key, options) do
-    name = String.to_atom(UUID.uuid4())
+  # defp start_config_cat(sdk_key, options) do
+  #   name = String.to_atom(UUID.uuid4())
 
-    default_options = [
-      fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
-      name: name,
-      sdk_key: sdk_key
-    ]
+  #   default_options = [
+  #     fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
+  #     name: name,
+  #     sdk_key: sdk_key
+  #   ]
 
-    start_supervised!({ConfigCat, Keyword.merge(default_options, options)})
-    {:ok, name}
-  end
-
-  defp fixture_file(name) do
-    __ENV__.file
-    |> Path.dirname()
-    |> Path.join("fixtures/" <> name)
-  end
+  #   start_supervised!({ConfigCat, Keyword.merge(default_options, options)})
+  #   {:ok, name}
+  # end
 
   defp temporary_file(name) do
     dir = System.tmp_dir!()
