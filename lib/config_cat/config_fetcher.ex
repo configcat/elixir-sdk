@@ -226,7 +226,8 @@ defmodule ConfigCat.CacheControlConfigFetcher do
        when code >= 200 and code < 300 do
     ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
 
-    with {:ok, config} <- Jason.decode(raw_config),
+    with {:ok, decoded_config} <- Jason.decode(raw_config),
+         config = Config.inline_salt_and_segments(decoded_config),
          new_etag = extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state do

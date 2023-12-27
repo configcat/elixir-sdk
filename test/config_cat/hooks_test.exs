@@ -19,7 +19,7 @@ defmodule ConfigCat.HooksTest do
 
   @moduletag capture_log: true
 
-  @config Factory.config()
+  @config Config.inline_salt_and_segments(Factory.config())
   @policy CachePolicy.manual()
 
   defmodule TestHooks do

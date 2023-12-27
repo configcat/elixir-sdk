@@ -1,6 +1,7 @@
 defmodule ConfigCat.Config.Condition do
   @moduledoc false
   alias ConfigCat.Config.PrerequisiteFlagCondition
+  alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentCondition
   alias ConfigCat.Config.UserCondition
 
@@ -23,5 +24,10 @@ defmodule ConfigCat.Config.Condition do
   @spec user_condition(t()) :: UserCondition.t() | nil
   def user_condition(condition) do
     Map.get(condition, @user_condition)
+  end
+
+  @spec inline_segments(t(), [Segment.t()]) :: t()
+  def inline_segments(condition, segments) do
+    Map.update(condition, @segment_condition, nil, &SegmentCondition.inline_segment(&1, segments))
   end
 end
