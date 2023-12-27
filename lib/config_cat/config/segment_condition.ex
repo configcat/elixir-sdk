@@ -1,5 +1,6 @@
 defmodule ConfigCat.Config.SegmentCondition do
   @moduledoc false
+  alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentComparator
 
   @type t :: %{String.t() => any}
@@ -21,5 +22,12 @@ defmodule ConfigCat.Config.SegmentCondition do
   @spec segment_index(t()) :: non_neg_integer() | nil
   def segment_index(condition) do
     Map.get(condition, @segment_index)
+  end
+
+  @spec inline_segment(t(), [Segment.t()]) :: t()
+  def inline_segment(condition, segments) do
+    index = segment_index(condition)
+    segment = Enum.at(segments, index)
+    Map.put(condition, @inline_segment, segment)
   end
 end

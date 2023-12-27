@@ -8,6 +8,7 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
+  alias ConfigCat.Config.Setting
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.Hooks
@@ -22,8 +23,9 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   setup do
-    settings = %{"some" => "settings"}
-    config = Config.new(settings: settings)
+    initial_settings = %{"new" => Setting.new(value: "new")}
+    config = [settings: initial_settings] |> Config.new() |> Config.inline_salt_and_segments()
+    settings = Config.settings(config)
     entry = ConfigEntry.new(config, "ETag")
 
     %{config: config, entry: entry, settings: settings}
@@ -35,8 +37,9 @@ defmodule ConfigCat.CachePolicyCase do
           settings: Config.settings()
         }
   def make_old_entry(age_ms \\ 0) do
-    settings = %{"old" => "settings"}
-    config = Config.new(settings: settings)
+    initial_settings = %{"old" => Setting.new(value: "old")}
+    config = [settings: initial_settings] |> Config.new() |> Config.inline_salt_and_segments()
+    settings = Config.settings(config)
 
     entry =
       config

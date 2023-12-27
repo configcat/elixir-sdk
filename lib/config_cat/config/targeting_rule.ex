@@ -3,6 +3,7 @@ defmodule ConfigCat.Config.TargetingRule do
   alias ConfigCat.Config
   alias ConfigCat.Config.Condition
   alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.SettingValueContainer
 
@@ -43,6 +44,11 @@ defmodule ConfigCat.Config.TargetingRule do
       nil -> default
       value -> SettingValueContainer.variation_id(value, default)
     end
+  end
+
+  @spec inline_segments(t(), [Segment.t()]) :: t()
+  def inline_segments(rule, segments) do
+    Map.update(rule, @conditions, [], &Enum.map(&1, fn condition -> Condition.inline_segments(condition, segments) end))
   end
 
   @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
