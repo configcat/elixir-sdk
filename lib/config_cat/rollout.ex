@@ -2,9 +2,7 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
-  alias ConfigCat.Config.ComparisonRule
   alias ConfigCat.Config.Condition
-  alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.Preferences
   alias ConfigCat.Config.PrerequisiteFlagComparator
@@ -12,9 +10,11 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SegmentComparator
   alias ConfigCat.Config.SegmentCondition
+  alias ConfigCat.Config.Setting
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.TargetingRule
   alias ConfigCat.Config.UserComparator
+  alias ConfigCat.Config.UserCondition
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.User
 
@@ -87,20 +87,20 @@ defmodule ConfigCat.Rollout do
     log_evaluating(logs, key, user)
 
     with {:ok, valid_user} <- validate_user(user),
-         feature_flags = Config.feature_flags(config),
-         {:ok, formula} <- evaluation_formula(feature_flags, key, default_value) do
+         settings = Config.settings(config),
+         {:ok, setting} <- setting(settings, key, default_value) do
       context = %Context{
         config: config,
         key: key,
         logs: logs,
-        percentage_option_attribute: EvaluationFormula.percentage_option_attribute(formula),
-        setting_type: EvaluationFormula.setting_type(formula),
+        percentage_option_attribute: Setting.percentage_option_attribute(setting),
+        setting_type: Setting.setting_type(setting),
         user: valid_user,
         visited_keys: visited_keys
       }
 
-      percentage_options = EvaluationFormula.percentage_options(formula)
-      targeting_rules = EvaluationFormula.targeting_rules(formula)
+      percentage_options = Setting.percentage_options(setting)
+      targeting_rules = Setting.targeting_rules(setting)
 
       {value, variation, rule, percentage_option} =
         evaluate_rules(targeting_rules, percentage_options, context)
@@ -109,8 +109,8 @@ defmodule ConfigCat.Rollout do
         EvaluationDetails.new(
           key: key,
           user: user,
-          value: base_value(formula, default_value, logs),
-          variation_id: EvaluationFormula.variation_id(formula, default_variation_id)
+          value: base_value(setting, default_value, logs),
+          variation_id: Setting.variation_id(setting, default_variation_id)
         )
       else
         EvaluationDetails.new(
@@ -163,14 +163,14 @@ defmodule ConfigCat.Rollout do
   defp validate_user(%User{} = user), do: {:ok, user}
   defp validate_user(_), do: {:error, :invalid_user}
 
-  defp evaluation_formula(feature_flags, key, default_value) do
-    case Map.fetch(feature_flags, key) do
-      {:ok, formula} ->
-        {:ok, formula}
+  defp setting(settings, key, default_value) do
+    case Map.fetch(settings, key) do
+      {:ok, setting} ->
+        {:ok, setting}
 
       :error ->
         available_keys =
-          feature_flags
+          settings
           |> Map.keys()
           |> Enum.map_join(", ", &"'#{&1}'")
 
@@ -213,7 +213,7 @@ defmodule ConfigCat.Rollout do
     value = TargetingRule.value(rule, context.setting_type)
 
     if evaluate_conditions(conditions, salt, value, segments, context) do
-      case TargetingRule.served_value(rule) do
+      case TargetingRule.simple_value(rule) do
         nil ->
           percentage_options = TargetingRule.percentage_options(rule)
           {value, variation_id, option} = evaluate_percentage_options(percentage_options, context)
@@ -265,9 +265,9 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_user_condition(comparison_rule, context_salt, salt, value, %Context{} = context) do
     %Context{logs: logs, user: user} = context
-    comparison_attribute = ComparisonRule.comparison_attribute(comparison_rule)
-    comparator = ComparisonRule.comparator(comparison_rule)
-    comparison_value = ComparisonRule.comparison_value(comparison_rule)
+    comparison_attribute = UserCondition.comparison_attribute(comparison_rule)
+    comparator = UserCondition.comparator(comparison_rule)
+    comparison_value = UserCondition.comparison_value(comparison_rule)
 
     case User.get_attribute(user, comparison_attribute) do
       nil = user_value ->
@@ -319,9 +319,9 @@ defmodule ConfigCat.Rollout do
     name = Segment.name(segment)
 
     segment
-    |> Segment.segment_rules()
-    |> Enum.reduce_while({:ok, true}, fn rule, acc ->
-      case evaluate_user_condition(rule, name, salt, value, context) do
+    |> Segment.conditions()
+    |> Enum.reduce_while({:ok, true}, fn condition, acc ->
+      case evaluate_user_condition(condition, name, salt, value, context) do
         {:ok, true} -> {:cont, acc}
         {:ok, false} -> {:halt, {:ok, false}}
         {:error, error} -> {:halt, {:error, error}}
@@ -338,16 +338,16 @@ defmodule ConfigCat.Rollout do
 
   defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
     %Context{config: config, logs: logs, user: user, visited_keys: visited_keys} = context
-    feature_flags = Config.feature_flags(config)
+    settings = Config.settings(config)
     prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
     comparator = PrerequisiteFlagCondition.comparator(condition)
 
-    case Map.get(feature_flags, prerequisite_key) do
+    case Map.get(settings, prerequisite_key) do
       nil ->
         {:error, :prerequisite_flag_key_missing_or_invalid}
 
-      formula ->
-        setting_type = EvaluationFormula.setting_type(formula)
+      setting ->
+        setting_type = Setting.setting_type(setting)
         comparison_value_type = PrerequisiteFlagCondition.inferred_setting_type(condition)
 
         unless setting_type == comparison_value_type do
@@ -429,8 +429,8 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
-  defp base_value(formula, default_value, logs) do
-    result = EvaluationFormula.value(formula, default_value)
+  defp base_value(setting, default_value, logs) do
+    result = Setting.value(setting, default_value)
 
     log(logs, "Returning #{result}")
 

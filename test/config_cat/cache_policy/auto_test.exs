@@ -172,9 +172,9 @@ defmodule ConfigCat.CachePolicy.AutoTest do
       test_pid = self()
       instance_id = String.to_atom(UUID.uuid4())
 
-      %{entry: old_entry, feature_flags: old_feature_flags} = make_old_entry()
+      %{entry: old_entry, settings: old_settings} = make_old_entry()
 
-      callback = fn feature_flags -> send(test_pid, {:config_changed, feature_flags}) end
+      callback = fn settings -> send(test_pid, {:config_changed, settings}) end
 
       start_supervised!({Hooks, hooks: [on_config_changed: callback], instance_id: instance_id})
 
@@ -187,7 +187,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
 
       ensure_initialized(instance_id)
 
-      assert_received {:config_changed, ^old_feature_flags}
+      assert_received {:config_changed, ^old_settings}
 
       %{instance_id: instance_id, policy: policy}
     end
@@ -195,30 +195,30 @@ defmodule ConfigCat.CachePolicy.AutoTest do
     test "calls the change callback after polled refresh", %{
       entry: entry,
       policy: policy,
-      feature_flags: feature_flags
+      settings: settings
     } do
       expect_refresh(entry)
       wait_for_poll(policy)
 
-      assert_receive {:config_changed, ^feature_flags}
+      assert_receive {:config_changed, ^settings}
     end
 
     test "doesn't call the change callback if the configuration hasn't changed", %{policy: policy} do
       expect_unchanged()
       wait_for_poll(policy)
 
-      refute_receive {:config_changed, _feature_flags}
+      refute_receive {:config_changed, _settings}
     end
 
     test "calls the change callback after forced refresh", %{
       entry: entry,
       instance_id: instance_id,
-      feature_flags: feature_flags
+      settings: settings
     } do
       expect_refresh(entry)
       :ok = CachePolicy.force_refresh(instance_id)
 
-      assert_receive {:config_changed, ^feature_flags}
+      assert_receive {:config_changed, ^settings}
     end
   end
 
@@ -258,7 +258,7 @@ defmodule ConfigCat.CachePolicy.AutoTest do
   end
 
   defp ensure_initialized(instance_id) do
-    _feature_flags = CachePolicy.get(instance_id)
+    _settings = CachePolicy.get(instance_id)
   end
 
   defp wait_for_poll(policy) do

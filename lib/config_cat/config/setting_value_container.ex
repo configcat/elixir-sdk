@@ -1,8 +1,8 @@
-defmodule ConfigCat.Config.ValueAndVariationId do
+defmodule ConfigCat.Config.SettingValueContainer do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.SettingType
-  alias ConfigCat.Config.Value
+  alias ConfigCat.Config.SettingValue
 
   @type t :: %{String.t() => term()}
 
@@ -14,7 +14,7 @@ defmodule ConfigCat.Config.ValueAndVariationId do
   def value(v, setting_type, default \\ nil) do
     case raw_value(v) do
       nil -> default
-      value -> Value.get(value, setting_type, default)
+      value -> SettingValue.get(value, setting_type, default)
     end
   end
 
@@ -24,7 +24,7 @@ defmodule ConfigCat.Config.ValueAndVariationId do
     Map.get(v, @variation_id, default)
   end
 
-  @spec variation_value(t(), Config.variation_id()) :: Value.t() | nil
+  @spec variation_value(t(), Config.variation_id()) :: SettingValue.t() | nil
   def variation_value(v, variation_id) do
     if variation_id(v) == variation_id do
       raw_value(v)
