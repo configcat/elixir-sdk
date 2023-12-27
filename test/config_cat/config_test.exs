@@ -5,34 +5,34 @@ defmodule ConfigCat.ConfigTest do
   alias ConfigCat.Config.Preferences
 
   describe "merging configs" do
-    test "copies right flags when left flags are missing" do
-      flags = %{"right" => "flags"}
+    test "copies right settings when left settings are missing" do
+      settings = %{"right" => "settings"}
       left = Config.new()
-      right = Config.new(feature_flags: flags)
+      right = Config.new(settings: settings)
       merged = Config.merge(left, right)
 
-      assert Config.feature_flags(merged) == flags
+      assert Config.settings(merged) == settings
     end
 
-    test "keeps left flags when right flags are missing" do
-      flags = %{"left" => "flags"}
-      left = Config.new(feature_flags: flags)
+    test "keeps left settings when right settings are missing" do
+      settings = %{"left" => "settings"}
+      left = Config.new(settings: settings)
       right = Config.new()
       merged = Config.merge(left, right)
 
-      assert Config.feature_flags(merged) == flags
+      assert Config.settings(merged) == settings
     end
 
-    test "merges flags when both are present; right wins when both have the same flag" do
-      left = Config.new(feature_flags: %{"a" => "left_a", "b" => "left_b"})
-      right = Config.new(feature_flags: %{"b" => "right_b", "c" => "right_c"})
+    test "merges settings when both are present; right wins when both have the same key" do
+      left = Config.new(settings: %{"a" => "left_a", "b" => "left_b"})
+      right = Config.new(settings: %{"b" => "right_b", "c" => "right_c"})
       merged = Config.merge(left, right)
 
       assert %{
                "a" => "left_a",
                "b" => "right_b",
                "c" => "right_c"
-             } == Config.feature_flags(merged)
+             } == Config.settings(merged)
     end
 
     test "always keeps left preferences" do

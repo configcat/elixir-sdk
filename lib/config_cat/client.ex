@@ -5,7 +5,7 @@ defmodule ConfigCat.Client do
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
-  alias ConfigCat.Config.EvaluationFormula
+  alias ConfigCat.Config.Setting
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
@@ -101,7 +101,7 @@ defmodule ConfigCat.Client do
       {:ok, config, _fetch_time_ms} ->
         result =
           config
-          |> Config.feature_flags()
+          |> Config.settings()
           |> Enum.find_value(nil, &entry_matching(&1, variation_id))
 
         if is_nil(result) do
@@ -189,7 +189,7 @@ defmodule ConfigCat.Client do
   defp do_get_all_keys(%State{} = state) do
     case cached_config(state) do
       {:ok, config, _fetch_time_ms} ->
-        config |> Config.feature_flags() |> Map.keys()
+        config |> Config.settings() |> Map.keys()
 
       _ ->
         ConfigCatLogger.error("Config JSON is not present. Returning empty result.",
@@ -200,8 +200,8 @@ defmodule ConfigCat.Client do
     end
   end
 
-  defp entry_matching({key, formula}, variation_id) do
-    case EvaluationFormula.variation_value(formula, variation_id) do
+  defp entry_matching({key, setting}, variation_id) do
+    case Setting.variation_value(setting, variation_id) do
       nil -> nil
       value -> {key, value}
     end
@@ -213,7 +213,7 @@ defmodule ConfigCat.Client do
     %EvaluationDetails{} =
       details =
       with {:ok, config, fetch_time_ms} <- cached_config(state),
-           {:ok, _feature_flags} <- Config.fetch_feature_flags(config),
+           {:ok, _settings} <- Config.fetch_settings(config),
            {:ok, logs} <- Agent.start(fn -> [] end) do
         try do
           %EvaluationDetails{} =

@@ -1,8 +1,8 @@
 defmodule ConfigCat.Config.Condition do
   @moduledoc false
-  alias ConfigCat.Config.ComparisonRule
   alias ConfigCat.Config.PrerequisiteFlagCondition
   alias ConfigCat.Config.SegmentCondition
+  alias ConfigCat.Config.UserCondition
 
   @type t :: %{String.t() => term()}
 
@@ -20,7 +20,7 @@ defmodule ConfigCat.Config.Condition do
     Map.get(condition, @segment_condition)
   end
 
-  @spec user_condition(t()) :: ComparisonRule.t() | nil
+  @spec user_condition(t()) :: UserCondition.t() | nil
   def user_condition(condition) do
     Map.get(condition, @user_condition)
   end

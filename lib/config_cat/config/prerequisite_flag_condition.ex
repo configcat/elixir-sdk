@@ -3,7 +3,7 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
   alias ConfigCat.Config
   alias ConfigCat.Config.PrerequisiteFlagComparator
   alias ConfigCat.Config.SettingType
-  alias ConfigCat.Config.Value
+  alias ConfigCat.Config.SettingValue
 
   @type t :: %{String.t() => term()}
 
@@ -20,7 +20,7 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
   def comparison_value(condition, setting_type) do
     case raw_value(condition) do
       nil -> nil
-      value -> Value.get(value, setting_type, nil)
+      value -> SettingValue.get(value, setting_type, nil)
     end
   end
 
@@ -33,7 +33,7 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
   def inferred_setting_type(condition) do
     case raw_value(condition) do
       nil -> nil
-      value -> Value.inferred_setting_type(value)
+      value -> SettingValue.inferred_setting_type(value)
     end
   end
 
