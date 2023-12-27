@@ -1,6 +1,7 @@
 defmodule ConfigCat.DefaultUserTest do
   use ConfigCat.ClientCase, async: true
 
+  alias ConfigCat.Config
   alias ConfigCat.Factory
   alias ConfigCat.FetchTime
   alias ConfigCat.User
@@ -8,7 +9,7 @@ defmodule ConfigCat.DefaultUserTest do
   @moduletag capture_log: true
 
   setup do
-    config = Factory.config()
+    config = Config.inline_salt_and_segments(Factory.config())
     stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok

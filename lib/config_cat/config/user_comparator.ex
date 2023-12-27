@@ -14,7 +14,6 @@ defmodule ConfigCat.Config.UserComparator do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.ComparatorMetadata, as: Metadata
-  alias ConfigCat.Config.Preferences
   alias ConfigCat.Config.UserCondition
 
   @is_one_of 0
@@ -115,8 +114,8 @@ defmodule ConfigCat.Config.UserComparator do
           t(),
           Config.value(),
           UserCondition.comparison_value(),
-          context_salt :: Preferences.salt(),
-          salt :: Preferences.salt()
+          context_salt :: Config.salt(),
+          salt :: Config.salt()
         ) :: result()
 
   def compare(@is_one_of, user_value, comparison_values, _context_salt, _salt) do

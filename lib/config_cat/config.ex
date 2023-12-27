@@ -16,6 +16,9 @@ defmodule ConfigCat.Config do
   @type opt :: {:preferences, Preferences.t()} | {:settings, settings()}
 
   @typedoc false
+  @type salt :: String.t()
+
+  @typedoc false
   @type settings :: %{String.t() => Setting.t()}
 
   @typedoc "A collection of feature flags and preferences."
