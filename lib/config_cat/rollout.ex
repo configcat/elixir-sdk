@@ -341,7 +341,7 @@ defmodule ConfigCat.Rollout do
 
     case Map.get(settings, prerequisite_key) do
       nil ->
-        {:error, :prerequisite_flag_key_missing_or_invalid}
+        raise EvaluationError, "Prerequisite flag key is missing or invalid."
 
       setting ->
         setting_type = Setting.setting_type(setting)

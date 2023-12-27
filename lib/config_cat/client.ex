@@ -272,7 +272,8 @@ defmodule ConfigCat.Client do
 
       :remote_over_local ->
         with {:ok, remote_config, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Config.merge(local_config, remote_config), fetch_time_ms}
+          merged = Config.merge(local_config, remote_config)
+          {:ok, merged, fetch_time_ms}
         end
     end
   end
