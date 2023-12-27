@@ -3,6 +3,7 @@ defmodule ConfigCat.Config.Setting do
   alias ConfigCat.Config
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.Preferences
+  alias ConfigCat.Config.Segment
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.SettingValue
   alias ConfigCat.Config.SettingValueContainer
@@ -66,6 +67,13 @@ defmodule ConfigCat.Config.Setting do
   end
 
   defdelegate variation_id(setting, default \\ nil), to: SettingValueContainer
+
+  @spec inline_salt_and_segments(t(), Preferences.salt(), [Segment.t()]) :: t()
+  def inline_salt_and_segments(setting, salt, segments) do
+    setting
+    |> Map.put(@inline_salt, salt)
+    |> Map.update(@targeting_rules, [], &Enum.map(&1, fn rule -> TargetingRule.inline_segments(rule, segments) end))
+  end
 
   @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
   def variation_value(setting, variation_id) do

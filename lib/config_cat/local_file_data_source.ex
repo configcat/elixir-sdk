@@ -128,7 +128,7 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(source) do
-      source
+      Config.inline_salt_and_segments(source)
     end
   end
 end

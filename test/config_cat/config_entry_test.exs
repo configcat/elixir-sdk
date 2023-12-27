@@ -1,6 +1,7 @@
 defmodule ConfigCat.ConfigEntryTest do
   use ExUnit.Case, async: true
 
+  alias ConfigCat.Config
   alias ConfigCat.ConfigEntry
 
   @config_json """
@@ -44,7 +45,10 @@ defmodule ConfigCat.ConfigEntryTest do
     end
 
     test "round trips" do
-      entry = ConfigEntry.new(@config, "ETAG", @config_json)
+      entry =
+        @config
+        |> Config.inline_salt_and_segments()
+        |> ConfigEntry.new("ETAG", @config_json)
 
       assert {:ok, ^entry} =
                entry
