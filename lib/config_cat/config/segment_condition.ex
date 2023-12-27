@@ -4,8 +4,14 @@ defmodule ConfigCat.Config.SegmentCondition do
 
   @type t :: %{String.t() => any}
 
+  @inline_segment "inline_segment"
   @segment_comparator "c"
   @segment_index "s"
+
+  @spec segment(t()) :: Segment.t() | nil
+  def segment(condition) do
+    Map.get(condition, @inline_segment)
+  end
 
   @spec segment_comparator(t()) :: SegmentComparator.t() | nil
   def segment_comparator(condition) do
