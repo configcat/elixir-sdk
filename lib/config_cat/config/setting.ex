@@ -2,6 +2,7 @@ defmodule ConfigCat.Config.Setting do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.Preferences
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.SettingValue
   alias ConfigCat.Config.SettingValueContainer
@@ -10,6 +11,7 @@ defmodule ConfigCat.Config.Setting do
   @type opt :: {:setting_type, SettingType.t()} | {:value, Config.value()}
   @type t :: %{String.t() => term()}
 
+  @inline_salt "inline_salt"
   @percentage_option_attribute "a"
   @percentage_options "p"
   @setting_type "t"
@@ -40,6 +42,11 @@ defmodule ConfigCat.Config.Setting do
   @spec percentage_options(t()) :: [PercentageOption.t()]
   def percentage_options(setting) do
     Map.get(setting, @percentage_options, [])
+  end
+
+  @spec salt(t()) :: Preferences.salt()
+  def salt(setting) do
+    Map.get(setting, @inline_salt, "")
   end
 
   @spec setting_type(t()) :: SettingType.t() | nil
