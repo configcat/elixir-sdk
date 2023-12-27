@@ -1,4 +1,4 @@
-defmodule ConfigCat.Config.Value do
+defmodule ConfigCat.Config.SettingValue do
   @moduledoc false
   alias ConfigCat.Config
 

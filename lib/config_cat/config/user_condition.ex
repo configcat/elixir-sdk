@@ -1,4 +1,4 @@
-defmodule ConfigCat.Config.ComparisonRule do
+defmodule ConfigCat.Config.UserCondition do
   @moduledoc false
   alias ConfigCat.Config.UserComparator
 

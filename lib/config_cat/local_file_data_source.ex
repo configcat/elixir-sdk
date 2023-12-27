@@ -72,7 +72,7 @@ defmodule ConfigCat.LocalFileDataSource do
   end
 
   defimpl OverrideDataSource do
-    alias ConfigCat.Config.EvaluationFormula
+    alias ConfigCat.Config.Setting
     alias ConfigCat.LocalFileDataSource
 
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
@@ -119,12 +119,12 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(%{"flags" => source} = _data) do
-      feature_flags =
+      settings =
         source
-        |> Enum.map(fn {key, value} -> {key, EvaluationFormula.new(value: value)} end)
+        |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
         |> Map.new()
 
-      Config.new(feature_flags: feature_flags)
+      Config.new(settings: settings)
     end
 
     defp normalize(source) do

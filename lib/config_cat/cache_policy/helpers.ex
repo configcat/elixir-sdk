@@ -96,8 +96,8 @@ defmodule ConfigCat.CachePolicy.Helpers do
       {:ok, %ConfigEntry{} = entry} ->
         update_cache(state, entry)
 
-        with {:ok, feature_flags} <- Config.fetch_feature_flags(entry.config) do
-          Hooks.invoke_on_config_changed(state.instance_id, feature_flags)
+        with {:ok, settings} <- Config.fetch_settings(entry.config) do
+          Hooks.invoke_on_config_changed(state.instance_id, settings)
         end
 
         :ok

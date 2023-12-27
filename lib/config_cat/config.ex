@@ -2,21 +2,21 @@ defmodule ConfigCat.Config do
   @moduledoc """
   Defines configuration-related types used in the rest of the library.
   """
-  alias ConfigCat.Config.EvaluationFormula
   alias ConfigCat.Config.Preferences
   alias ConfigCat.Config.Segment
+  alias ConfigCat.Config.Setting
 
   @typedoc false
   @type comparator :: non_neg_integer()
-
-  @typedoc false
-  @type feature_flags :: %{String.t() => EvaluationFormula.t()}
 
   @typedoc "The name of a configuration setting."
   @type key :: String.t()
 
   @typedoc false
-  @type opt :: {:feature_flags, feature_flags()} | {:preferences, Preferences.t()}
+  @type opt :: {:preferences, Preferences.t()} | {:settings, settings()}
+
+  @typedoc false
+  @type settings :: %{String.t() => Setting.t()}
 
   @typedoc "A collection of feature flags and preferences."
   @type t :: %{String.t() => map()}
@@ -30,30 +30,30 @@ defmodule ConfigCat.Config do
   @typedoc "The name of a variation being tested."
   @type variation_id :: String.t()
 
-  @feature_flags "f"
+  @settings "f"
   @preferences "p"
   @segments "s"
 
   @doc false
   @spec new([opt]) :: t()
   def new(opts \\ []) do
-    feature_flags = Keyword.get(opts, :feature_flags, %{})
+    settings = Keyword.get(opts, :settings, %{})
     preferences = Keyword.get_lazy(opts, :preferences, &Preferences.new/0)
 
-    %{@feature_flags => feature_flags, @preferences => preferences}
+    %{@settings => settings, @preferences => preferences}
   end
 
   @doc false
-  @spec feature_flags(t()) :: feature_flags()
-  def feature_flags(config) do
-    Map.get(config, @feature_flags, %{})
+  @spec settings(t()) :: settings()
+  def settings(config) do
+    Map.get(config, @settings, %{})
   end
 
   @doc false
-  @spec fetch_feature_flags(t()) :: {:ok, feature_flags()} | {:error, :not_found}
-  def fetch_feature_flags(config) do
-    case Map.fetch(config, @feature_flags) do
-      {:ok, feature_flags} -> {:ok, feature_flags}
+  @spec fetch_settings(t()) :: {:ok, settings()} | {:error, :not_found}
+  def fetch_settings(config) do
+    case Map.fetch(config, @settings) do
+      {:ok, settings} -> {:ok, settings}
       :error -> {:error, :not_found}
     end
   end
@@ -73,9 +73,9 @@ defmodule ConfigCat.Config do
   @doc false
   @spec merge(left :: t(), right :: t()) :: t()
   def merge(left, right) do
-    left_flags = feature_flags(left)
-    right_flags = feature_flags(right)
+    left_flags = settings(left)
+    right_flags = settings(right)
 
-    Map.put(left, @feature_flags, Map.merge(left_flags, right_flags))
+    Map.put(left, @settings, Map.merge(left_flags, right_flags))
   end
 end

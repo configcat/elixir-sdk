@@ -1,6 +1,6 @@
 defmodule ConfigCat.Config.PercentageOption do
   @moduledoc false
-  alias ConfigCat.Config.ValueAndVariationId
+  alias ConfigCat.Config.SettingValueContainer
 
   @type t :: %{String.t() => term()}
 
@@ -11,7 +11,7 @@ defmodule ConfigCat.Config.PercentageOption do
     Map.get(option, @percentage, 0)
   end
 
-  defdelegate value(option, setting_type, default \\ nil), to: ValueAndVariationId
-  defdelegate variation_id(option, default \\ nil), to: ValueAndVariationId
-  defdelegate variation_value(option, variation_id), to: ValueAndVariationId
+  defdelegate value(option, setting_type, default \\ nil), to: SettingValueContainer
+  defdelegate variation_id(option, default \\ nil), to: SettingValueContainer
+  defdelegate variation_value(option, variation_id), to: SettingValueContainer
 end

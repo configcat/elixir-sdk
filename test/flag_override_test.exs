@@ -11,13 +11,13 @@ defmodule ConfigCat.FlagOverrideTest do
   @moduletag capture_log: true
 
   setup do
-    feature_flags = ~J"""
+    settings = ~J"""
       {
         "fakeKey": {"v": {"b": false}, "t": 0}
       }
     """
 
-    config = Config.new(feature_flags: feature_flags)
+    config = Config.new(settings: settings)
     stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok

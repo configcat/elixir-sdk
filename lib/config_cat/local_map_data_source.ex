@@ -7,7 +7,7 @@ defmodule ConfigCat.LocalMapDataSource do
   use TypedStruct
 
   alias ConfigCat.Config
-  alias ConfigCat.Config.EvaluationFormula
+  alias ConfigCat.Config.Setting
   alias ConfigCat.OverrideDataSource
 
   typedstruct enforce: true do
@@ -20,13 +20,13 @@ defmodule ConfigCat.LocalMapDataSource do
   """
   @spec new(map, OverrideDataSource.behaviour()) :: t
   def new(overrides, override_behaviour) do
-    feature_flags =
+    settings =
       overrides
-      |> Enum.map(fn {key, value} -> {key, EvaluationFormula.new(value: value)} end)
+      |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
       |> Map.new()
 
     %__MODULE__{
-      config: Config.new(feature_flags: feature_flags),
+      config: Config.new(settings: settings),
       override_behaviour: override_behaviour
     }
   end

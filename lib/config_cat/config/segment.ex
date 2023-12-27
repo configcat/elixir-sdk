@@ -1,19 +1,19 @@
 defmodule ConfigCat.Config.Segment do
   @moduledoc false
-  alias ConfigCat.Config.ComparisonRule
+  alias ConfigCat.Config.UserCondition
 
   @type t :: %{String.t() => term()}
 
+  @conditions "r"
   @name "n"
-  @segment_rules "r"
+
+  @spec conditions(t()) :: [UserCondition.t()]
+  def conditions(segment) do
+    Map.get(segment, @conditions, [])
+  end
 
   @spec name(t()) :: String.t()
   def name(segment) do
     Map.get(segment, @name, "")
-  end
-
-  @spec segment_rules(t()) :: [ComparisonRule.t()]
-  def segment_rules(segment) do
-    Map.get(segment, @segment_rules, [])
   end
 end
