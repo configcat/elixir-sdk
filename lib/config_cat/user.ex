@@ -8,29 +8,70 @@ defmodule ConfigCat.User do
   ConfigCat SDK.
 
   Has the following properties:
-  - `identifier`: **REQUIRED** We recommend using a UserID, Email address,
-    or SessionID. Enables ConfigCat to differentiate your users from each
-    other and to evaluate the setting values for percentage-based targeting.
+  - `identifier`: **REQUIRED** We recommend using a primary key, email address,
+    or session ID. Enables ConfigCat to differentiate your users from each other
+    and to evaluate the setting values for percentage-based targeting.
 
-  - `country`: **OPTIONAL** Fill this for location or country-based
-    targeting. e.g: Turn on a feature for users in Canada only.
+  - `country`: **OPTIONAL** Fill this for location or country-based targeting.
+    e.g: Turn on a feature for users in Canada only.
 
-  - `email`: **OPTIONAL** By adding this parameter you will be able to
-    create Email address-based targeting. e.g: Only turn on a feature
-    for users with @example.com addresses.
+  - `email`: **OPTIONAL** By adding this parameter you will be able to create
+    Email address-based targeting. e.g: Only turn on a feature for users with
+    @example.com addresses.
 
-  - `custom`: **OPTIONAL** This parameter will let you create targeting
-    based on any user data you like. e.g: Age, Subscription type,
-    User role, Device type, App version number, etc. `custom` is a map
-    containing string or atom keys and string values.  When evaluating
-    targeting rules, keys are case-sensitive, so make sure you specify
-    your keys with the same capitalization as you use when defining
-    your targeting rules.
+  - `custom`: **OPTIONAL** This parameter will let you create targeting based on
+    any user data you like. e.g: age, subscription type, user role, device type,
+    app version number, etc. `custom` is a map containing string or atom keys.
+    When evaluating targeting rules, keys are case-sensitive, so make sure you
+    specify your keys with the same capitalization as you use when defining your
+    targeting rules.
 
-  While `ConfigCat.User` is a struct, we also provide the `new/2` function
-  to make it easier to create a new user object. Pass it the `identifier`
-  and then either a keyword list or map containing the other properties
-  you want to specify.
+  All comparators support string values as User struct attributes (in some cases
+  they need to be provided in a specific format though, see below), but some of
+  them also support other types of values. It depends on the comparator how the
+  values will be handled. The following rules apply:
+
+  Text-based comparators (EQUALS, IS_ONE_OF, etc.)
+  - accept string values,
+  - all other values are automatically converted to string (a warning will be
+    logged but evaluation will continue as normal).
+
+  SemVer-based comparators (IS_ONE_OF_SEMVER, LESS_THAN_SEMVER,
+  GREATER_THAN_SEMVER, etc.)
+  - accept string values containing a properly formatted, valid semver value
+  - all other values are considered invalid (a warning will be logged and the
+    currently evaluated targeting rule will be skipped).
+
+  Number-based comparators (EQUALS_NUMBER, LESS_THAN_NUMBER,
+  GREATER_THAN_OR_EQUAL_NUMBER, etc.)
+  - accept float values and all other numeric values which can safely be
+    converted to float,
+  - accept string values containing a properly formatted, valid float value,
+  - all other values are considered invalid (a warning will be logged and the
+    currently evaluated targeting rule will be skipped).
+
+  Date time-based comparators (BEFORE_DATETIME / AFTER_DATETIME)
+  - accept `DateTime` and `NaiveDateTime` values, which are automatically
+    converted to a second-based fractional Unix timestamp (`NaiveDateTime`
+    values are considered to be in UTC),
+  - accept float values representing a fractional second-based Unix timestamp
+    and all other numeric values which can safely be converted to float,
+  - accept string values containing a properly formatted, valid float value,
+  - all other values are considered invalid (a warning will be logged and the
+    currently evaluated targeting rule will be skipped).
+
+  String array-based comparators (ARRAY_CONTAINS_ANY_OF /
+  ARRAY_NOT_CONTAINS_ANY_OF)
+  - accept arrays of strings,
+  - accept string values containing a valid JSON string which can be
+    deserialized to an array of strings,
+  - all other values are considered invalid (a warning will be logged and the
+    currently evaluated targeting rule will be skipped).
+
+  While `ConfigCat.User` is a struct, we also provide the `new/2` function to
+  make it easier to create a new user object. Pass it the `identifier` and then
+  either a keyword list or map containing the other properties you want to
+  specify.
 
   e.g. `ConfigCat.User.new("IDENTIFIER", email: "user@example.com")`
   """
