@@ -3,10 +3,13 @@ defmodule ConfigCat.FlagOverrideTest do
 
   import Jason.Sigil
 
+  alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.FetchTime
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
+  alias ConfigCat.NullDataSource
+  alias ConfigCat.User
 
   @moduletag capture_log: true
 
@@ -151,6 +154,65 @@ defmodule ConfigCat.FlagOverrideTest do
       assert ConfigCat.get_value("fakeKey", true, client: client) == false
       assert ConfigCat.get_value("nonexisting", false, client: client) == true
     end
+  end
+
+  for {key, user_id, email, override_behaviour, expected_value} <- [
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", nil, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :remote_over_local, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :local_only, nil},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", nil, "Cat"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :remote_over_local, "Cat"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :local_only, nil},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", nil, "Dog"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :remote_over_local, "Dog"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :local_over_remote, "Cat"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :local_only, nil},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", nil, "Cat"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :remote_over_local, "Cat"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_only, nil}
+      ] do
+    test "prerequisite flag override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+      # The flag override alters the definition of the following flags:
+      # * 'mainStringFlag': to check the case where a prerequisite flag is
+      #   overridden (dependent flag: 'stringDependsOnString')
+      # * 'stringDependsOnInt': to check the case where a dependent flag is
+      #   overridden (prerequisite flag: 'mainIntFlag')
+      key = unquote(key)
+      user_id = unquote(user_id)
+      email = unquote(email)
+      override_behaviour = unquote(override_behaviour)
+      expected_value = unquote(expected_value)
+
+      user = User.new(user_id, email: email)
+
+      overrides =
+        if override_behaviour do
+          LocalFileDataSource.new(fixture_file("test_override_flagdependency_v6.json"), override_behaviour)
+        else
+          NullDataSource.new()
+        end
+
+      {:ok, client} =
+        start_config_cat("configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg", flag_overrides: overrides)
+
+      assert expected_value == ConfigCat.get_value(key, nil, user, client: client)
+    end
+  end
+
+  defp start_config_cat(sdk_key, options) do
+    name = String.to_atom(UUID.uuid4())
+
+    default_options = [
+      fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
+      name: name,
+      sdk_key: sdk_key
+    ]
+
+    start_supervised!({ConfigCat, Keyword.merge(default_options, options)})
+    {:ok, name}
   end
 
   defp fixture_file(name) do
