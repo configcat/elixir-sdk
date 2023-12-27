@@ -1,9 +1,8 @@
 defmodule ConfigCat.RolloutTest do
-  use ExUnit.Case, async: true
+  use ConfigCat.Case, async: true
 
   import ExUnit.CaptureLog
 
-  alias ConfigCat.CachePolicy
   alias ConfigCat.Config.SettingType
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.LocalFileDataSource
@@ -355,12 +354,6 @@ defmodule ConfigCat.RolloutTest do
     |> String.split("\n", trim: true)
   end
 
-  defp fixture_file(filename) do
-    __ENV__.file
-    |> Path.dirname()
-    |> Path.join("fixtures/#{filename}")
-  end
-
   defp parse_header(header) do
     [custom_key | settings_keys] =
       header
@@ -455,17 +448,4 @@ defmodule ConfigCat.RolloutTest do
   defp normalize(""), do: nil
   defp normalize("##null##"), do: nil
   defp normalize(value), do: value
-
-  defp start_config_cat(sdk_key, options \\ []) do
-    name = String.to_atom(UUID.uuid4())
-
-    default_options = [
-      fetch_policy: CachePolicy.lazy(cache_refresh_interval_seconds: 300),
-      name: name,
-      sdk_key: sdk_key
-    ]
-
-    start_supervised!({ConfigCat, Keyword.merge(default_options, options)})
-    {:ok, name}
-  end
 end
