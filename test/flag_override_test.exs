@@ -202,6 +202,43 @@ defmodule ConfigCat.FlagOverrideTest do
     end
   end
 
+  for {key, user_id, email, override_behaviour, expected_value} <- [
+        {"developerAndBetaUserSegment", "1", "john@example.com", nil, false},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :remote_over_local, false},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :local_over_remote, true},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :local_only, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", nil, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :remote_over_local, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_over_remote, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_only, nil}
+      ] do
+    test "salt/segment override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+      # The flag override uses a different config json salt than the downloaded one and
+      # overrides the following segments:
+      # * "Beta Users": User.Email IS ONE OF ["jane@example.com"]
+      # * "Developers": User.Email IS ONE OF ["john@example.com"]
+      key = unquote(key)
+      user_id = unquote(user_id)
+      email = unquote(email)
+      override_behaviour = unquote(override_behaviour)
+      expected_value = unquote(expected_value)
+
+      user = User.new(user_id, email: email)
+
+      overrides =
+        if override_behaviour do
+          LocalFileDataSource.new(fixture_file("test_override_segments_v6.json"), override_behaviour)
+        else
+          NullDataSource.new()
+        end
+
+      {:ok, client} =
+        start_config_cat("configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/h99HYXWWNE2bH8eWyLAVMA", flag_overrides: overrides)
+
+      assert expected_value == ConfigCat.get_value(key, nil, user, client: client)
+    end
+  end
+
   defp start_config_cat(sdk_key, options) do
     name = String.to_atom(UUID.uuid4())
 
