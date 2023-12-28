@@ -1,4 +1,4 @@
-warning [3001] Cannot evaluate targeting rules and % options for setting 'mainFeature' (User Object is missing). You should pass a User Object to the evaluation methods like `get_value()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/
+warning [3001] Cannot evaluate targeting rules and % options for setting 'mainFeature' (User Object is missing). You should pass a User Object to the evaluation functions like `get_value()` in order to make targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/
 debug [5000] Evaluating 'dependentFeature'
   Evaluating targeting rules and applying the first match if any:
   - IF Flag 'mainFeature' EQUALS 'target'

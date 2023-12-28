@@ -4,10 +4,12 @@ defmodule ConfigCat.EvaluationLogTest do
 
   import ExUnit.CaptureLog
 
+  alias ConfigCat.CachePolicy
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.NullDataSource
   alias ConfigCat.User
 
+  @moduletag capture_log: true
   @moduletag skip: "Working on logging changes"
 
   setup do
@@ -16,7 +18,7 @@ defmodule ConfigCat.EvaluationLogTest do
     on_exit(fn -> Logger.configure(level: original_level) end)
   end
 
-  @moduletag capture_log: true
+  @tag skip: false
   test "simple value" do
     test_evaluation_log("simple_value.json")
   end
@@ -29,6 +31,7 @@ defmodule ConfigCat.EvaluationLogTest do
     test_evaluation_log("2_targeting_rules.json")
   end
 
+  @tag skip: false
   test "options based on user id" do
     test_evaluation_log("options_based_on_user_id.json")
   end
@@ -93,7 +96,8 @@ defmodule ConfigCat.EvaluationLogTest do
         NullDataSource.new()
       end
 
-    {:ok, client} = start_config_cat(sdk_key, flag_overrides: overrides)
+    {:ok, client} = start_config_cat(sdk_key, fetch_policy: CachePolicy.manual(), flag_overrides: overrides)
+    ConfigCat.force_refresh(client: client)
 
     Enum.each(data["tests"], &run_test(&1, client, suite_sub_dir))
   end
@@ -104,7 +108,7 @@ defmodule ConfigCat.EvaluationLogTest do
 
     user = build_user(test["user"])
 
-    test_name = Path.basename(expected_log_file, ".txt")
+    # test_name = Path.basename(expected_log_file, ".txt")
     expected_log = File.read!(Path.join(suite_sub_dir, expected_log_file))
 
     {value, log} =
@@ -112,21 +116,8 @@ defmodule ConfigCat.EvaluationLogTest do
         ConfigCat.get_value(key, default_value, user, client: client)
       end)
 
-    unless log == expected_log do
-      # We want an extra message with the failing test name, but also the nicer
-      # output provided by `assert` so we do both.
-      # credo:disable-for-next-line Credo.Check.Refactor.IoPuts
-      IO.puts("Log mismatch for test: #{test_name}")
-      assert log == expected_log
-    end
-
-    unless value == return_value do
-      # We want an extra message with the failing test name, but also the nicer
-      # output provided by `assert` so we do both.
-      # credo:disable-for-next-line Credo.Check.Refactor.IoPuts
-      IO.puts("Return value mismatch for test: #{test_name}")
-      assert value == return_value
-    end
+    assert log == expected_log
+    assert value == return_value
   end
 
   defp build_user(nil), do: nil

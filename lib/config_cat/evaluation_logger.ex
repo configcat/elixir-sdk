@@ -181,7 +181,7 @@ defmodule ConfigCat.EvaluationLogger do
       "- Computing hash in the [0..99] range from User.#{attribute_name} => #{hash_value} " <>
         "(this value is sticky and consistent across all SDKs)"
     )
-    |> new_line("- Hash value #{hash_value} selects % option #{index} option (#{percentage}%), '#{value}'.")
+    |> new_line("- Hash value #{hash_value} selects % option #{index} (#{percentage}%), '#{value}'.")
   end
 
   @spec log_return_value(t() | nil, Config.value()) :: t() | nil
@@ -195,14 +195,14 @@ defmodule ConfigCat.EvaluationLogger do
   def log_skipping_percentage_options_missing_user(nil), do: nil
 
   def log_skipping_percentage_options_missing_user(logger) do
-    new_line(logger, "Skipping % options because the User struct is missing.")
+    new_line(logger, "Skipping % options because the User Object is missing.")
   end
 
   @spec log_skipping_percentage_options_missing_user_attribute(t() | nil, String.t()) :: t() | nil
   def log_skipping_percentage_options_missing_user_attribute(nil, _attribute_name), do: nil
 
   def log_skipping_percentage_options_missing_user_attribute(logger, attribute_name) do
-    new_line(logger, "Skipping % options because the User.#{attribute_name} is missing.")
+    new_line(logger, "Skipping % options because the User.#{attribute_name} attribute is missing.")
   end
 
   @spec result(t() | nil) :: String.t()
