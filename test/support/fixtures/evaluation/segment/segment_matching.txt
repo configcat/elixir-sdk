@@ -7,5 +7,5 @@ debug [5000] Evaluating 'featureWithSegmentTargeting' for User '{"Identifier":"1
       Segment evaluation result: User IS IN SEGMENT.
       Condition (User IS IN SEGMENT 'Beta users') evaluates to true.
     )
-    THEN 'True' => MATCH, applying rule
-  Returning 'True'.
+    THEN 'true' => MATCH, applying rule
+  Returning 'true'.

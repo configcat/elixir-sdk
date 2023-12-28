@@ -8,6 +8,6 @@ debug [5000] Evaluating 'featureWithNegatedSegmentTargetingCleartext' for User '
       Segment evaluation result: cannot evaluate, the User.Email attribute is missing.
       Condition (User IS NOT IN SEGMENT 'Beta users (cleartext)') failed to evaluate.
     )
-    THEN 'True' => cannot evaluate, the User.Email attribute is missing
+    THEN 'true' => cannot evaluate, the User.Email attribute is missing
     The current targeting rule is ignored and the evaluation continues with the next rule.
-  Returning 'False'.
+  Returning 'false'.

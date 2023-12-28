@@ -506,7 +506,7 @@ defmodule ConfigCat.Rollout do
     ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
         "(User Object is not an instance of `ConfigCat.User` struct)." <>
-        "You should pass a User struct to the evaluation functions like `get_value()` " <>
+        "You should pass a User Object to the evaluation functions like `get_value()` " <>
         "in order to make targeting work properly. " <>
         "Read more: https://configcat.com/docs/advanced/user-object/",
       event_id: 4001
