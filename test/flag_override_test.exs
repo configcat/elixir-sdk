@@ -173,6 +173,7 @@ defmodule ConfigCat.FlagOverrideTest do
         {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
         {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_only, nil}
       ] do
+    @tag skip: "Conflicting SDK Key"
     test "prerequisite flag override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
       # The flag override alters the definition of the following flags:
       # * 'mainStringFlag': to check the case where a prerequisite flag is
