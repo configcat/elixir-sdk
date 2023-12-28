@@ -9,8 +9,8 @@ defmodule ConfigCat.Config.SettingValueContainer do
   @value "v"
   @variation_id "i"
 
-  @spec value(t(), SettingType.t()) :: Config.value()
-  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value()
+  @spec value(t(), SettingType.t()) :: Config.value() | nil
+  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
   def value(v, setting_type, default \\ nil) do
     case raw_value(v) do
       nil -> default

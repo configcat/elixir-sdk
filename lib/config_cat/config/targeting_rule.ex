@@ -28,8 +28,8 @@ defmodule ConfigCat.Config.TargetingRule do
     Map.get(rule, @simple_value)
   end
 
-  @spec value(t(), SettingType.t()) :: Config.value()
-  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value()
+  @spec value(t(), SettingType.t()) :: Config.value() | nil
+  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
   def value(rule, setting_type, default \\ nil) do
     case simple_value(rule) do
       nil -> default
