@@ -2,7 +2,9 @@ defmodule ConfigCat.RolloutTest do
   use ConfigCat.Case, async: true
 
   import ExUnit.CaptureLog
+  import Jason.Sigil
 
+  alias ConfigCat.Config
   alias ConfigCat.Config.SettingType
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.LocalFileDataSource
@@ -10,6 +12,8 @@ defmodule ConfigCat.RolloutTest do
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
+
+  require ConfigCat.Config.SettingType
 
   @moduletag capture_log: true
 
@@ -153,6 +157,59 @@ defmodule ConfigCat.RolloutTest do
       assert !is_nil(evaluation_details.matched_targeting_rule) == expected_matched_targeting_rule
       assert !is_nil(evaluation_details.matched_percentage_option) == expected_matched_percentage_option
     end
+  end
+
+  test "user object attribute value conversion text comparison" do
+    sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ"
+
+    {:ok, client} = start_config_cat(sdk_key)
+    custom_attribute_name = "Custom1"
+    custom_attribute_value = 42
+    user = User.new("12345", custom: %{custom_attribute_name => custom_attribute_value})
+
+    key = "boolTextEqualsNumber"
+
+    {value, logs} =
+      with_log(fn ->
+        ConfigCat.get_value(key, nil, user, client: client)
+      end)
+
+    assert value
+
+    expected_log =
+      "warning [3005] Evaluation of condition (User.#{custom_attribute_name} EQUALS '#{custom_attribute_value}') " <>
+        "for setting '#{key}' may not produce the expected result (the User.#{custom_attribute_name} attribute is not a string value, " <>
+        "thus it was automatically converted to the string value '#{custom_attribute_value}'). " <>
+        "Please make sure that using a non-string value was intended."
+
+    assert logs == expected_log
+  end
+
+  test "config json type mismatch" do
+    config =
+      Config.inline_salt_and_segments(~j"""
+      {
+          "f": {
+              "test": {
+                  "t": #{SettingType.string()},
+                  "v": {"b": true}
+              }
+          }
+      }
+      """)
+
+    {details, logs} =
+      with_log(fn ->
+        Rollout.evaluate("test", nil, false, "default_variation_id", config)
+      end)
+
+    assert %EvaluationDetails{value: false} = details
+
+    expected_log =
+      "[2001] Failed to evaluate setting 'test'. " <>
+        "(Setting value is not of the expected type <String.t()>)"
+
+    assert logs == expected_log
   end
 
   for {sdk_key, key, custom_attribute_value, expected_return_value} <- [
