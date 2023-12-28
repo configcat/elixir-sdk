@@ -15,6 +15,7 @@ defmodule ConfigCat.Rollout do
   alias ConfigCat.Config.UserComparator
   alias ConfigCat.Config.UserCondition
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.EvaluationLogger
   alias ConfigCat.User
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
@@ -65,14 +66,16 @@ defmodule ConfigCat.Rollout do
     typedstruct enforce: true do
       field :config, Config.t()
       field :key, Config.key()
-      field :logs, pid() | nil
-      field :percentage_option_attribute, String.t(), enforce: false
+      field :logger, pid() | nil
+      field :percentage_option_attribute, String.t()
       field :salt, Config.salt()
       field :setting_type, SettingType.t()
       field :user, User.t(), enforce: false
       field :visited_keys, [String.t()]
     end
   end
+
+  @default_percentage_option_attribute "Identifier"
 
   @spec evaluate(
           Config.key(),
@@ -83,50 +86,81 @@ defmodule ConfigCat.Rollout do
           pid() | nil,
           [String.t()]
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, config, logs \\ nil, visited_keys \\ []) do
-    log_evaluating(logs, key, user)
+  def evaluate(key, user, default_value, default_variation_id, config, logger \\ nil, visited_keys \\ []) do
+    root_flag_evaluation? = visited_keys == []
+    settings = Config.settings(config)
 
-    with {:ok, valid_user} <- validate_user(user),
-         settings = Config.settings(config),
-         {:ok, setting} <- setting(settings, key, default_value) do
+    with {:ok, setting} <- setting(settings, key, default_value),
+         {:ok, valid_user} <- validate_user(user) do
+      percentage_options = Setting.percentage_options(setting)
+      targeting_rules = Setting.targeting_rules(setting)
+
       context = %Context{
         config: config,
         key: key,
-        logs: logs,
-        percentage_option_attribute: Setting.percentage_option_attribute(setting),
+        logger: logger,
+        percentage_option_attribute: Setting.percentage_option_attribute(setting) || @default_percentage_option_attribute,
         salt: Setting.salt(setting),
         setting_type: Setting.setting_type(setting),
         user: valid_user,
         visited_keys: visited_keys
       }
 
-      percentage_options = Setting.percentage_options(setting)
-      targeting_rules = Setting.targeting_rules(setting)
+      try do
+        if root_flag_evaluation? do
+          logger
+          |> EvaluationLogger.log_evaluating(key, context.user)
+          |> EvaluationLogger.increase_indent()
+        end
 
-      {value, variation, rule, percentage_option} =
-        evaluate_rules(targeting_rules, percentage_options, context)
+        case evaluate_rules(targeting_rules, percentage_options, context) do
+          {:none, _variation_id, _matching_rule, _matching_option} ->
+            value = Setting.value(setting, default_value)
+            EvaluationLogger.log_return_value(logger, value)
 
-      if value == :none do
-        EvaluationDetails.new(
-          key: key,
-          user: user,
-          value: base_value(setting, default_value, logs),
-          variation_id: Setting.variation_id(setting, default_variation_id)
-        )
-      else
-        EvaluationDetails.new(
-          key: key,
-          matched_targeting_rule: rule,
-          matched_percentage_option: percentage_option,
-          user: user,
-          value: value,
-          variation_id: variation
-        )
+            EvaluationDetails.new(
+              key: key,
+              user: user,
+              value: value,
+              variation_id: Setting.variation_id(setting, default_variation_id)
+            )
+
+          {value, variation_id, rule, percentage_option} ->
+            EvaluationLogger.log_return_value(logger, value)
+
+            EvaluationDetails.new(
+              key: key,
+              matched_targeting_rule: rule,
+              matched_percentage_option: percentage_option,
+              user: user,
+              value: value,
+              variation_id: variation_id || default_variation_id
+            )
+        end
+      rescue
+        error ->
+          if root_flag_evaluation? do
+            message =
+              "Failed to evaluate setting '#{key}'. (#{Exception.message(error)}). " <>
+                "Returning the default_value parameter that you specified in your application: '#{default_value}'."
+
+            ConfigCatLogger.error(message, event_id: 2001)
+
+            EvaluationDetails.new(
+              default_value?: true,
+              error: message,
+              key: key,
+              value: default_value,
+              variation_id: default_variation_id
+            )
+          else
+            reraise(error, __STACKTRACE__)
+          end
       end
     else
       {:error, :invalid_user} ->
-        log_invalid_user(key)
-        evaluate(key, nil, default_value, default_variation_id, config, logs, visited_keys)
+        warn_invalid_user(key)
+        evaluate(key, nil, default_value, default_variation_id, config, logger, visited_keys)
 
       {:error, message} ->
         ConfigCatLogger.error(message, event_id: 1001)
@@ -139,25 +173,6 @@ defmodule ConfigCat.Rollout do
           variation_id: default_variation_id
         )
     end
-  rescue
-    error ->
-      if visited_keys == [] do
-        message =
-          "Failed to evaluate setting '#{key}'. (#{Exception.message(error)}). " <>
-            "Returning the default_value parameter that you specified in your application: '#{default_value}'."
-
-        ConfigCatLogger.error(message, event_id: 2001)
-
-        EvaluationDetails.new(
-          default_value?: true,
-          error: message,
-          key: key,
-          value: default_value,
-          variation_id: default_variation_id
-        )
-      else
-        reraise(error, __STACKTRACE__)
-      end
   end
 
   defp validate_user(nil), do: {:ok, nil}
@@ -197,7 +212,11 @@ defmodule ConfigCat.Rollout do
     end
   end
 
+  defp evaluate_targeting_rules([], _context), do: {:none, nil, nil, nil}
+
   defp evaluate_targeting_rules(rules, %Context{} = context) do
+    EvaluationLogger.log_evaluating_targeting_rules(context.logger)
+
     Enum.reduce_while(rules, {:none, nil, nil, nil}, fn rule, acc ->
       case evaluate_targeting_rule(rule, context) do
         {:none, _, _, _} -> {:cont, acc}
@@ -207,14 +226,22 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_targeting_rule(rule, %Context{} = context) do
+    %Context{logger: logger} = context
     conditions = TargetingRule.conditions(rule)
     value = TargetingRule.value(rule, context.setting_type)
 
     if evaluate_conditions(conditions, value, context) do
       case TargetingRule.simple_value(rule) do
         nil ->
+          EvaluationLogger.increase_indent(logger)
           percentage_options = TargetingRule.percentage_options(rule)
           {value, variation_id, option} = evaluate_percentage_options(percentage_options, context)
+
+          if value == :none do
+            EvaluationLogger.log_ignored_targeting_rule(logger)
+          end
+
+          EvaluationLogger.decrease_indent(logger)
           {value, variation_id, rule, option}
 
         _ ->
@@ -227,26 +254,44 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_conditions(conditions, value, context) do
-    Enum.reduce_while(conditions, true, fn condition, acc ->
-      case evaluate_condition(condition, value, context) do
-        {:ok, true} -> {:cont, acc}
-        {:ok, false} -> {:halt, false}
-        {:error, _error} -> {:halt, false}
-      end
-    end)
+    condition_count = length(conditions)
+
+    result =
+      conditions
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
+        EvaluationLogger.log_evaluating_condition_start(context.logger, index)
+
+        case evaluate_condition(condition, condition_count, value, context) do
+          {:ok, true} -> {:cont, acc}
+          result -> {:halt, result}
+        end
+      end)
+
+    EvaluationLogger.log_evaluating_condition_result(context.logger, result, condition_count, value)
+
+    case result do
+      {:ok, result} -> result
+      {:error, _error} -> false
+    end
   end
 
-  defp evaluate_condition(condition, value, %Context{} = context) do
+  defp evaluate_condition(condition, condition_count, value, %Context{} = context) do
+    %Context{logger: logger} = context
     prerequisite_flag_condition = Condition.prerequisite_flag_condition(condition)
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
     cond do
       user_condition ->
-        evaluate_user_condition(user_condition, context.key, value, context)
+        result = evaluate_user_condition(user_condition, context.key, value, context)
+        EvaluationLogger.log_evaluating_user_condition_result(logger, result, condition_count)
+        result
 
       segment_condition ->
-        evaluate_segment_condition(segment_condition, value, context)
+        result = evaluate_segment_condition(segment_condition, value, context)
+        EvaluationLogger.log_evaluating_segment_condition_result(logger, result, condition_count)
+        result
 
       prerequisite_flag_condition ->
         evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context)
@@ -257,26 +302,26 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_user_condition(_comparison_rule, _context_salt, _value, %Context{user: nil} = context) do
-    log_nil_user(context.key)
+    warn_missing_user(context.key)
     {:ok, false}
   end
 
   defp evaluate_user_condition(comparison_rule, context_salt, value, %Context{} = context) do
-    %Context{logs: logs, salt: salt, user: user} = context
+    %Context{logger: logger, salt: salt, user: user} = context
     comparison_attribute = UserCondition.comparison_attribute(comparison_rule)
     comparator = UserCondition.comparator(comparison_rule)
     comparison_value = UserCondition.comparison_value(comparison_rule)
 
     case User.get_attribute(user, comparison_attribute) do
       nil = user_value ->
-        log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
+        log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value)
         {:error, :missing_comparison_attribute}
 
       user_value ->
         case UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
           {:ok, true} ->
             log_match(
-              logs,
+              logger,
               comparison_attribute,
               user_value,
               comparator,
@@ -287,12 +332,12 @@ defmodule ConfigCat.Rollout do
             {:ok, true}
 
           {:ok, false} ->
-            log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
+            log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value)
             {:ok, false}
 
           {:error, error} ->
             log_validation_error(
-              logs,
+              logger,
               comparison_attribute,
               user_value,
               comparator,
@@ -306,7 +351,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_segment_condition(_condition, _value, %Context{user: nil} = context) do
-    log_nil_user(context.key)
+    warn_missing_user(context.key)
     {:ok, false}
   end
 
@@ -334,7 +379,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
-    %Context{config: config, logs: logs, user: user, visited_keys: visited_keys} = context
+    %Context{config: config, logger: logger, user: user, visited_keys: visited_keys} = context
     settings = Config.settings(config)
     prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
     comparator = PrerequisiteFlagCondition.comparator(condition)
@@ -359,7 +404,7 @@ defmodule ConfigCat.Rollout do
           raise CircularDependencyError, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
         else
           %EvaluationDetails{value: prerequisite_value} =
-            evaluate(prerequisite_key, user, nil, nil, config, logs, next_visited_keys)
+            evaluate(prerequisite_key, user, nil, nil, config, logger, next_visited_keys)
 
           {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
         end
@@ -369,7 +414,8 @@ defmodule ConfigCat.Rollout do
   defp evaluate_percentage_options([] = _percentage_options, _context), do: {:none, nil, nil}
 
   defp evaluate_percentage_options(_percentage_options, %Context{user: nil} = context) do
-    log_nil_user(context.key)
+    warn_missing_user(context.key)
+    EvaluationLogger.log_skipping_percentage_options_missing_user(context.logger)
     {:none, nil, nil}
   end
 
@@ -377,32 +423,40 @@ defmodule ConfigCat.Rollout do
     case extract_user_key(context) do
       {:ok, user_key} ->
         hash_val = hash_user(user_key, context.key)
-        Enum.reduce_while(percentage_options, 0, &evaluate_percentage_option(&1, &2, hash_val, context))
+        Enum.reduce_while(percentage_options, {0, 1}, &evaluate_percentage_option(&1, &2, hash_val, context))
 
       {:error, :missing_user_key} ->
+        attribute_name = context.percentage_option_attribute
+        warn_missing_user_attribute(context.key, attribute_name)
+        EvaluationLogger.log_skipping_percentage_options_missing_user_attribute(context.logger, attribute_name)
         {:none, nil, nil}
     end
   end
 
   defp evaluate_percentage_option(option, increment, hash_val, %Context{} = context) do
-    bucket = increment + PercentageOption.percentage(option)
+    percentage = PercentageOption.percentage(option)
+    {last_bucket, index} = increment
+    bucket = last_bucket + percentage
 
     if hash_val < bucket do
       value = PercentageOption.value(option, context.setting_type)
       variation_id = PercentageOption.variation_id(option)
+      attribute_name = context.percentage_option_attribute
+
+      EvaluationLogger.log_matching_percentage_option(context.logger, attribute_name, hash_val, index, percentage, value)
 
       {:halt, {value, variation_id, option}}
     else
-      {:cont, bucket}
+      {:cont, {bucket, index + 1}}
     end
   end
 
   defp extract_user_key(%Context{} = context) do
     attribute = context.percentage_option_attribute
 
-    case User.get_attribute(context.user, attribute || "Identifier") do
+    case User.get_attribute(context.user, attribute) do
       nil ->
-        if is_nil(attribute) do
+        if attribute == @default_percentage_option_attribute do
           {:ok, nil}
         else
           {:error, :missing_user_key}
@@ -426,41 +480,40 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
-  defp base_value(setting, default_value, logs) do
-    result = Setting.value(setting, default_value)
-
-    log(logs, "Returning #{result}")
-
-    result
-  end
-
-  defp log_evaluating(logs, key, user) do
-    log(logs, "Evaluating get_value('#{key}). User object:\n#{inspect(user)}")
-  end
-
-  defp log_match(logs, comparison_attribute, user_value, comparator, comparison_value, value) do
+  defp log_match(logger, comparison_attribute, user_value, comparator, comparison_value, value) do
     log(
-      logs,
+      logger,
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
     )
   end
 
-  defp log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value) do
+  defp log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value) do
     log(
-      logs,
+      logger,
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => no match"
     )
   end
 
-  defp log_validation_error(logs, comparison_attribute, user_value, comparator, comparison_value, error) do
+  defp log_validation_error(logger, comparison_attribute, user_value, comparator, comparison_value, error) do
     message =
       "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
 
     ConfigCatLogger.warning(message)
-    log(logs, message)
+    log(logger, message)
   end
 
-  defp log_nil_user(key) do
+  defp warn_invalid_user(key) do
+    ConfigCatLogger.warning(
+      "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
+        "(User Object is not an instance of `ConfigCat.User` struct)." <>
+        "You should pass a User struct to the evaluation functions like `get_value()` " <>
+        "in order to make targeting work properly. " <>
+        "Read more: https://configcat.com/docs/advanced/user-object/",
+      event_id: 4001
+    )
+  end
+
+  defp warn_missing_user(key) do
     ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
         "(User Object is missing). " <>
@@ -471,20 +524,16 @@ defmodule ConfigCat.Rollout do
     )
   end
 
-  defp log_invalid_user(key) do
+  defp warn_missing_user_attribute(key, attribute_name) do
     ConfigCatLogger.warning(
-      "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
-        "(User Object is not an instance of User struct)." <>
-        "You should pass a User Object to the evaluation functions like `get_value()` " <>
-        "in order to make targeting work properly. " <>
-        "Read more: https://configcat.com/docs/advanced/user-object/",
-      event_id: 4001
+      "Cannot evaluate % options for setting '#{key}' " <>
+        "(the User.#{attribute_name} attribute is missing). You should set the User.#{attribute_name} attribute in order to make " <>
+        "targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/",
+      event_id: 3003
     )
   end
 
-  defp log(nil, _message), do: :ok
-
-  defp log(logs, message) do
-    Agent.update(logs, &[message | &1])
+  defp log(logger, message) do
+    EvaluationLogger.new_line(logger, message)
   end
 end

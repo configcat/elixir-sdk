@@ -7,6 +7,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.Config
   alias ConfigCat.Config.Setting
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.EvaluationLogger
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.OverrideDataSource
@@ -214,11 +215,11 @@ defmodule ConfigCat.Client do
       details =
       with {:ok, config, fetch_time_ms} <- cached_config(state),
            {:ok, _settings} <- Config.fetch_settings(config),
-           {:ok, logs} <- Agent.start(fn -> [] end) do
+           {:ok, logger} <- EvaluationLogger.start() do
         try do
           %EvaluationDetails{} =
             details =
-            Rollout.evaluate(key, user, default_value, default_variation_id, config, logs)
+            Rollout.evaluate(key, user, default_value, default_variation_id, config, logger)
 
           fetch_time =
             case FetchTime.to_datetime(fetch_time_ms) do
@@ -228,13 +229,11 @@ defmodule ConfigCat.Client do
 
           %{details | fetch_time: fetch_time}
         after
-          logs
-          |> Agent.get(& &1)
-          |> Enum.reverse()
-          |> Enum.join("\n")
+          logger
+          |> EvaluationLogger.result()
           |> ConfigCatLogger.debug(event_id: 5000)
 
-          Agent.stop(logs)
+          EvaluationLogger.stop(logger)
         end
       else
         _ ->
