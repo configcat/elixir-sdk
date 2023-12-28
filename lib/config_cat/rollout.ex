@@ -290,7 +290,7 @@ defmodule ConfigCat.Rollout do
 
       segment_condition ->
         result = evaluate_segment_condition(segment_condition, value, context)
-        EvaluationLogger.log_evaluating_segment_condition_result(logger, result, condition_count)
+        EvaluationLogger.log_evaluating_segment_condition_final_result(logger, result, condition_count)
         result
 
       prerequisite_flag_condition ->
@@ -350,31 +350,52 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_segment_condition(_condition, _value, %Context{user: nil} = context) do
+  defp evaluate_segment_condition(condition, _value, %Context{user: nil} = context) do
     warn_missing_user(context.key)
-    {:ok, false}
+    EvaluationLogger.log_skipping_segment_condition_missing_user(context.logger, condition)
+    {:error, "cannot evaluate, User Object is missing"}
   end
 
   defp evaluate_segment_condition(condition, value, %Context{} = context) do
-    segment = SegmentCondition.segment(condition)
-    comparator = SegmentCondition.segment_comparator(condition)
-    name = Segment.name(segment)
+    %Context{logger: logger} = context
 
-    segment
-    |> Segment.conditions()
-    |> Enum.reduce_while({:ok, true}, fn condition, acc ->
-      case evaluate_user_condition(condition, name, value, context) do
-        {:ok, true} -> {:cont, acc}
-        {:ok, false} -> {:halt, {:ok, false}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
-      {:ok, in_segment?} ->
-        {:ok, SegmentComparator.compare(comparator, in_segment?)}
+    case SegmentCondition.fetch_segment(condition) do
+      {:error, :not_found} ->
+        raise EvaluationError, "Segment reference is invalid."
 
-      {:error, error} ->
-        {:error, error}
+      {:ok, segment} ->
+        comparator = SegmentCondition.segment_comparator(condition)
+        name = Segment.name(segment)
+
+        EvaluationLogger.log_evaluating_segment_condition_start(logger, condition, name)
+
+        segment
+        |> Segment.conditions()
+        |> Enum.with_index()
+        |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
+          EvaluationLogger.log_evaluating_condition_start(logger, index)
+
+          result = evaluate_user_condition(condition, name, value, context)
+          # Faking multiple conditions; may want to use actual condition count
+          # eventually. Keeping it this way to match Python SDK for now.
+          EvaluationLogger.log_evaluating_user_condition_result(logger, result, 2)
+
+          case result do
+            {:ok, true} -> {:cont, acc}
+            {:ok, false} -> {:halt, {:ok, false}}
+            {:error, error} -> {:halt, {:error, error}}
+          end
+        end)
+        |> case do
+          {:ok, in_segment?} ->
+            result = {:ok, SegmentComparator.compare(comparator, in_segment?)}
+            EvaluationLogger.log_evaluating_segment_condition_result(logger, condition, in_segment?, result)
+            result
+
+          {:error, _error} = result ->
+            EvaluationLogger.log_evaluating_segment_condition_result(logger, condition, false, result)
+            result
+        end
     end
   end
 

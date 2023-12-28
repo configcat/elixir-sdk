@@ -2,6 +2,7 @@ defmodule ConfigCat.EvaluationLogger do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.PrerequisiteFlagCondition
+  alias ConfigCat.Config.SegmentCondition
   alias ConfigCat.Config.SettingType
   alias ConfigCat.User
 
@@ -163,21 +164,65 @@ defmodule ConfigCat.EvaluationLogger do
     new_line(logger, "Evaluating targeting rules and applying the first match if any:")
   end
 
-  @spec log_evaluating_segment_condition_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
-  def log_evaluating_segment_condition_result(nil, _result, _condition_count), do: nil
+  @spec log_evaluating_segment_condition_result(t() | nil, SegmentCondition.t(), boolean(), condition_result()) ::
+          t() | nil
+  def log_evaluating_segment_condition_result(nil, _condition, _in_segment?, _result), do: nil
 
-  def log_evaluating_segment_condition_result(logger, result, condition_count) when condition_count > 1 do
+  def log_evaluating_segment_condition_result(logger, condition, in_segment?, result) do
+    description = SegmentCondition.description(condition)
+
+    logger
+    |> decrease_indent()
+    |> new_line("Segment evaluation result: ")
+
+    case result do
+      {:ok, match?} ->
+        maybe_not = if in_segment?, do: " ", else: " NOT "
+
+        logger
+        |> append("User IS#{maybe_not}IN SEGMENT")
+        |> new_line("Condition (#{description}) ")
+        |> append("evaluates to #{match?}")
+        |> decrease_indent()
+        |> new_line(")")
+
+      {:error, error} ->
+        logger
+        |> append("#{error}.")
+        |> new_line("Condition (#{description}) ")
+        |> append("failed to evaluate.")
+        |> decrease_indent()
+        |> new_line(")")
+        |> new_line()
+    end
+  end
+
+  @spec log_evaluating_segment_condition_final_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
+  def log_evaluating_segment_condition_final_result(nil, _result, _condition_count), do: nil
+
+  def log_evaluating_segment_condition_final_result(logger, result, condition_count) when condition_count > 1 do
     case result do
       {:ok, true} -> append(logger, "=> true")
       _ -> append(logger, "=> false, skipping the remaining AND conditions")
     end
   end
 
-  def log_evaluating_segment_condition_result(logger, result, _condition_count) do
+  def log_evaluating_segment_condition_final_result(logger, result, _condition_count) do
     case result do
       {:error, _error} -> logger
       _ -> new_line(logger)
     end
+  end
+
+  @spec log_evaluating_segment_condition_start(t() | nil, SegmentCondition.t(), String.t()) :: t() | nil
+  def log_evaluating_segment_condition_start(nil, _condition, _segment_name), do: nil
+
+  def log_evaluating_segment_condition_start(logger, condition, segment_name) do
+    logger
+    |> append("#{SegmentCondition.description(condition)}")
+    |> new_line("(")
+    |> increase_indent()
+    |> new_line("Evaluating segment '#{segment_name}':")
   end
 
   @spec log_evaluating_user_condition_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
@@ -238,6 +283,13 @@ defmodule ConfigCat.EvaluationLogger do
 
   def log_skipping_percentage_options_missing_user_attribute(logger, attribute_name) do
     new_line(logger, "Skipping % options because the User.#{attribute_name} attribute is missing.")
+  end
+
+  @spec log_skipping_segment_condition_missing_user(t() | nil, SegmentCondition.t()) :: t() | nil
+  def log_skipping_segment_condition_missing_user(nil, _condition), do: nil
+
+  def log_skipping_segment_condition_missing_user(logger, condition) do
+    append(logger, "#{SegmentCondition.description(condition)} ")
   end
 
   @spec result(t() | nil) :: String.t()
