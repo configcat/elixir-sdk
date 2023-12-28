@@ -26,7 +26,7 @@ defmodule ConfigCat.User do
     specify your keys with the same capitalization as you use when defining your
     targeting rules.
 
-  All comparators support string values as User struct attributes (in some cases
+  All comparators support string values as User Object attributes (in some cases
   they need to be provided in a specific format though, see below), but some of
   them also support other types of values. It depends on the comparator how the
   values will be handled. The following rules apply:
@@ -105,7 +105,7 @@ defmodule ConfigCat.User do
   @type options :: keyword() | map()
 
   @doc """
-  Creates a new ConfigCat.User struct.
+  Creates a new ConfigCat.User Object.
 
   This is provided as a convenience to make it easier to create a
   new user object.
@@ -133,6 +133,24 @@ defmodule ConfigCat.User do
          end) do
       {_key, value} -> value
       _ -> nil
+    end
+  end
+
+  defimpl String.Chars do
+    @moduledoc false
+    alias ConfigCat.User
+
+    @spec to_string(User.t()) :: String.t()
+    def to_string(%User{} = user) do
+      %{
+        "Identifier" => user.identifier,
+        "Email" => user.email,
+        "Country" => user.country
+      }
+      |> Map.merge(user.custom)
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.new()
+      |> Jason.encode!()
     end
   end
 end
