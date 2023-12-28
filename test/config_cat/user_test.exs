@@ -88,5 +88,39 @@ defmodule ConfigCat.UserTest do
       assert User.get_attribute(user, "Country") == nil
       assert User.get_attribute(user, "AnyCustom") == nil
     end
+
+    test "attribute names are case-sensitive", %{user: user} do
+      assert User.get_attribute(user, "identifier") == nil
+      assert User.get_attribute(user, "EMAIL") == nil
+      assert User.get_attribute(user, "country") == nil
+      assert User.get_attribute(user, "UPPERSTRINGPROPERTY") == nil
+    end
+  end
+
+  describe "converting to string" do
+    test "produces a JSON-encoded string" do
+      user_id = "id"
+      email = "test@test.com"
+      country = "country"
+
+      custom = %{
+        "datetime" => ~U[2023-09-19T11:01:35.999Z],
+        "float" => 3.14,
+        "int" => 42,
+        "string" => "test"
+      }
+
+      user = User.new(user_id, country: country, custom: custom, email: email)
+
+      assert %{
+               "Identifier" => user_id,
+               "Email" => email,
+               "Country" => country,
+               "string" => "test",
+               "int" => 42,
+               "float" => 3.14,
+               "datetime" => "2023-09-19T11:01:35.999Z"
+             } == Jason.decode!(to_string(user))
+    end
   end
 end

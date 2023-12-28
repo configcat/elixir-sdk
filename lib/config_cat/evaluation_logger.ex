@@ -80,7 +80,7 @@ defmodule ConfigCat.EvaluationLogger do
     new_line(logger, "Evaluating '#{key}'")
 
     if user do
-      append(logger, " for User '#{inspect(user)}")
+      append(logger, " for User '#{user}'")
     end
 
     logger
