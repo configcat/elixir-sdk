@@ -14,6 +14,7 @@ defmodule ConfigCat.Config.SegmentComparator do
   @spec compare(t(), boolean()) :: boolean()
   def compare(@is_in, in_segment?), do: in_segment?
   def compare(@is_not_in, in_segment?), do: not in_segment?
+  def compare(_invalid_comparator, _in_segment?), do: false
 
   @spec description(t()) :: String.t()
   def description(comparator) do
