@@ -1,6 +1,7 @@
 defmodule ConfigCatTest do
   use ConfigCat.ClientCase, async: true
 
+  import Jason.Sigil
   import Mox
 
   alias ConfigCat.Config
@@ -8,6 +9,7 @@ defmodule ConfigCatTest do
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Factory
   alias ConfigCat.FetchTime
+  alias ConfigCat.Hooks
   alias ConfigCat.User
 
   require ConfigCat.Config.SettingType, as: SettingType
@@ -117,6 +119,35 @@ defmodule ConfigCatTest do
       assert %{key: "testDoubleKey", value: 1.1} = details_by_key.("testDoubleKey")
       assert %{key: "key1", value: true, variation_id: "fakeId1"} = details_by_key.("key1")
       assert %{key: "key2", value: false, variation_id: "fakeId2"} = details_by_key.("key2")
+    end
+
+    test "reports error for incorrect config json", %{client: client, fetch_time_ms: fetch_time_ms} do
+      config =
+        Config.inline_salt_and_segments(~J"""
+         {
+           "f": {
+             "testKey":  {
+               "t": 0,
+               "r": [ {
+                 "c": [ { "u": { "a": "Custom1", "c": 19, "d": "wrong_utc_timestamp" } } ],
+                 "s": { "v": { "b": true } }
+               } ],
+               "v": { "b": false }
+             }
+           }
+        }
+        """)
+
+      stub_cached_config({:ok, config, fetch_time_ms})
+      user = User.new("1234", custom: %{"Custom1" => 1_681_118_000.56})
+      test_pid = self()
+
+      [client: client]
+      |> ConfigCat.hooks()
+      |> Hooks.add_on_error(fn -> send(test_pid, {:on_error}) end)
+
+      refute ConfigCat.get_value("testKey", false, user, client: client)
+      assert_received {:on_error}
     end
   end
 
