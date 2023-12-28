@@ -403,10 +403,22 @@ defmodule ConfigCat.Rollout do
         if prerequisite_key in visited_keys do
           raise CircularDependencyError, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
         else
+          EvaluationLogger.log_evaluating_prerequisite_condition_start(logger, condition, setting_type)
+
           %EvaluationDetails{value: prerequisite_value} =
             evaluate(prerequisite_key, user, nil, nil, config, logger, next_visited_keys)
 
-          {:ok, PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)}
+          result = PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)
+
+          EvaluationLogger.log_evaluating_prerequisite_condition_result(
+            logger,
+            condition,
+            setting_type,
+            prerequisite_value,
+            result
+          )
+
+          {:ok, result}
         end
     end
   end

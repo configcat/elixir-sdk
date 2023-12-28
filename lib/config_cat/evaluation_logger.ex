@@ -1,6 +1,8 @@
 defmodule ConfigCat.EvaluationLogger do
   @moduledoc false
   alias ConfigCat.Config
+  alias ConfigCat.Config.PrerequisiteFlagCondition
+  alias ConfigCat.Config.SettingType
   alias ConfigCat.User
 
   @type t :: Agent.agent()
@@ -119,6 +121,39 @@ defmodule ConfigCat.EvaluationLogger do
     else
       new_line(logger, "AND ")
     end
+  end
+
+  @spec log_evaluating_prerequisite_condition_result(
+          t() | nil,
+          PrerequisiteFlagCondition.t(),
+          SettingType.t(),
+          Config.value(),
+          boolean()
+        ) ::
+          t() | nil
+  def log_evaluating_prerequisite_condition_result(nil, _condition, _setting_type, _value, _result), do: nil
+
+  def log_evaluating_prerequisite_condition_result(logger, condition, setting_type, value, result) do
+    logger
+    |> new_line("Prerequisite flag evaluation result: '#{value}'.")
+    |> new_line("Condition (#{PrerequisiteFlagCondition.description(condition, setting_type)}) evaluates to #{result}.")
+    |> decrease_indent()
+    |> new_line(")")
+    |> new_line()
+  end
+
+  @spec log_evaluating_prerequisite_condition_start(t() | nil, PrerequisiteFlagCondition.t(), SettingType.t()) ::
+          t() | nil
+  def log_evaluating_prerequisite_condition_start(nil, _condition, _setting_type), do: nil
+
+  def log_evaluating_prerequisite_condition_start(logger, condition, setting_type) do
+    key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
+
+    logger
+    |> append(PrerequisiteFlagCondition.description(condition, setting_type))
+    |> new_line("(")
+    |> increase_indent()
+    |> new_line("Evaluating prerequisite flag '#{key}':")
   end
 
   @spec log_evaluating_targeting_rules(t() | nil) :: t() | nil
