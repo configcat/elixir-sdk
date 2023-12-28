@@ -9,9 +9,17 @@ defmodule ConfigCat.Config.SegmentCondition do
   @segment_comparator "c"
   @segment_index "s"
 
-  @spec segment(t()) :: Segment.t() | nil
+  @spec segment(t()) :: Segment.t()
   def segment(condition) do
-    Map.get(condition, @inline_segment)
+    Map.get(condition, @inline_segment, %{})
+  end
+
+  @spec fetch_segment(t()) :: {:ok, Segment.t()} | {:error, :not_found}
+  def fetch_segment(condition) do
+    case Map.fetch(condition, @inline_segment) do
+      {:ok, segment} -> {:ok, segment}
+      :error -> {:error, :not_found}
+    end
   end
 
   @spec segment_comparator(t()) :: SegmentComparator.t() | nil
@@ -29,5 +37,13 @@ defmodule ConfigCat.Config.SegmentCondition do
     index = segment_index(condition)
     segment = Enum.at(segments, index)
     Map.put(condition, @inline_segment, segment)
+  end
+
+  @spec description(t()) :: String.t()
+  def description(condition) do
+    comparator = segment_comparator(condition)
+    segment_name = condition |> segment() |> Segment.name()
+
+    "User #{SegmentComparator.description(comparator)} '#{segment_name}'"
   end
 end
