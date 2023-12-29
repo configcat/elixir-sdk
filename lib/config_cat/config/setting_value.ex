@@ -1,6 +1,7 @@
 defmodule ConfigCat.Config.SettingValue do
   @moduledoc false
   alias ConfigCat.Config
+  alias ConfigCat.Config.ValueError
 
   require ConfigCat.Config.SettingType, as: SettingType
 
@@ -17,16 +18,31 @@ defmodule ConfigCat.Config.SettingValue do
     %{type_key(setting_type) => value}
   end
 
-  @spec get(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
-  def get(value, setting_type, default) do
-    Map.get(value, type_key(setting_type), default)
+  @spec get(t(), SettingType.t()) :: Config.value() | nil
+  def get(value, setting_type) do
+    case type_key(setting_type) do
+      @unsupported_value ->
+        raise ValueError, "Unsupported setting type"
+
+      type_key ->
+        case Map.get(value, type_key) do
+          nil ->
+            expected_type = SettingType.to_elixir_type(setting_type)
+            raise ValueError, "Setting value is not of the expected type #{expected_type}"
+
+          value ->
+            value
+        end
+    end
   end
 
   @spec inferred_setting_type(t()) :: SettingType.t() | nil
   def inferred_setting_type(value) do
     Enum.find(
       [SettingType.bool(), SettingType.double(), SettingType.int(), SettingType.string()],
-      &(get(value, &1, nil) != nil)
+      fn setting_type ->
+        !is_nil(Map.get(value, type_key(setting_type)))
+      end
     )
   end
 

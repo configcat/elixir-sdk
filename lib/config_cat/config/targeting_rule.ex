@@ -29,11 +29,13 @@ defmodule ConfigCat.Config.TargetingRule do
   end
 
   @spec value(t(), SettingType.t()) :: Config.value() | nil
-  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
-  def value(rule, setting_type, default \\ nil) do
+  def value(rule, setting_type) do
     case simple_value(rule) do
-      nil -> default
-      value -> SettingValueContainer.value(value, setting_type, default)
+      nil ->
+        nil
+
+      value ->
+        SettingValueContainer.value(value, setting_type)
     end
   end
 

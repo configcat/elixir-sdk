@@ -20,7 +20,7 @@ defmodule ConfigCat.Config.PrerequisiteFlagCondition do
   def comparison_value(condition, setting_type) do
     case raw_value(condition) do
       nil -> nil
-      value -> SettingValue.get(value, setting_type, nil)
+      value -> SettingValue.get(value, setting_type)
     end
   end
 

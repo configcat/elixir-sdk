@@ -185,7 +185,6 @@ defmodule ConfigCat.RolloutTest do
     assert expected_log in String.split(logs, "\n", trim: true)
   end
 
-  @tag skip: "Working on logging changes"
   test "config json type mismatch" do
     config =
       Config.inline_salt_and_segments(~j"""
@@ -207,10 +206,10 @@ defmodule ConfigCat.RolloutTest do
     assert %EvaluationDetails{value: false} = details
 
     expected_log =
-      "[2001] Failed to evaluate setting 'test'. " <>
-        "(Setting value is not of the expected type <String.t()>)"
+      "error [2001] Failed to evaluate setting 'test'. " <>
+        "(Setting value is not of the expected type String.t())"
 
-    assert logs == expected_log
+    assert logs =~ expected_log
   end
 
   for {sdk_key, key, custom_attribute_value, expected_return_value} <- [
