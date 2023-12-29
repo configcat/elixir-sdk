@@ -5,6 +5,10 @@ defmodule ConfigCat.Config.UserCondition do
   alias ConfigCat.Config.UserComparator
 
   @type comparison_value :: number() | String.t() | [String.t()]
+  @type option ::
+          {:comparator, UserComparator.t()}
+          | {:comparison_attribute, String.t()}
+          | {:comparison_value, comparison_value()}
   @type t :: %{String.t() => term()}
 
   @comparator "c"
@@ -12,6 +16,26 @@ defmodule ConfigCat.Config.UserCondition do
   @double_value "d"
   @string_list_value "l"
   @string_value "s"
+
+  @spec new([option]) :: t()
+  def new(options \\ []) do
+    comparator = options[:comparator]
+    attribute = options[:comparison_attribute]
+    comparison_value = options[:comparison_value]
+
+    value_key =
+      case UserComparator.value_type(comparator) do
+        :double -> @double_value
+        :string -> @string_value
+        :string_list -> @string_list_value
+      end
+
+    %{
+      @comparator => comparator,
+      @comparison_attribute => attribute,
+      value_key => comparison_value
+    }
+  end
 
   @spec comparator(t()) :: UserComparator.t()
   def comparator(rule) do
