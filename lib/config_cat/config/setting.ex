@@ -60,9 +60,8 @@ defmodule ConfigCat.Config.Setting do
   end
 
   @spec value(t()) :: Config.value()
-  @spec value(t(), Config.value() | nil) :: Config.value()
-  def value(setting, default \\ nil) do
-    SettingValueContainer.value(setting, setting_type(setting), default)
+  def value(setting) do
+    SettingValueContainer.value(setting, setting_type(setting))
   end
 
   defdelegate variation_id(setting, default \\ nil), to: SettingValueContainer

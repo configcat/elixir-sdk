@@ -3,6 +3,7 @@ defmodule ConfigCat.Config.SettingValueContainer do
   alias ConfigCat.Config
   alias ConfigCat.Config.SettingType
   alias ConfigCat.Config.SettingValue
+  alias ConfigCat.Config.ValueError
 
   @type t :: %{String.t() => term()}
 
@@ -10,11 +11,13 @@ defmodule ConfigCat.Config.SettingValueContainer do
   @variation_id "i"
 
   @spec value(t(), SettingType.t()) :: Config.value() | nil
-  @spec value(t(), SettingType.t(), Config.value() | nil) :: Config.value() | nil
-  def value(v, setting_type, default \\ nil) do
+  def value(v, setting_type) do
     case raw_value(v) do
-      nil -> default
-      value -> SettingValue.get(value, setting_type, default)
+      nil ->
+        raise ValueError, "Value is missing"
+
+      value ->
+        SettingValue.get(value, setting_type)
     end
   end
 

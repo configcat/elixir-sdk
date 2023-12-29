@@ -15,6 +15,7 @@ defmodule ConfigCat.Config.ComparisonContext do
   use TypedStruct
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.UserCondition
 
   typedstruct enforce: true do
     field :condition, UserCondition.t()

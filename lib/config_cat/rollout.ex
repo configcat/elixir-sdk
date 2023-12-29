@@ -168,7 +168,7 @@ defmodule ConfigCat.Rollout do
 
       case evaluate_rules(targeting_rules, percentage_options, context) do
         {:none, _variation_id, _matching_rule, _matching_option} ->
-          value = Setting.value(setting, default_value)
+          value = Setting.value(setting)
 
           if root_flag_evaluation? do
             EvaluationLogger.log_return_value(logger, value)
