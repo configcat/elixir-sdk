@@ -2,6 +2,7 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.ComparisonContext
   alias ConfigCat.Config.Condition
   alias ConfigCat.Config.PercentageOption
   alias ConfigCat.Config.PrerequisiteFlagComparator
@@ -316,7 +317,7 @@ defmodule ConfigCat.Rollout do
   end
 
   defp evaluate_user_condition(condition, context_salt, %Context{} = context) do
-    %Context{logger: logger, salt: salt, user: user} = context
+    %Context{key: key, logger: logger, salt: salt, user: user} = context
 
     EvaluationLogger.log_evaluating_user_condition_start(logger, condition)
 
@@ -334,7 +335,14 @@ defmodule ConfigCat.Rollout do
             {:error, "cannot evaluate, the User.#{comparison_attribute} attribute is missing"}
 
           user_value ->
-            UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt)
+            context = %ComparisonContext{
+              condition: condition,
+              context_salt: context_salt,
+              key: key,
+              salt: salt
+            }
+
+            UserComparator.compare(comparator, user_value, comparison_value, context)
         end
     end
   end

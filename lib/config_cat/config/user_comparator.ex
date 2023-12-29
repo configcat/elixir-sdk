@@ -10,11 +10,28 @@ defmodule ConfigCat.Config.ComparatorMetadata do
   end
 end
 
+defmodule ConfigCat.Config.ComparisonContext do
+  @moduledoc false
+  use TypedStruct
+
+  alias ConfigCat.Config
+
+  typedstruct enforce: true do
+    field :condition, UserCondition.t()
+    field :context_salt, Config.salt()
+    field :key, Config.key()
+    field :salt, Config.salt()
+  end
+end
+
 defmodule ConfigCat.Config.UserComparator do
   @moduledoc false
   alias ConfigCat.Config
   alias ConfigCat.Config.ComparatorMetadata, as: Metadata
+  alias ConfigCat.Config.ComparisonContext
   alias ConfigCat.Config.UserCondition
+
+  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   @is_one_of 0
   @is_not_one_of 1
@@ -114,48 +131,52 @@ defmodule ConfigCat.Config.UserComparator do
 
   @spec description(t()) :: String.t()
   def description(comparator) do
-    case Map.get(@metadata, comparator) do
-      nil -> "Unsupported comparator"
-      %Metadata{} = metadata -> metadata.description
+    case Map.fetch(@metadata, comparator) do
+      {:ok, %Metadata{} = metadata} -> metadata.description
+      :error -> "Unsupported comparator"
     end
   end
 
   @spec value_type(t()) :: value_type()
   def value_type(comparator) do
-    %Metadata{} = metadata = Map.fetch!(@metadata, comparator)
-    metadata.value_type
+    case Map.fetch(@metadata, comparator) do
+      {:ok, %Metadata{} = metadata} ->
+        metadata.value_type
+
+      :error ->
+        :string
+    end
   end
 
   @spec compare(
           t(),
           Config.value(),
           UserCondition.comparison_value(),
-          context_salt :: Config.salt(),
-          salt :: Config.salt()
+          ComparisonContext.t()
         ) :: result()
 
-  def compare(@is_one_of, user_value, comparison_values, _context_salt, _salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@is_one_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       {:ok, text in comparison_values}
     end
   end
 
-  def compare(@is_not_one_of, user_value, comparison_values, context_salt, salt) do
-    @is_one_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@is_not_one_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    @is_one_of |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@contains_any_of, user_value, comparison_values, _context_salt, _salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@contains_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result = Enum.any?(comparison_values, &String.contains?(text, &1))
       {:ok, result}
     end
   end
 
-  def compare(@not_contains_any_of, user_value, comparison_values, context_salt, salt) do
-    @contains_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@not_contains_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    @contains_any_of |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@is_one_of_semver, user_value, comparison_values, _context_salt, _salt) do
+  def compare(@is_one_of_semver, user_value, comparison_values, %ComparisonContext{} = _context) do
     with {:ok, user_version} <- to_version(user_value),
          {:ok, comparison_versions} <- to_versions(comparison_values) do
       result = Enum.any?(comparison_versions, &(Version.compare(user_version, &1) == :eq))
@@ -163,82 +184,82 @@ defmodule ConfigCat.Config.UserComparator do
     end
   end
 
-  def compare(@is_not_one_of_semver, user_value, comparison_values, context_salt, salt) do
-    @is_one_of_semver |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@is_not_one_of_semver, user_value, comparison_values, %ComparisonContext{} = context) do
+    @is_one_of_semver |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@less_than_semver, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@less_than_semver, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_semver(user_value, comparison_value, [:lt])
   end
 
-  def compare(@less_than_equal_semver, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@less_than_equal_semver, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_semver(user_value, comparison_value, [:lt, :eq])
   end
 
-  def compare(@greater_than_semver, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@greater_than_semver, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_semver(user_value, comparison_value, [:gt])
   end
 
-  def compare(@greater_than_equal_semver, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@greater_than_equal_semver, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_semver(user_value, comparison_value, [:gt, :eq])
   end
 
-  def compare(@equals_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@equals_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &==/2)
   end
 
-  def compare(@not_equals_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@not_equals_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &!==/2)
   end
 
-  def compare(@less_than_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@less_than_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &</2)
   end
 
-  def compare(@less_than_equal_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@less_than_equal_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &<=/2)
   end
 
-  def compare(@greater_than_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@greater_than_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &>/2)
   end
 
-  def compare(@greater_than_equal_number, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@greater_than_equal_number, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_numbers(user_value, comparison_value, &>=/2)
   end
 
-  def compare(@is_one_of_hashed, user_value, comparison_values, context_salt, salt) do
-    with {:ok, text} <- as_text(user_value) do
-      result = hash_value(text, context_salt, salt) in comparison_values
+  def compare(@is_one_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
+      result = hash_value(text, context) in comparison_values
       {:ok, result}
     end
   end
 
-  def compare(@is_not_one_of_hashed, user_value, comparison_values, context_salt, salt) do
-    @is_one_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@is_not_one_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    @is_one_of_hashed |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@before_datetime, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@before_datetime, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_datetimes(user_value, comparison_value, [:lt])
   end
 
-  def compare(@after_datetime, user_value, comparison_value, _context_salt, _salt) do
+  def compare(@after_datetime, user_value, comparison_value, %ComparisonContext{} = _context) do
     compare_datetimes(user_value, comparison_value, [:gt])
   end
 
-  def compare(@equals_hashed, user_value, comparison_value, context_salt, salt) do
-    with {:ok, text} <- as_text(user_value) do
-      result = hash_value(text, context_salt, salt) == comparison_value
+  def compare(@equals_hashed, user_value, comparison_value, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
+      result = hash_value(text, context) == comparison_value
       {:ok, result}
     end
   end
 
-  def compare(@not_equals_hashed, user_value, comparison_value, context_salt, salt) do
-    @equals_hashed |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@not_equals_hashed, user_value, comparison_value, %ComparisonContext{} = context) do
+    @equals_hashed |> compare(user_value, comparison_value, context) |> negate()
   end
 
-  def compare(@starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@starts_with_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result =
         Enum.any?(
           comparison_values,
@@ -246,7 +267,7 @@ defmodule ConfigCat.Config.UserComparator do
             {length, comparison_string} = parse_comparison(comparison)
 
             if byte_size(text) >= length do
-              hashed = text |> binary_part(0, length) |> hash_value(context_salt, salt)
+              hashed = text |> binary_part(0, length) |> hash_value(context)
               hashed == comparison_string
             else
               false
@@ -258,12 +279,12 @@ defmodule ConfigCat.Config.UserComparator do
     end
   end
 
-  def compare(@not_starts_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    @starts_with_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@not_starts_with_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    @starts_with_any_of_hashed |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@ends_with_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result =
         Enum.any?(
           comparison_values,
@@ -271,7 +292,7 @@ defmodule ConfigCat.Config.UserComparator do
             {length, comparison_string} = parse_comparison(comparison)
 
             if byte_size(text) >= length do
-              hashed = text |> binary_part(byte_size(text), -length) |> hash_value(context_salt, salt)
+              hashed = text |> binary_part(byte_size(text), -length) |> hash_value(context)
               hashed == comparison_string
             else
               false
@@ -283,68 +304,68 @@ defmodule ConfigCat.Config.UserComparator do
     end
   end
 
-  def compare(@not_ends_with_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    @ends_with_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@not_ends_with_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    @ends_with_any_of_hashed |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@array_contains_any_of_hashed, user_value, comparison_values, context_salt, salt) do
+  def compare(@array_contains_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
     with {:ok, user_values} <- to_string_list(user_value) do
-      hashed_user_values = Enum.map(user_values, &hash_value(&1, context_salt, salt))
+      hashed_user_values = Enum.map(user_values, &hash_value(&1, context))
       result = Enum.any?(comparison_values, &(&1 in hashed_user_values))
 
       {:ok, result}
     end
   end
 
-  def compare(@array_not_contains_any_of_hashed, user_value, comparison_values, context_salt, salt) do
-    @array_contains_any_of_hashed |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@array_not_contains_any_of_hashed, user_value, comparison_values, %ComparisonContext{} = context) do
+    @array_contains_any_of_hashed |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@equals, user_value, comparison_value, _context_salt, _salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@equals, user_value, comparison_value, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result = text == comparison_value
       {:ok, result}
     end
   end
 
-  def compare(@not_equals, user_value, comparison_value, context_salt, salt) do
-    @equals |> compare(user_value, comparison_value, context_salt, salt) |> negate()
+  def compare(@not_equals, user_value, comparison_value, %ComparisonContext{} = context) do
+    @equals |> compare(user_value, comparison_value, context) |> negate()
   end
 
-  def compare(@starts_with_any_of, user_value, comparison_values, _context_salt, _salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@starts_with_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result = Enum.any?(comparison_values, &String.starts_with?(text, &1))
       {:ok, result}
     end
   end
 
-  def compare(@not_starts_with_any_of, user_value, comparison_values, context_salt, salt) do
-    @starts_with_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@not_starts_with_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    @starts_with_any_of |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@ends_with_any_of, user_value, comparison_values, _context_salt, _salt) do
-    with {:ok, text} <- as_text(user_value) do
+  def compare(@ends_with_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    with {:ok, text} <- as_text(user_value, context) do
       result = Enum.any?(comparison_values, &String.ends_with?(text, &1))
       {:ok, result}
     end
   end
 
-  def compare(@not_ends_with_any_of, user_value, comparison_values, context_salt, salt) do
-    @ends_with_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@not_ends_with_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    @ends_with_any_of |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(@array_contains_any_of, user_value, comparison_values, _context_salt, _salt) do
+  def compare(@array_contains_any_of, user_value, comparison_values, %ComparisonContext{} = _context) do
     with {:ok, user_values} <- to_string_list(user_value) do
       result = Enum.any?(comparison_values, &(&1 in user_values))
       {:ok, result}
     end
   end
 
-  def compare(@array_not_contains_any_of, user_value, comparison_values, context_salt, salt) do
-    @array_contains_any_of |> compare(user_value, comparison_values, context_salt, salt) |> negate()
+  def compare(@array_not_contains_any_of, user_value, comparison_values, %ComparisonContext{} = context) do
+    @array_contains_any_of |> compare(user_value, comparison_values, context) |> negate()
   end
 
-  def compare(_comparator, _user_value, _comparison_value, _context_salt, _salt) do
+  def compare(_comparator, _user_value, _comparison_value, %ComparisonContext{} = _context) do
     {:ok, false}
   end
 
@@ -379,8 +400,8 @@ defmodule ConfigCat.Config.UserComparator do
     end
   end
 
-  defp hash_value(value, context_salt, salt) do
-    salted = value <> salt <> context_salt
+  defp hash_value(value, %ComparisonContext{} = context) do
+    salted = value <> context.salt <> context.context_salt
 
     :sha256
     |> :crypto.hash(salted)
@@ -394,9 +415,20 @@ defmodule ConfigCat.Config.UserComparator do
     {String.to_integer(length_string), comparison_string}
   end
 
-  defp as_text(value) when is_binary(value), do: {:ok, value}
+  defp as_text(value, _context) when is_binary(value), do: {:ok, value}
 
-  defp as_text(value) do
+  defp as_text(value, %ComparisonContext{} = context) do
+    %ComparisonContext{condition: condition, key: key} = context
+    attribute_name = UserCondition.comparison_attribute(condition)
+    condition_text = UserCondition.description(context.condition)
+
+    ConfigCatLogger.warning(
+      "Evaluation of condition (#{condition_text}) for setting '#{key}' may not produce the expected result " <>
+        "(the User.#{attribute_name} attribute is not a string value, thus it was automatically converted to " <>
+        "the string value '#{value}'). Please make sure that using a non-string value was intended.",
+      event_id: 3005
+    )
+
     user_value_to_string(value)
   end
 
