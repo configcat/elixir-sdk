@@ -11,7 +11,7 @@ defmodule ConfigCat.Config.PercentageOption do
     Map.get(option, @percentage, 0)
   end
 
-  defdelegate value(option, setting_type, default \\ nil), to: SettingValueContainer
+  defdelegate value(option, setting_type), to: SettingValueContainer
   defdelegate variation_id(option, default \\ nil), to: SettingValueContainer
   defdelegate variation_value(option, variation_id), to: SettingValueContainer
 end
