@@ -77,6 +77,7 @@ defmodule ConfigCat.EvaluationLogTest do
     test_evaluation_log("comparators.json")
   end
 
+  @tag skip: false
   test "list truncation validation" do
     test_evaluation_log("list_truncation.json")
   end
