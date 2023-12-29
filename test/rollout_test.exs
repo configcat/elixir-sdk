@@ -383,7 +383,7 @@ defmodule ConfigCat.RolloutTest do
       assert value == expected_value
 
       unless expected_value do
-        flag_value_type = flag_value |> SettingType.from_value() |> SettingType.to_elixir_type()
+        flag_value_type = SettingType.infer_elixir_type(flag_value)
 
         expected_message =
           "Type mismatch between comparison value type #{comparison_value_type} and type #{flag_value_type} of prerequisite flag '#{flag_key}'"
