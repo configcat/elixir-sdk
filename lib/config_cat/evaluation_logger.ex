@@ -181,7 +181,7 @@ defmodule ConfigCat.EvaluationLogger do
         maybe_not = if in_segment?, do: " ", else: " NOT "
 
         logger
-        |> append("User IS#{maybe_not}IN SEGMENT")
+        |> append("User IS#{maybe_not}IN SEGMENT.")
         |> new_line("Condition (#{description}) ")
         |> append("evaluates to #{match?}.")
         |> decrease_indent()
