@@ -183,7 +183,7 @@ defmodule ConfigCat.EvaluationLogger do
         logger
         |> append("User IS#{maybe_not}IN SEGMENT")
         |> new_line("Condition (#{description}) ")
-        |> append("evaluates to #{match?}")
+        |> append("evaluates to #{match?}.")
         |> decrease_indent()
         |> new_line(")")
 
@@ -203,8 +203,8 @@ defmodule ConfigCat.EvaluationLogger do
 
   def log_evaluating_segment_condition_final_result(logger, result, condition_count) when condition_count > 1 do
     case result do
-      {:ok, true} -> append(logger, "=> true")
-      _ -> append(logger, "=> false, skipping the remaining AND conditions")
+      {:ok, true} -> append(logger, " => true")
+      _ -> append(logger, " => false, skipping the remaining AND conditions")
     end
   end
 
