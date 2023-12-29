@@ -10,7 +10,6 @@ defmodule ConfigCat.EvaluationLogTest do
   alias ConfigCat.User
 
   @moduletag capture_log: true
-  @moduletag skip: "Working on logging changes"
 
   setup do
     original_level = Logger.level()
@@ -18,7 +17,6 @@ defmodule ConfigCat.EvaluationLogTest do
     on_exit(fn -> Logger.configure(level: original_level) end)
   end
 
-  @tag skip: false
   test "simple value" do
     test_evaluation_log("simple_value.json")
   end
@@ -31,7 +29,6 @@ defmodule ConfigCat.EvaluationLogTest do
     test_evaluation_log("2_targeting_rules.json")
   end
 
-  @tag skip: false
   test "options based on user id" do
     test_evaluation_log("options_based_on_user_id.json")
   end
@@ -77,7 +74,6 @@ defmodule ConfigCat.EvaluationLogTest do
     test_evaluation_log("comparators.json")
   end
 
-  @tag skip: false
   test "list truncation validation" do
     test_evaluation_log("list_truncation.json")
   end
@@ -117,7 +113,11 @@ defmodule ConfigCat.EvaluationLogTest do
         ConfigCat.get_value(key, default_value, user, client: client)
       end)
 
-    assert log == expected_log
+    {expected_clean_log, expected_user} = extract_logged_user(expected_log)
+    {clean_log, actual_user} = extract_logged_user(log)
+
+    assert clean_log == expected_clean_log
+    assert actual_user == expected_user
     assert value == return_value
   end
 
@@ -127,5 +127,16 @@ defmodule ConfigCat.EvaluationLogTest do
     {attrs, custom} = Map.split(user_attrs, ["Country", "Email", "Identifier"])
 
     User.new(attrs["Identifier"], country: attrs["Country"], custom: custom, email: attrs["Email"])
+  end
+
+  @logged_user_regex ~r/for User '(\{.*?\})'/
+  defp extract_logged_user(log) do
+    case Regex.run(@logged_user_regex, log) do
+      nil ->
+        {log, nil}
+
+      [_entire_match, logged_user] ->
+        {Regex.replace(@logged_user_regex, log, ""), Jason.decode!(logged_user)}
+    end
   end
 end
