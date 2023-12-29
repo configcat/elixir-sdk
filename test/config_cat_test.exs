@@ -121,7 +121,7 @@ defmodule ConfigCatTest do
       assert %{key: "key2", value: false, variation_id: "fakeId2"} = details_by_key.("key2")
     end
 
-    @tag skip: "Working on logging changes"
+    @tag capture_log: true
     test "reports error for incorrect config json", %{client: client, fetch_time_ms: fetch_time_ms} do
       config =
         Config.inline_salt_and_segments(~J"""
@@ -145,10 +145,11 @@ defmodule ConfigCatTest do
 
       [client: client]
       |> ConfigCat.hooks()
-      |> Hooks.add_on_error(fn -> send(test_pid, {:on_error}) end)
+      |> Hooks.add_on_error(fn error -> send(test_pid, {:on_error, error}) end)
 
       refute ConfigCat.get_value("testKey", false, user, client: client)
-      assert_received {:on_error}
+      assert_received {:on_error, error}
+      assert error =~ "Failed to evaluate setting 'testKey'."
     end
   end
 
