@@ -7,7 +7,9 @@ defmodule ConfigCat.Config.UserComparatorTest do
 
   use ExUnit.Case, async: true
 
+  alias ConfigCat.Config.ComparisonContext
   alias ConfigCat.Config.UserComparator
+  alias ConfigCat.Config.UserCondition
 
   @context_salt "CONTEXT_SALT"
   @salt "SALT"
@@ -491,6 +493,16 @@ defmodule ConfigCat.Config.UserComparatorTest do
   end
 
   defp compare(comparator, user_value, comparison_value) do
-    UserComparator.compare(comparator, user_value, comparison_value, @context_salt, @salt)
+    condition =
+      UserCondition.new(comparator: comparator, comparison_attribute: "SomeAttribute", comparison_value: comparison_value)
+
+    context = %ComparisonContext{
+      condition: condition,
+      context_salt: @context_salt,
+      key: "someKey",
+      salt: @salt
+    }
+
+    UserComparator.compare(comparator, user_value, comparison_value, context)
   end
 end

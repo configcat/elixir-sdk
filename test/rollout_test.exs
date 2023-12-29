@@ -159,7 +159,6 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
-  @tag skip: "Working on logging changes"
   test "user object attribute value conversion text comparison" do
     sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ"
 
@@ -183,7 +182,7 @@ defmodule ConfigCat.RolloutTest do
         "thus it was automatically converted to the string value '#{custom_attribute_value}'). " <>
         "Please make sure that using a non-string value was intended."
 
-    assert logs == expected_log
+    assert expected_log in String.split(logs, "\n", trim: true)
   end
 
   @tag skip: "Working on logging changes"
