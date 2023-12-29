@@ -1,5 +1,7 @@
 defmodule ConfigCat.Config.UserCondition do
   @moduledoc false
+  import ConfigCat.Config.UserComparator, only: [is_for_datetime: 1, is_for_hashed: 1]
+
   alias ConfigCat.Config.UserComparator
 
   @type comparison_value :: number() | String.t() | [String.t()]
@@ -44,11 +46,11 @@ defmodule ConfigCat.Config.UserCondition do
   @spec description(t()) :: String.t()
   def description(condition) do
     attribute = comparison_attribute(condition)
-    comparator = condition |> comparator() |> UserComparator.description()
+    comparator = comparator(condition)
+    comparator_text = UserComparator.description(comparator)
     comparison_value = comparison_value(condition)
 
-    # TODO: Truncate comparison value if needed
-    "User.#{attribute} #{comparator} #{comparison_value}"
+    "User.#{attribute} #{comparator_text} #{format_comparison_value(comparison_value, comparator)}"
   end
 
   defp double_value(rule) do
@@ -61,5 +63,50 @@ defmodule ConfigCat.Config.UserCondition do
 
   defp string_value(rule) do
     Map.get(rule, @string_value)
+  end
+
+  defp format_comparison_value(values, comparator) when length(values) > 1 and is_for_hashed(comparator) do
+    "[<#{length(values)} hashed values>]"
+  end
+
+  defp format_comparison_value(values, comparator) when is_list(values) and is_for_hashed(comparator) do
+    "[<#{length(values)} hashed value>]"
+  end
+
+  defp format_comparison_value(_value, comparator) when is_for_hashed(comparator) do
+    "'<hashed value>'"
+  end
+
+  @length_limit 10
+  defp format_comparison_value(values, _comparator) when is_list(values) do
+    length = length(values)
+
+    if length > @length_limit do
+      remaining = length - @length_limit
+      more_text = if remaining == 1, do: "<1 more value>", else: "<#{remaining} more values>"
+      entries = values |> Enum.take(@length_limit) |> format_list_entries()
+      "[#{entries}, ... #{more_text}]"
+    else
+      "[#{format_list_entries(values)}]"
+    end
+  end
+
+  defp format_comparison_value(value, comparator) when is_for_datetime(comparator) do
+    formatted =
+      (value * 1000)
+      |> round()
+      |> DateTime.from_unix!(:millisecond)
+      |> DateTime.truncate(:millisecond)
+      |> DateTime.to_iso8601()
+
+    "'#{value}' (#{formatted} UTC)"
+  end
+
+  defp format_comparison_value(value, _comparator) do
+    "'#{value}'"
+  end
+
+  defp format_list_entries(values) do
+    Enum.map_join(values, ", ", &"'#{&1}'")
   end
 end
