@@ -421,7 +421,7 @@ defmodule ConfigCat.Config.UserComparator do
   defp as_text(value, %ComparisonContext{} = context) do
     %ComparisonContext{condition: condition, key: key} = context
     attribute_name = UserCondition.comparison_attribute(condition)
-    condition_text = UserCondition.description(context.condition)
+    condition_text = UserCondition.description(condition)
 
     ConfigCatLogger.warning(
       "Evaluation of condition (#{condition_text}) for setting '#{key}' may not produce the expected result " <>
