@@ -6,6 +6,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.Config.Setting
+  alias ConfigCat.Config.SettingType
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.EvaluationLogger
   alias ConfigCat.FetchTime
@@ -221,6 +222,8 @@ defmodule ConfigCat.Client do
             details =
             Rollout.evaluate(key, user, default_value, default_variation_id, config, logger)
 
+          check_type_mismatch(details.value, default_value)
+
           fetch_time =
             case FetchTime.to_datetime(fetch_time_ms) do
               {:ok, %DateTime{} = dt} -> dt
@@ -274,6 +277,30 @@ defmodule ConfigCat.Client do
           merged = Config.merge(local_config, remote_config)
           {:ok, merged, fetch_time_ms}
         end
+    end
+  end
+
+  defp check_type_mismatch(_value, nil), do: :ok
+
+  defp check_type_mismatch(value, default_value) do
+    value_type = SettingType.infer_elixir_type(value)
+    default_type = SettingType.infer_elixir_type(default_value)
+    number_types = ["float()", "integer()"]
+
+    cond do
+      value_type == default_type ->
+        :ok
+
+      value_type in number_types and default_type in number_types ->
+        :ok
+
+      true ->
+        ConfigCatLogger.warning(
+          "The type of a setting does not match the type of the specified default value (#{default_value}). " <>
+            "Setting's type was #{value_type} but the default value's type was #{default_type}. " <>
+            "Please make sure that using a default value not matching the setting's type was intended.",
+          event_id: 4002
+        )
     end
   end
 end
