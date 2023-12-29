@@ -86,6 +86,9 @@ defmodule ConfigCat.Rollout do
           pid() | nil,
           [String.t()]
         ) :: EvaluationDetails.t()
+  # This function is slightly complex, but still reasonably understandable.
+  # Breaking it up doesn't seem like it will help much.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def evaluate(key, user, default_value, default_variation_id, config, logger \\ nil, visited_keys \\ []) do
     root_flag_evaluation? = visited_keys == []
     settings = Config.settings(config)

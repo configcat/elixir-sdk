@@ -81,7 +81,7 @@ defmodule ConfigCat.Config.UserComparator do
     @ends_with_any_of_hashed => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
     @not_ends_with_any_of_hashed => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list},
     @array_contains_any_of_hashed => %Metadata{description: "ARRAY CONTAINS ANY OF", value_type: :string_list},
-    @array_not_contains_any_of_hashed => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list},
+    @array_not_contains_any_of_hashed => %Metadata{description: "ARRAY NOT CONTAINS ANY OF", value_type: :string_list},
     @equals => %Metadata{description: "EQUALS", value_type: :string},
     @not_equals => %Metadata{description: "NOT EQUALS", value_type: :string},
     @starts_with_any_of => %Metadata{description: "STARTS WITH ANY OF", value_type: :string_list},
@@ -89,12 +89,28 @@ defmodule ConfigCat.Config.UserComparator do
     @ends_with_any_of => %Metadata{description: "ENDS WITH ANY OF", value_type: :string_list},
     @not_ends_with_any_of => %Metadata{description: "NOT ENDS WITH ANY OF", value_type: :string_list},
     @array_contains_any_of => %Metadata{description: "ARRAY CONTAINS ANY OF", value_type: :string_list},
-    @array_not_contains_any_of => %Metadata{description: "NOT ARRAY CONTAINS ANY OF", value_type: :string_list}
+    @array_not_contains_any_of => %Metadata{description: "ARRAY NOT CONTAINS ANY OF", value_type: :string_list}
   }
 
   @type result :: {:ok, boolean()} | {:error, Exception.t()}
   @type t :: non_neg_integer()
   @type value_type :: Metadata.value_type()
+
+  defguard is_for_datetime(comparator) when comparator in [@before_datetime, @after_datetime]
+
+  defguard is_for_hashed(comparator)
+           when comparator in [
+                  @is_one_of_hashed,
+                  @is_not_one_of_hashed,
+                  @equals_hashed,
+                  @not_equals_hashed,
+                  @starts_with_any_of_hashed,
+                  @not_starts_with_any_of_hashed,
+                  @ends_with_any_of_hashed,
+                  @not_ends_with_any_of_hashed,
+                  @array_contains_any_of_hashed,
+                  @array_not_contains_any_of_hashed
+                ]
 
   @spec description(t()) :: String.t()
   def description(comparator) do
