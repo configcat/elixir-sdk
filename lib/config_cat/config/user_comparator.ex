@@ -109,7 +109,8 @@ defmodule ConfigCat.Config.UserComparator do
     @array_not_contains_any_of => %Metadata{description: "ARRAY NOT CONTAINS ANY OF", value_type: :string_list}
   }
 
-  @type result :: {:ok, boolean()} | {:error, Exception.t()}
+  @type result ::
+          {:ok, boolean()} | {:error, :invalid_datetime | :invalid_float | :invalid_string_list | :invalid_version}
   @type t :: non_neg_integer()
   @type value_type :: Metadata.value_type()
 

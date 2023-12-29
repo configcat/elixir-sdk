@@ -342,7 +342,27 @@ defmodule ConfigCat.Rollout do
               salt: salt
             }
 
-            UserComparator.compare(comparator, user_value, comparison_value, context)
+            case UserComparator.compare(comparator, user_value, comparison_value, context) do
+              {:ok, result} ->
+                {:ok, result}
+
+              {:error, :invalid_datetime} ->
+                message = "'#{user_value}' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)"
+                handle_invalid_user_attribute(key, condition, message)
+
+              {:error, :invalid_float} ->
+                message = "'#{user_value}' is not a valid decimal number"
+                handle_invalid_user_attribute(key, condition, message)
+
+              {:error, :invalid_string_list} ->
+                message = "'#{user_value}' is not a valid string array"
+                handle_invalid_user_attribute(key, condition, message)
+
+              {:error, :invalid_version} ->
+                trimmed = user_value |> to_string() |> String.trim()
+                message = "'#{trimmed}' is not a valid semantic version"
+                handle_invalid_user_attribute(key, condition, message)
+            end
         end
     end
   end
@@ -510,6 +530,13 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
+  defp handle_invalid_user_attribute(key, condition, message) do
+    warn_type_mismatch(key, condition, message)
+
+    attribute = UserCondition.comparison_attribute(condition)
+    {:error, "cannot evaluate, the User.#{attribute} attribute is invalid (#{message})"}
+  end
+
   defp warn_invalid_user(key) do
     ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
@@ -547,6 +574,18 @@ defmodule ConfigCat.Rollout do
         "(the User.#{attribute_name} attribute is missing). You should set the User.#{attribute_name} attribute in order to make " <>
         "targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/",
       event_id: 3003
+    )
+  end
+
+  defp warn_type_mismatch(key, condition, message) do
+    attribute = UserCondition.comparison_attribute(condition)
+    condition_text = UserCondition.description(condition)
+
+    ConfigCatLogger.warning(
+      "Cannot evaluate condition (#{condition_text}) for setting '#{key}' " <>
+        "(#{message}). Please check the User.#{attribute} attribute and make sure that its value corresponds to the " <>
+        "comparison operator.",
+      event_id: 3004
     )
   end
 end
