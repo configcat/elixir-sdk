@@ -4,6 +4,7 @@ defmodule ConfigCat.EvaluationLogger do
   alias ConfigCat.Config.PrerequisiteFlagCondition
   alias ConfigCat.Config.SegmentCondition
   alias ConfigCat.Config.SettingType
+  alias ConfigCat.Config.UserCondition
   alias ConfigCat.User
 
   @type t :: Agent.agent()
@@ -237,6 +238,13 @@ defmodule ConfigCat.EvaluationLogger do
 
   def log_evaluating_user_condition_result(logger, _result, _condition_count), do: logger
 
+  @spec log_evaluating_user_condition_start(t() | nil, UserCondition.t()) :: t() | nil
+  def log_evaluating_user_condition_start(nil, _condition), do: nil
+
+  def log_evaluating_user_condition_start(logger, condition) do
+    append(logger, "#{UserCondition.description(condition)} ")
+  end
+
   @spec log_ignored_targeting_rule(t() | nil) :: t() | nil
   def log_ignored_targeting_rule(nil), do: nil
 
@@ -299,16 +307,12 @@ defmodule ConfigCat.EvaluationLogger do
     Agent.get(logger, &State.result/1)
   end
 
-  def append(logger, text) do
+  defp append(logger, text) do
     Agent.update(logger, &State.append(&1, text))
     logger
   end
 
-  # TODO: Make these `defp`
-  def new_line(logger, text \\ "")
-  def new_line(nil, _text), do: nil
-
-  def new_line(logger, text) do
+  defp new_line(logger, text \\ "") do
     Agent.update(logger, &State.new_line(&1, text))
     logger
   end

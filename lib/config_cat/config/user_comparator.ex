@@ -65,7 +65,7 @@ defmodule ConfigCat.Config.UserComparator do
     @greater_than_semver => %Metadata{description: ">", value_type: :string},
     @greater_than_equal_semver => %Metadata{description: ">=", value_type: :string},
     @equals_number => %Metadata{description: "=", value_type: :double},
-    @not_equals_number => %Metadata{description: "<>", value_type: :double},
+    @not_equals_number => %Metadata{description: "!=", value_type: :double},
     @less_than_number => %Metadata{description: "<", value_type: :double},
     @less_than_equal_number => %Metadata{description: "<=", value_type: :double},
     @greater_than_number => %Metadata{description: ">", value_type: :double},

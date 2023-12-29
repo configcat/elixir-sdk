@@ -21,6 +21,14 @@ defmodule ConfigCat.Config.UserCondition do
     Map.get(rule, @comparison_attribute)
   end
 
+  @spec fetch_comparison_attribute(t()) :: {:ok, String.t()} | {:error, :not_found}
+  def fetch_comparison_attribute(rule) do
+    case Map.fetch(rule, @comparison_attribute) do
+      {:ok, attribute} -> {:ok, attribute}
+      :error -> {:error, :not_found}
+    end
+  end
+
   @spec comparison_value(t()) :: comparison_value()
   def comparison_value(rule) do
     rule
@@ -31,6 +39,16 @@ defmodule ConfigCat.Config.UserCondition do
       :string -> string_value(rule)
       :string_list -> string_list_value(rule)
     end
+  end
+
+  @spec description(t()) :: String.t()
+  def description(condition) do
+    attribute = comparison_attribute(condition)
+    comparator = condition |> comparator() |> UserComparator.description()
+    comparison_value = comparison_value(condition)
+
+    # TODO: Truncate comparison value if needed
+    "User.#{attribute} #{comparator} #{comparison_value}"
   end
 
   defp double_value(rule) do
