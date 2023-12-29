@@ -262,7 +262,7 @@ defmodule ConfigCat.Rollout do
       |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
         EvaluationLogger.log_evaluating_condition_start(context.logger, index)
 
-        case evaluate_condition(condition, condition_count, value, context) do
+        case evaluate_condition(condition, condition_count, context) do
           {:ok, true} -> {:cont, acc}
           result -> {:halt, result}
         end
@@ -276,7 +276,7 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_condition(condition, condition_count, value, %Context{} = context) do
+  defp evaluate_condition(condition, condition_count, %Context{} = context) do
     %Context{logger: logger} = context
     prerequisite_flag_condition = Condition.prerequisite_flag_condition(condition)
     segment_condition = Condition.segment_condition(condition)
@@ -284,12 +284,12 @@ defmodule ConfigCat.Rollout do
 
     cond do
       user_condition ->
-        result = evaluate_user_condition(user_condition, context.key, value, context)
+        result = evaluate_user_condition(user_condition, context.key, context)
         EvaluationLogger.log_evaluating_user_condition_result(logger, result, condition_count)
         result
 
       segment_condition ->
-        result = evaluate_segment_condition(segment_condition, value, context)
+        result = evaluate_segment_condition(segment_condition, context)
         EvaluationLogger.log_evaluating_segment_condition_final_result(logger, result, condition_count)
         result
 
@@ -301,62 +301,43 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_user_condition(_comparison_rule, _context_salt, _value, %Context{user: nil} = context) do
+  defp evaluate_user_condition(condition, _context_salt, %Context{user: nil} = context) do
+    EvaluationLogger.log_evaluating_user_condition_start(context.logger, condition)
     warn_missing_user(context.key)
-    {:ok, false}
+    {:error, "cannot evaluate, User Object is missing"}
   end
 
-  defp evaluate_user_condition(comparison_rule, context_salt, value, %Context{} = context) do
+  defp evaluate_user_condition(condition, context_salt, %Context{} = context) do
     %Context{logger: logger, salt: salt, user: user} = context
-    comparison_attribute = UserCondition.comparison_attribute(comparison_rule)
-    comparator = UserCondition.comparator(comparison_rule)
-    comparison_value = UserCondition.comparison_value(comparison_rule)
 
-    case User.get_attribute(user, comparison_attribute) do
-      nil = user_value ->
-        log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value)
-        {:error, :missing_comparison_attribute}
+    EvaluationLogger.log_evaluating_user_condition_start(logger, condition)
 
-      user_value ->
-        case UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt) do
-          {:ok, true} ->
-            log_match(
-              logger,
-              comparison_attribute,
-              user_value,
-              comparator,
-              comparison_value,
-              value
-            )
+    case UserCondition.fetch_comparison_attribute(condition) do
+      {:error, :not_found} ->
+        raise EvaluationError, "Comparison attribute name missing"
 
-            {:ok, true}
+      {:ok, comparison_attribute} ->
+        comparator = UserCondition.comparator(condition)
+        comparison_value = UserCondition.comparison_value(condition)
 
-          {:ok, false} ->
-            log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value)
-            {:ok, false}
+        case User.get_attribute(user, comparison_attribute) do
+          nil ->
+            warn_missing_user_attribute(context.key, condition, comparison_attribute)
+            {:error, "cannot evaluate, the User.#{comparison_attribute} attribute is missing"}
 
-          {:error, error} ->
-            log_validation_error(
-              logger,
-              comparison_attribute,
-              user_value,
-              comparator,
-              comparison_value,
-              error
-            )
-
-            {:error, error}
+          user_value ->
+            UserComparator.compare(comparator, user_value, comparison_value, context_salt, salt)
         end
     end
   end
 
-  defp evaluate_segment_condition(condition, _value, %Context{user: nil} = context) do
+  defp evaluate_segment_condition(condition, %Context{user: nil} = context) do
     warn_missing_user(context.key)
     EvaluationLogger.log_skipping_segment_condition_missing_user(context.logger, condition)
     {:error, "cannot evaluate, User Object is missing"}
   end
 
-  defp evaluate_segment_condition(condition, value, %Context{} = context) do
+  defp evaluate_segment_condition(condition, %Context{} = context) do
     %Context{logger: logger} = context
 
     case SegmentCondition.fetch_segment(condition) do
@@ -375,7 +356,7 @@ defmodule ConfigCat.Rollout do
         |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
           EvaluationLogger.log_evaluating_condition_start(logger, index)
 
-          result = evaluate_user_condition(condition, name, value, context)
+          result = evaluate_user_condition(condition, name, context)
           # Faking multiple conditions; may want to use actual condition count
           # eventually. Keeping it this way to match Python SDK for now.
           EvaluationLogger.log_evaluating_user_condition_result(logger, result, 2)
@@ -513,28 +494,6 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
-  defp log_match(logger, comparison_attribute, user_value, comparator, comparison_value, value) do
-    log(
-      logger,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
-    )
-  end
-
-  defp log_no_match(logger, comparison_attribute, user_value, comparator, comparison_value) do
-    log(
-      logger,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => no match"
-    )
-  end
-
-  defp log_validation_error(logger, comparison_attribute, user_value, comparator, comparison_value, error) do
-    message =
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{UserComparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
-
-    ConfigCatLogger.warning(message)
-    log(logger, message)
-  end
-
   defp warn_invalid_user(key) do
     ConfigCatLogger.warning(
       "Cannot evaluate targeting rules and % options for setting '#{key}' " <>
@@ -566,7 +525,12 @@ defmodule ConfigCat.Rollout do
     )
   end
 
-  defp log(logger, message) do
-    EvaluationLogger.new_line(logger, message)
+  defp warn_missing_user_attribute(key, user_condition, attribute_name) do
+    ConfigCatLogger.warning(
+      "Cannot evaluate condition (#{UserCondition.description(user_condition)}) for setting '#{key}' " <>
+        "(the User.#{attribute_name} attribute is missing). You should set the User.#{attribute_name} attribute in order to make " <>
+        "targeting work properly. Read more: https://configcat.com/docs/advanced/user-object/",
+      event_id: 3003
+    )
   end
 end
