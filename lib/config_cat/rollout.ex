@@ -116,7 +116,10 @@ defmodule ConfigCat.Rollout do
         case evaluate_rules(targeting_rules, percentage_options, context) do
           {:none, _variation_id, _matching_rule, _matching_option} ->
             value = Setting.value(setting, default_value)
-            EvaluationLogger.log_return_value(logger, value)
+
+            if root_flag_evaluation? do
+              EvaluationLogger.log_return_value(logger, value)
+            end
 
             EvaluationDetails.new(
               key: key,
@@ -126,7 +129,9 @@ defmodule ConfigCat.Rollout do
             )
 
           {value, variation_id, rule, percentage_option} ->
-            EvaluationLogger.log_return_value(logger, value)
+            if root_flag_evaluation? do
+              EvaluationLogger.log_return_value(logger, value)
+            end
 
             EvaluationDetails.new(
               key: key,
