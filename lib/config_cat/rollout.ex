@@ -192,7 +192,7 @@ defmodule ConfigCat.Rollout do
             matched_percentage_option: percentage_option,
             user: user,
             value: value,
-            variation_id: variation_id || default_variation_id
+            variation_id: variation_id
           )
       end
     rescue
@@ -283,7 +283,7 @@ defmodule ConfigCat.Rollout do
           {value, variation_id, rule, option}
 
         _ ->
-          variation_id = TargetingRule.variation_id(rule)
+          variation_id = TargetingRule.variation_id(rule, context.default_variation_id)
           {value, variation_id, rule, nil}
       end
     else
@@ -525,7 +525,7 @@ defmodule ConfigCat.Rollout do
 
     if hash_val < bucket do
       value = PercentageOption.value(option, context.setting_type)
-      variation_id = PercentageOption.variation_id(option)
+      variation_id = PercentageOption.variation_id(option, context.default_variation_id)
       attribute_name = context.percentage_option_attribute
 
       EvaluationLogger.log_matching_percentage_option(context.logger, attribute_name, hash_val, index, percentage, value)
