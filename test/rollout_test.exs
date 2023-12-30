@@ -1,5 +1,8 @@
 defmodule ConfigCat.RolloutTest do
-  use ConfigCat.Case, async: true
+  # Must be async: false to avoid a collision with other tests.
+  # Now that we only allow a single ConfigCat instance to use the same SDK key,
+  # one of the async tests would fail due to the existing running instance.
+  use ConfigCat.Case, async: false
 
   import ExUnit.CaptureLog
   import Jason.Sigil

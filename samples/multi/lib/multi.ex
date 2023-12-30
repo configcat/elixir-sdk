@@ -19,12 +19,12 @@ defmodule Multi do
 
   defmodule First do
     @moduledoc false
-    use ConfigCat, sdk_key: "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A"
+    use ConfigCat, sdk_key: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/AG6C1ngVb0CvM07un6JisQ"
   end
 
   defmodule Second do
     @moduledoc false
-    use ConfigCat, sdk_key: "PKDVCLf-Hq-h-kCzMp-L7Q/HhOWfwVtZ0mb30i9wi17GQ"
+    use ConfigCat, sdk_key: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/tiOvFw5gkky9LFu1Duuvzw"
   end
 
   def start_link(_options) do

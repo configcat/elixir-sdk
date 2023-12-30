@@ -6,7 +6,7 @@ defmodule ConfigCat.UsingBlockTest do
 
   defmodule CustomModule do
     @moduledoc false
-    use ConfigCat, sdk_key: "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
+    use ConfigCat, sdk_key: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
   end
 
   test "can call API through using block" do
