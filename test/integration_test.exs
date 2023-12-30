@@ -9,7 +9,7 @@ defmodule ConfigCat.IntegrationTest do
   alias ConfigCat.InMemoryCache
   alias ConfigCat.LocalMapDataSource
 
-  @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/PaDVCFk9EpmD6sLpGLltTA"
+  @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
   describe "SDK key validation" do
     test "raises error if SDK key is missing" do

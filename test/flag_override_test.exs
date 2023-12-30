@@ -1,5 +1,8 @@
 defmodule ConfigCat.FlagOverrideTest do
-  use ConfigCat.ClientCase, async: true
+  # Must be async: false to avoid a collision with other tests.
+  # Now that we only allow a single ConfigCat instance to use the same SDK key,
+  # one of the async tests would fail due to the existing running instance.
+  use ConfigCat.ClientCase, async: false
 
   import Jason.Sigil
 

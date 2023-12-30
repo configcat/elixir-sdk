@@ -5,7 +5,7 @@ defmodule Simple.Application do
 
   require Logger
 
-  @sdk_key "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A"
+  @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/AG6C1ngVb0CvM07un6JisQ"
 
   @impl Application
   def start(_type, _args) do
