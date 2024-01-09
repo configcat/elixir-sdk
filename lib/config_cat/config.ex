@@ -61,4 +61,13 @@ defmodule ConfigCat.Config do
   def preferences(config) do
     Map.get_lazy(config, @preferences, &Preferences.new/0)
   end
+
+  @doc false
+  @spec merge(left :: t(), right :: t()) :: t()
+  def merge(left, right) do
+    left_flags = feature_flags(left)
+    right_flags = feature_flags(right)
+
+    Map.put(left, @feature_flags, Map.merge(left_flags, right_flags))
+  end
 end

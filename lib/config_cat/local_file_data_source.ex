@@ -19,7 +19,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
     typedstruct do
       field :cached_timestamp, non_neg_integer(), default: 0
-      field :feature_flags, Config.feature_flags()
+      field :config, Config.t()
     end
 
     @spec start_link(GenServer.options()) :: Agent.on_start()
@@ -27,11 +27,11 @@ defmodule ConfigCat.LocalFileDataSource do
       Agent.start_link(fn -> %__MODULE__{} end)
     end
 
-    @spec cached_feature_flags(Agent.agent()) :: {:ok, Config.t()} | {:error, :not_found}
-    def cached_feature_flags(cache) do
-      case Agent.get(cache, fn %__MODULE__{feature_flags: feature_flags} -> feature_flags end) do
+    @spec cached_config(Agent.agent()) :: {:ok, Config.t()} | {:error, :not_found}
+    def cached_config(cache) do
+      case Agent.get(cache, fn %__MODULE__{config: config} -> config end) do
         nil -> {:error, :not_found}
-        feature_flags -> {:ok, feature_flags}
+        config -> {:ok, config}
       end
     end
 
@@ -41,9 +41,9 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     @spec update(Agent.agent(), Config.t(), integer()) :: :ok
-    def update(cache, feature_flags, timestamp) do
+    def update(cache, config, timestamp) do
       Agent.update(cache, fn %__MODULE__{} = state ->
-        %{state | cached_timestamp: timestamp, feature_flags: feature_flags}
+        %{state | cached_timestamp: timestamp, config: config}
       end)
     end
   end
@@ -82,8 +82,8 @@ defmodule ConfigCat.LocalFileDataSource do
     def overrides(%{cache: cache} = data_source) do
       refresh_cache(cache, data_source.filename)
 
-      case FileCache.cached_feature_flags(cache) do
-        {:ok, feature_flags} -> feature_flags
+      case FileCache.cached_config(cache) do
+        {:ok, config} -> config
         _ -> %{}
       end
     end
@@ -93,8 +93,8 @@ defmodule ConfigCat.LocalFileDataSource do
         unless FileCache.cached_timestamp(cache) == timestamp do
           with {:ok, contents} <- File.read(filename),
                {:ok, data} <- Jason.decode(contents) do
-            feature_flags = normalize(data)
-            FileCache.update(cache, feature_flags, timestamp)
+            config = normalize(data)
+            FileCache.update(cache, config, timestamp)
           else
             error ->
               log_error(error, filename)
@@ -119,13 +119,16 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(%{"flags" => source} = _data) do
-      source
-      |> Enum.map(fn {key, value} -> {key, EvaluationFormula.new(value: value)} end)
-      |> Map.new()
+      feature_flags =
+        source
+        |> Enum.map(fn {key, value} -> {key, EvaluationFormula.new(value: value)} end)
+        |> Map.new()
+
+      Config.new(feature_flags: feature_flags)
     end
 
     defp normalize(source) do
-      Config.feature_flags(source)
+      source
     end
   end
 end
