@@ -31,9 +31,12 @@ defmodule ConfigCat.ClientCase do
     {:ok, instance_id}
   end
 
-  @spec stub_cached_settings({:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}) ::
+  @spec stub_cached_feature_flags(
+          {:ok, Config.feature_flags(), FetchTime.t()}
+          | {:error, :not_found}
+        ) ::
           :ok
-  def stub_cached_settings(response) do
+  def stub_cached_feature_flags(response) do
     Mox.stub(MockCachePolicy, :get, fn _id -> response end)
     :ok
   end

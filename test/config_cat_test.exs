@@ -4,17 +4,16 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
+  alias ConfigCat.Config.RolloutRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
   alias ConfigCat.User
-
-  require ConfigCat.Constants, as: Constants
 
   setup :verify_on_exit!
 
   describe "when the configuration has been fetched" do
     setup do
-      settings = ~J"""
+      feature_flags = ~J"""
         {
           "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
           "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
@@ -31,7 +30,7 @@ defmodule ConfigCatTest do
       {:ok, client} = start_client()
 
       fetch_time_ms = FetchTime.now_ms()
-      stub_cached_settings({:ok, settings, fetch_time_ms})
+      stub_cached_feature_flags({:ok, feature_flags, fetch_time_ms})
 
       {:ok, client: client, fetch_time_ms: fetch_time_ms}
     end
@@ -95,17 +94,21 @@ defmodule ConfigCatTest do
 
       {:ok, fetch_time} = FetchTime.to_datetime(fetch_time_ms)
 
+      rule =
+        RolloutRule.new(
+          comparator: 2,
+          comparison_attribute: "Identifier",
+          comparison_value: "@test1.com",
+          value: "fake1",
+          variation_id: "id1"
+        )
+
       assert %EvaluationDetails{
                default_value?: false,
                error: nil,
                fetch_time: ^fetch_time,
                key: "testStringKey",
-               matched_evaluation_rule: %{
-                 Constants.comparator() => 2,
-                 Constants.comparison_attribute() => "Identifier",
-                 Constants.comparison_value() => "@test1.com",
-                 Constants.value() => "fake1"
-               },
+               matched_evaluation_rule: ^rule,
                matched_evaluation_percentage_rule: nil,
                user: ^user,
                value: "fake1",
@@ -138,7 +141,7 @@ defmodule ConfigCatTest do
     setup do
       {:ok, client} = start_client()
 
-      stub_cached_settings({:error, :not_found})
+      stub_cached_feature_flags({:error, :not_found})
 
       {:ok, client: client}
     end

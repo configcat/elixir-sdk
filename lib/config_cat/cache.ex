@@ -83,8 +83,8 @@ defmodule ConfigCat.Cache do
   def handle_call(:get, _from, %State{latest_entry: nil} = state) do
     with {:ok, serialized} <- state.cache.get(state.cache_key),
          {:ok, entry} <- deserialize(serialized),
-         {:ok, settings} <- Config.fetch_settings(entry.config) do
-      Hooks.invoke_on_config_changed(state.instance_id, settings)
+         {:ok, feature_flags} <- Config.fetch_feature_flags(entry.config) do
+      Hooks.invoke_on_config_changed(state.instance_id, feature_flags)
       {:reply, {:ok, entry}, State.with_entry(state, entry)}
     else
       error ->

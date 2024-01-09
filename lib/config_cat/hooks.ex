@@ -78,7 +78,7 @@ defmodule ConfigCat.Hooks do
   """
   @type named_callback :: {module(), atom(), list()}
   @type on_client_ready_callback :: (-> any()) | named_callback()
-  @type on_config_changed_callback :: (Config.settings() -> any()) | named_callback()
+  @type on_config_changed_callback :: (Config.feature_flags() -> any()) | named_callback()
   @type on_error_callback :: (String.t() -> any()) | named_callback()
   @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> any()) | named_callback()
   @type option ::
@@ -154,11 +154,11 @@ defmodule ConfigCat.Hooks do
   end
 
   @doc false
-  @spec invoke_on_config_changed(t(), Config.settings()) :: :ok
-  def invoke_on_config_changed(instance_id, settings) do
+  @spec invoke_on_config_changed(t(), Config.feature_flags()) :: :ok
+  def invoke_on_config_changed(instance_id, feature_flags) do
     instance_id
     |> hooks()
-    |> Impl.invoke_hook(:on_config_changed, [settings])
+    |> Impl.invoke_hook(:on_config_changed, [feature_flags])
   end
 
   @doc false
