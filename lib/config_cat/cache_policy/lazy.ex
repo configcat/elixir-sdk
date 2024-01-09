@@ -41,7 +41,7 @@ defmodule ConfigCat.CachePolicy.Lazy do
   @impl GenServer
   def handle_call(:get, _from, %State{} = state) do
     with {:ok, new_state} <- maybe_refresh(state) do
-      {:reply, Helpers.cached_settings(new_state), new_state}
+      {:reply, Helpers.cached_feature_flags(new_state), new_state}
     end
   end
 

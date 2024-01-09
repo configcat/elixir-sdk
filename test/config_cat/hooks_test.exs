@@ -7,14 +7,13 @@ defmodule ConfigCat.HooksTest do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.Config
+  alias ConfigCat.Config.RolloutRule
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.Hooks
   alias ConfigCat.MockFetcher
   alias ConfigCat.NullDataSource
   alias ConfigCat.User
-
-  require ConfigCat.Constants, as: Constants
 
   @moduletag capture_log: true
 
@@ -84,11 +83,11 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    feature_flags = Config.feature_flags(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
-    assert_received {:on_config_changed, ^settings}
+    assert_received {:on_config_changed, ^feature_flags}
     assert_received {:on_flag_evaluated, _details}
 
     refute_received {:on_error, _error}
@@ -112,11 +111,11 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    feature_flags = Config.feature_flags(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
-    assert_received {:on_config_changed, ^settings}
+    assert_received {:on_config_changed, ^feature_flags}
     assert_received {:on_flag_evaluated, _details}
     refute_received {:on_error, _error}
     refute_received _any_other_messages
@@ -140,16 +139,20 @@ defmodule ConfigCat.HooksTest do
 
     assert_received {:on_flag_evaluated, details}
 
+    rule =
+      RolloutRule.new(
+        comparator: 2,
+        comparison_attribute: "Identifier",
+        comparison_value: "@test1.com",
+        value: "fake1",
+        variation_id: "id1"
+      )
+
     assert %EvaluationDetails{
              default_value?: false,
              error: nil,
              key: "testStringKey",
-             matched_evaluation_rule: %{
-               Constants.comparator() => 2,
-               Constants.comparison_attribute() => "Identifier",
-               Constants.comparison_value() => "@test1.com",
-               Constants.value() => "fake1"
-             },
+             matched_evaluation_rule: ^rule,
              matched_evaluation_percentage_rule: nil,
              user: ^user,
              value: "fake1",

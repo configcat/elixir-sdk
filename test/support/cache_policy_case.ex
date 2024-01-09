@@ -22,31 +22,31 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   setup do
-    settings = %{"some" => "settings"}
+    feature_flags = %{"some" => "feature_flags"}
 
     entry =
-      settings
-      |> Config.new_with_settings()
+      [feature_flags: feature_flags]
+      |> Config.new()
       |> ConfigEntry.new("ETag")
 
-    %{entry: entry, settings: settings}
+    %{entry: entry, feature_flags: feature_flags}
   end
 
-  @spec make_old_entry :: %{entry: ConfigEntry.t(), settings: Config.settings()}
+  @spec make_old_entry :: %{entry: ConfigEntry.t(), feature_flags: Config.feature_flags()}
   @spec make_old_entry(non_neg_integer()) :: %{
           entry: ConfigEntry.t(),
-          settings: Config.settings()
+          feature_flags: Config.feature_flags()
         }
   def make_old_entry(age_ms \\ 0) do
-    settings = %{"old" => "settings"}
+    feature_flags = %{"old" => "feature_flags"}
 
     entry =
-      settings
-      |> Config.new_with_settings()
+      [feature_flags: feature_flags]
+      |> Config.new()
       |> ConfigEntry.new("OldETag")
       |> Map.update!(:fetch_time_ms, &(&1 - age_ms))
 
-    %{entry: entry, settings: settings}
+    %{entry: entry, feature_flags: feature_flags}
   end
 
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}
