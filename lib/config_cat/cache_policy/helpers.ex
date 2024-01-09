@@ -4,7 +4,6 @@ defmodule ConfigCat.CachePolicy.Helpers do
   alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
-  alias ConfigCat.ConfigCache
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.FetchTime
@@ -66,19 +65,11 @@ defmodule ConfigCat.CachePolicy.Helpers do
     Hooks.invoke_on_client_ready(state.instance_id)
   end
 
-  @spec cached_feature_flags(State.t()) ::
-          {:ok, Config.feature_flags(), FetchTime.t()} | {:error, :not_found}
-  def cached_feature_flags(%State{} = state) do
-    with {:ok, %ConfigEntry{} = entry} <- cached_entry(state),
-         {:ok, feature_flags} <- Config.fetch_feature_flags(entry.config) do
-      {:ok, feature_flags, entry.fetch_time_ms}
-    end
-  end
-
-  @spec cached_config(State.t()) :: ConfigCache.result()
+  @spec cached_config(State.t()) ::
+          {:ok, Config.t(), FetchTime.t()} | {:error, :not_found}
   def cached_config(%State{} = state) do
     with {:ok, %ConfigEntry{} = entry} <- cached_entry(state) do
-      {:ok, entry.config}
+      {:ok, entry.config, entry.fetch_time_ms}
     end
   end
 

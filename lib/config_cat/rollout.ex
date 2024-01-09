@@ -16,15 +16,16 @@ defmodule ConfigCat.Rollout do
           User.t() | nil,
           Config.value(),
           Config.variation_id() | nil,
-          Config.feature_flags()
+          Config.t()
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, feature_flags) do
+  def evaluate(key, user, default_value, default_variation_id, config) do
     {:ok, logs} = Agent.start(fn -> [] end)
 
     try do
       log_evaluating(logs, key, user)
 
       with {:ok, valid_user} <- validate_user(user),
+           feature_flags = Config.feature_flags(config),
            {:ok, setting_descriptor} <- setting_descriptor(feature_flags, key, default_value),
            setting_variation =
              EvaluationFormula.variation_id(setting_descriptor, default_variation_id),
@@ -52,7 +53,7 @@ defmodule ConfigCat.Rollout do
       else
         {:error, :invalid_user} ->
           log_invalid_user(key)
-          evaluate(key, nil, default_value, default_variation_id, feature_flags)
+          evaluate(key, nil, default_value, default_variation_id, config)
 
         {:error, message} ->
           ConfigCatLogger.error(message, event_id: 1001)

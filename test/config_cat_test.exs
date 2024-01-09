@@ -4,6 +4,7 @@ defmodule ConfigCatTest do
   import Jason.Sigil
   import Mox
 
+  alias ConfigCat.Config
   alias ConfigCat.Config.RolloutRule
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.FetchTime
@@ -27,10 +28,12 @@ defmodule ConfigCatTest do
         }
       """
 
+      config = Config.new(feature_flags: feature_flags)
+
       {:ok, client} = start_client()
 
       fetch_time_ms = FetchTime.now_ms()
-      stub_cached_feature_flags({:ok, feature_flags, fetch_time_ms})
+      stub_cached_config({:ok, config, fetch_time_ms})
 
       {:ok, client: client, fetch_time_ms: fetch_time_ms}
     end
@@ -141,7 +144,7 @@ defmodule ConfigCatTest do
     setup do
       {:ok, client} = start_client()
 
-      stub_cached_feature_flags({:error, :not_found})
+      stub_cached_config({:error, :not_found})
 
       {:ok, client: client}
     end

@@ -30,18 +30,18 @@ defmodule ConfigCat.CachePolicy.ManualTest do
   end
 
   describe "refreshing the config" do
-    test "stores new config in the cache", %{entry: entry, feature_flags: feature_flags} do
+    test "stores new config in the cache", %{config: config, entry: entry} do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
 
       assert :ok = CachePolicy.force_refresh(instance_id)
-      assert {:ok, feature_flags, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
     test "updates fetch time when server responds that the config hasn't changed", %{
-      entry: entry,
-      feature_flags: feature_flags
+      config: config,
+      entry: entry
     } do
       entry = Map.update!(entry, :fetch_time_ms, &(&1 - 200))
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
@@ -52,7 +52,7 @@ defmodule ConfigCat.CachePolicy.ManualTest do
 
       assert :ok = CachePolicy.force_refresh(instance_id)
 
-      assert {:ok, ^feature_flags, new_fetch_time_ms} = CachePolicy.get(instance_id)
+      assert {:ok, ^config, new_fetch_time_ms} = CachePolicy.get(instance_id)
       assert before <= new_fetch_time_ms && new_fetch_time_ms <= FetchTime.now_ms()
     end
 
