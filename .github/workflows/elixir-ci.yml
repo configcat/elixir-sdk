@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  ELIXIR_VERSION: '1.14.x'
+  ELIXIR_VERSION: '1.15.x'
   OTP_VERSION: '24.x'
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-version: ['1.11.x', '1.12.x', '1.13.x', '1.14.x']
+        elixir-version: ['1.11.x', '1.12.x', '1.13.x', '1.14.x', '1.15.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir

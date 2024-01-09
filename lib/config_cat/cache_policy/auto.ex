@@ -106,7 +106,7 @@ defmodule ConfigCat.CachePolicy.Auto do
   def handle_info(:init_timeout, %State{} = state) do
     seconds = state.policy_options.max_init_wait_time_ms / 1000
 
-    ConfigCatLogger.warn(
+    ConfigCatLogger.warning(
       "`max_init_wait_time_seconds` for the very first fetch reached (#{seconds}). Returning cached config.",
       event_id: 4200
     )

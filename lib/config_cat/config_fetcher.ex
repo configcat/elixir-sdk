@@ -271,7 +271,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
         end
 
       if redirect_mode == RedirectMode.should_redirect() do
-        ConfigCatLogger.warn(
+        ConfigCatLogger.warning(
           "The `dataGovernance` parameter specified at the client initialization is not in sync with the preferences on the ConfigCat Dashboard. " <>
             "Read more: https://configcat.com/docs/advanced/data-governance/",
           event_id: 3002
