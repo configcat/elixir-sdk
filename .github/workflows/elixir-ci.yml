@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  ELIXIR_VERSION: '1.15.x'
+  ELIXIR_VERSION: '1.16.x'
   OTP_VERSION: '24.x'
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        elixir-version: ['1.11.x', '1.12.x', '1.13.x', '1.14.x', '1.15.x']
+        elixir-version: ['1.12.x', '1.13.x', '1.14.x', '1.15.x', '1.16.x']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Elixir
@@ -57,12 +57,7 @@ jobs:
     - name: Run dialyzer
       run: mix dialyzer
 
-    - name: Execute tests (Elixir 1.11.x)
-      if: matrix.elixir-version == '1.11.x'
-      run: mix coveralls.json
-
     - name: Execute tests
-      if: matrix.elixir-version != '1.11.x'
       run: mix coveralls.json --warnings-as-errors
 
     - name: Upload coverage report

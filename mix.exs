@@ -10,7 +10,7 @@ defmodule ConfigCat.MixProject do
       source_url: @source_url,
       homepage_url: "https://configcat.com/",
       version: "3.0.0",
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       description: description(),
       package: package(),
       elixirc_options: elixirc_options(Mix.env()),
