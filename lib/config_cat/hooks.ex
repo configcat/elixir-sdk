@@ -77,7 +77,7 @@ defmodule ConfigCat.Hooks do
   ```
   """
   @type named_callback :: {module(), atom(), list()}
-  @type on_client_ready_callback :: (() -> any()) | named_callback()
+  @type on_client_ready_callback :: (-> any()) | named_callback()
   @type on_config_changed_callback :: (Config.settings() -> any()) | named_callback()
   @type on_error_callback :: (String.t() -> any()) | named_callback()
   @type on_flag_evaluated_callback :: (EvaluationDetails.t() -> any()) | named_callback()
