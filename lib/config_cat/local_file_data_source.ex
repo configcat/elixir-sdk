@@ -93,8 +93,8 @@ defmodule ConfigCat.LocalFileDataSource do
       with {:ok, %{mtime: timestamp}} <- File.stat(filename, time: :posix) do
         unless FileCache.cached_timestamp(cache) == timestamp do
           with {:ok, contents} <- File.read(filename),
-               {:ok, data} <- Jason.decode(contents),
-               settings <- normalize(data) do
+               {:ok, data} <- Jason.decode(contents) do
+            settings = normalize(data)
             FileCache.update(cache, settings, timestamp)
           else
             error ->

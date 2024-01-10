@@ -48,26 +48,18 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the default user if no user is passed", %{client: client} do
       expected =
-        %{
-          "testBoolKey" => true,
-          "testStringKey" => "fake1"
-        }
-        |> Enum.sort()
+        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake1"})
 
-      actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
+      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
       expected =
-        %{
-          "testBoolKey" => true,
-          "testStringKey" => "fake2"
-        }
-        |> Enum.sort()
+        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
 
       user = User.new("test@test2.com")
-      actual = ConfigCat.get_all_values(user, client: client) |> Enum.sort()
+      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
       assert actual == expected
     end
   end
@@ -94,26 +86,18 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the undefined user case if no user is passed", %{client: client} do
       expected =
-        %{
-          "testBoolKey" => true,
-          "testStringKey" => "testValue"
-        }
-        |> Enum.sort()
+        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "testValue"})
 
-      actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
+      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
       expected =
-        %{
-          "testBoolKey" => true,
-          "testStringKey" => "fake2"
-        }
-        |> Enum.sort()
+        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
 
       user = User.new("test@test2.com")
-      actual = ConfigCat.get_all_values(user, client: client) |> Enum.sort()
+      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
       assert actual == expected
     end
   end

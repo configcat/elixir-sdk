@@ -17,17 +17,12 @@ defmodule ConfigCat.ClientCase do
 
   @spec start_client([Client.option()]) :: {:ok, GenServer.server()}
   def start_client(opts \\ []) do
-    instance_id = UUID.uuid4() |> String.to_atom()
+    instance_id = String.to_atom(UUID.uuid4())
 
     start_supervised!({Hooks, instance_id: instance_id})
 
     options =
-      [
-        cache_policy: MockCachePolicy,
-        flag_overrides: NullDataSource.new(),
-        instance_id: instance_id
-      ]
-      |> Keyword.merge(opts)
+      Keyword.merge([cache_policy: MockCachePolicy, flag_overrides: NullDataSource.new(), instance_id: instance_id], opts)
 
     {:ok, pid} = start_supervised({Client, options})
 
@@ -39,9 +34,7 @@ defmodule ConfigCat.ClientCase do
   @spec stub_cached_settings({:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}) ::
           :ok
   def stub_cached_settings(response) do
-    MockCachePolicy
-    |> Mox.stub(:get, fn _id -> response end)
-
+    Mox.stub(MockCachePolicy, :get, fn _id -> response end)
     :ok
   end
 end

@@ -2,12 +2,11 @@ defmodule ConfigCat.CachePolicy.Null do
   @moduledoc false
 
   # The CachePolicy that gets used in :local_only mode
+  @behaviour ConfigCat.CachePolicy.Behaviour
 
   alias ConfigCat.CachePolicy.Behaviour
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
-
-  @behaviour Behaviour
 
   @impl Behaviour
   def get(_instance_id) do
@@ -37,7 +36,6 @@ defmodule ConfigCat.CachePolicy.Null do
 
   @impl Behaviour
   def force_refresh(_instance_id) do
-    {:error,
-     "The SDK uses the `:local_only` override behavior which prevents making HTTP requests."}
+    {:error, "The SDK uses the `:local_only` override behavior which prevents making HTTP requests."}
   end
 end

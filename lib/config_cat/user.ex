@@ -74,8 +74,7 @@ defmodule ConfigCat.User do
   """
   @spec new(String.t(), options()) :: t()
   def new(identifier, other_props \\ []) do
-    %__MODULE__{identifier: identifier}
-    |> struct!(other_props)
+    struct!(%__MODULE__{identifier: identifier}, other_props)
   end
 
   @doc false

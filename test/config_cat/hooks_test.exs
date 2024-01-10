@@ -101,7 +101,8 @@ defmodule ConfigCat.HooksTest do
     {:ok, instance_id} = start_hooks()
 
     _hooks =
-      ConfigCat.hooks(client: instance_id)
+      [client: instance_id]
+      |> ConfigCat.hooks()
       |> Hooks.add_on_client_ready({TestHooks, :on_client_ready, [test_pid]})
       |> Hooks.add_on_config_changed({TestHooks, :on_config_changed, [test_pid]})
       |> Hooks.add_on_flag_evaluated({TestHooks, :on_flag_evaluated, [test_pid]})
@@ -122,9 +123,7 @@ defmodule ConfigCat.HooksTest do
   end
 
   test "provides details on on_flag_evaluated hook" do
-    MockFetcher
-    |> stub(:fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
-
+    stub(MockFetcher, :fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
     test_pid = self()
 
     {:ok, instance_id} =
@@ -159,9 +158,7 @@ defmodule ConfigCat.HooksTest do
   end
 
   test "doesn't fail when callbacks raise errors" do
-    MockFetcher
-    |> stub(:fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
-
+    stub(MockFetcher, :fetch, fn _instance_id, _etag -> {:ok, ConfigEntry.new(@config, "NEW-ETAG")} end)
     callback0 = fn -> raise "Error raised in callback" end
     callback1 = fn _ignored -> raise "Error raised in callback" end
 
@@ -182,7 +179,7 @@ defmodule ConfigCat.HooksTest do
   end
 
   defp start_hooks(config \\ []) do
-    instance_id = UUID.uuid4() |> String.to_atom()
+    instance_id = String.to_atom(UUID.uuid4())
 
     start_supervised!({Hooks, hooks: config, instance_id: instance_id})
 

@@ -19,7 +19,7 @@ defmodule ConfigCat.ConfigCatLogger do
 
       Logger.error(fn -> module.formatted_message(message, metadata) end)
 
-      instance_id = Logger.metadata() |> Keyword.get(:instance_id)
+      instance_id = Keyword.get(Logger.metadata(), :instance_id)
 
       if instance_id do
         ConfigCat.Hooks.invoke_on_error(instance_id, message)

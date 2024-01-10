@@ -1,11 +1,11 @@
 defmodule ConfigCat.InMemoryCache do
   @moduledoc false
 
+  @behaviour ConfigCat.ConfigCache
+
   use GenServer
 
   alias ConfigCat.ConfigCache
-
-  @behaviour ConfigCache
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(_options) do

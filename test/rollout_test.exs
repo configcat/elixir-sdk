@@ -109,7 +109,8 @@ defmodule ConfigCat.RolloutTest do
       |> String.split(";")
       |> Enum.drop(4)
 
-    Enum.zip(settings_keys, expected_values)
+    settings_keys
+    |> Enum.zip(expected_values)
     |> Enum.map(fn {setting_key, expected} ->
       run_test(setting_key, expected, user, client, type)
     end)
@@ -166,7 +167,7 @@ defmodule ConfigCat.RolloutTest do
   defp normalize(value), do: value
 
   defp start_config_cat(sdk_key) do
-    name = UUID.uuid4() |> String.to_atom()
+    name = String.to_atom(UUID.uuid4())
 
     with {:ok, _pid} <-
            start_supervised(

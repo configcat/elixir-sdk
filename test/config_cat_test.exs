@@ -37,8 +37,8 @@ defmodule ConfigCatTest do
     end
 
     test "get_all_keys/1 returns all known keys", %{client: client} do
-      expected = ~w(testBoolKey testStringKey testIntKey testDoubleKey key1 key2) |> Enum.sort()
-      actual = ConfigCat.get_all_keys(client: client) |> Enum.sort()
+      expected = Enum.sort(~w(testBoolKey testStringKey testIntKey testDoubleKey key1 key2))
+      actual = [client: client] |> ConfigCat.get_all_keys() |> Enum.sort()
       assert actual == expected
     end
 
@@ -74,17 +74,16 @@ defmodule ConfigCatTest do
     @tag capture_log: true
     test "get_all_values/2 returns all key/value pairs", %{client: client} do
       expected =
-        %{
+        Enum.sort(%{
           "testBoolKey" => true,
           "testStringKey" => "testValue",
           "testIntKey" => 1,
           "testDoubleKey" => 1.1,
           "key1" => true,
           "key2" => false
-        }
-        |> Enum.sort()
+        })
 
-      actual = ConfigCat.get_all_values(nil, client: client) |> Enum.sort()
+      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
       assert actual == expected
     end
 
