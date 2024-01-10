@@ -178,10 +178,12 @@ defmodule ConfigCat.RolloutTest do
       end)
 
     expected_log =
-      "warning [3005] Evaluation of condition (User.#{custom_attribute_name} EQUALS '#{custom_attribute_value}') " <>
-        "for setting '#{key}' may not produce the expected result (the User.#{custom_attribute_name} attribute is not a string value, " <>
-        "thus it was automatically converted to the string value '#{custom_attribute_value}'). " <>
-        "Please make sure that using a non-string value was intended."
+      adjust_log_level(
+        "warning [3005] Evaluation of condition (User.#{custom_attribute_name} EQUALS '#{custom_attribute_value}') " <>
+          "for setting '#{key}' may not produce the expected result (the User.#{custom_attribute_name} attribute is not a string value, " <>
+          "thus it was automatically converted to the string value '#{custom_attribute_value}'). " <>
+          "Please make sure that using a non-string value was intended."
+      )
 
     assert expected_log in String.split(logs, "\n", trim: true)
   end

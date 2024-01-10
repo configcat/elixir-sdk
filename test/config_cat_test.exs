@@ -185,9 +185,11 @@ defmodule ConfigCatTest do
           expected_type = SettingType.infer_elixir_type(expected_value)
 
           expected_log =
-            "warning [4002] The type of a setting does not match the type of the specified default value (#{default_value}). " <>
-              "Setting's type was #{expected_type} but the default value's type was #{default_type}. " <>
-              "Please make sure that using a default value not matching the setting's type was intended."
+            adjust_log_level(
+              "warning [4002] The type of a setting does not match the type of the specified default value (#{default_value}). " <>
+                "Setting's type was #{expected_type} but the default value's type was #{default_type}. " <>
+                "Please make sure that using a default value not matching the setting's type was intended."
+            )
 
           assert expected_log in String.split(logs, "\n")
         else

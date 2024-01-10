@@ -113,7 +113,7 @@ defmodule ConfigCat.EvaluationLogTest do
         assert return_value == ConfigCat.get_value(key, default_value, user, client: client)
       end)
 
-    {expected_clean_log, expected_user} = extract_logged_user(expected_log)
+    {expected_clean_log, expected_user} = expected_log |> adjust_log_level() |> extract_logged_user()
     {clean_log, actual_user} = extract_logged_user(log)
 
     assert clean_log == expected_clean_log
