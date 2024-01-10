@@ -172,12 +172,10 @@ defmodule ConfigCat.RolloutTest do
 
     key = "boolTextEqualsNumber"
 
-    {value, logs} =
-      with_log(fn ->
-        ConfigCat.get_value(key, nil, user, client: client)
+    logs =
+      capture_log(fn ->
+        assert ConfigCat.get_value(key, nil, user, client: client)
       end)
-
-    assert value
 
     expected_log =
       "warning [3005] Evaluation of condition (User.#{custom_attribute_name} EQUALS '#{custom_attribute_value}') " <>
@@ -201,12 +199,10 @@ defmodule ConfigCat.RolloutTest do
       }
       """)
 
-    {details, logs} =
-      with_log(fn ->
-        Rollout.evaluate("test", nil, false, "default_variation_id", config)
+    logs =
+      capture_log(fn ->
+        assert %EvaluationDetails{value: false} = Rollout.evaluate("test", nil, false, "default_variation_id", config)
       end)
-
-    assert %EvaluationDetails{value: false} = details
 
     expected_log =
       "error [2001] Failed to evaluate setting 'test'. " <>
@@ -325,12 +321,12 @@ defmodule ConfigCat.RolloutTest do
         |> LocalFileDataSource.new(:local_only)
         |> OverrideDataSource.overrides()
 
-      {details, logs} =
-        with_log(fn ->
-          Rollout.evaluate(key, nil, "default_value", "default_variation_id", config)
+      logs =
+        capture_log(fn ->
+          assert %EvaluationDetails{value: "default_value"} =
+                   Rollout.evaluate(key, nil, "default_value", "default_variation_id", config)
         end)
 
-      assert %EvaluationDetails{value: "default_value"} = details
       assert logs =~ "Circular dependency detected"
       assert logs =~ dependency_cycle
     end
@@ -378,12 +374,10 @@ defmodule ConfigCat.RolloutTest do
 
       {:ok, client} = start_config_cat(sdk_key, flag_overrides: flag_overrides)
 
-      {value, logs} =
-        with_log(fn ->
-          ConfigCat.get_value(key, nil, client: client)
+      logs =
+        capture_log(fn ->
+          assert expected_value == ConfigCat.get_value(key, nil, client: client)
         end)
-
-      assert value == expected_value
 
       unless expected_value do
         flag_value_type = SettingType.infer_elixir_type(flag_value)

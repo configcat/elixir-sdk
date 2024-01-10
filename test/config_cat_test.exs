@@ -175,12 +175,10 @@ defmodule ConfigCatTest do
         warning? = unquote(warning?)
         user = if user_id, do: User.new(user_id)
 
-        {value, logs} =
-          with_log(fn ->
-            ConfigCat.get_value(key, default_value, user, client: client)
+        logs =
+          capture_log(fn ->
+            assert expected_value == ConfigCat.get_value(key, default_value, user, client: client)
           end)
-
-        assert value == expected_value
 
         if warning? do
           default_type = SettingType.infer_elixir_type(default_value)

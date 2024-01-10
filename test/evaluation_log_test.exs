@@ -108,9 +108,9 @@ defmodule ConfigCat.EvaluationLogTest do
     # test_name = Path.basename(expected_log_file, ".txt")
     expected_log = File.read!(Path.join(suite_sub_dir, expected_log_file))
 
-    {value, log} =
-      with_log(fn ->
-        ConfigCat.get_value(key, default_value, user, client: client)
+    log =
+      capture_log(fn ->
+        assert return_value == ConfigCat.get_value(key, default_value, user, client: client)
       end)
 
     {expected_clean_log, expected_user} = extract_logged_user(expected_log)
@@ -118,7 +118,6 @@ defmodule ConfigCat.EvaluationLogTest do
 
     assert clean_log == expected_clean_log
     assert actual_user == expected_user
-    assert value == return_value
   end
 
   defp build_user(nil), do: nil
