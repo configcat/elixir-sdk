@@ -7,7 +7,13 @@ end
 if config_env() == :test do
   config :logger, level: :warning
 
-  config :logger, :default_formatter,
-    colors: [enabled: false],
-    format: "$level $message\n"
+  if Version.compare(System.version(), "1.15.0") == :lt do
+    config :logger, :console,
+      colors: [enabled: false],
+      format: "$level $message\n"
+  else
+    config :logger, :default_formatter,
+      colors: [enabled: false],
+      format: "$level $message\n"
+  end
 end
