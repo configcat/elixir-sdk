@@ -55,7 +55,7 @@ defmodule ConfigCat.CachePolicy do
   @type lazy_options :: [{:cache_refresh_interval_seconds, non_neg_integer()}]
 
   @typedoc "Callback to call when configuration changes."
-  @type on_changed_callback :: (() -> :ok)
+  @type on_changed_callback :: (-> :ok)
 
   @typedoc false
   @type option ::

@@ -113,6 +113,9 @@ defmodule ConfigCat.Rollout.Comparator do
     {:ok, false}
   end
 
+  # These aren't actually predicates, but are inlined in the `config-v6` branch
+  # so will go away soon.
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   defp is_one_of(user_value, comparison_value) do
     result =
       comparison_value
@@ -128,6 +131,9 @@ defmodule ConfigCat.Rollout.Comparator do
     {:ok, result}
   end
 
+  # These aren't actually predicates, but are inlined in the `config-v6` branch
+  # so will go away soon.
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   defp is_one_of_semver(user_value, comparison_value) do
     user_version = Version.parse!(user_value)
 
@@ -145,6 +151,9 @@ defmodule ConfigCat.Rollout.Comparator do
       {:error, error}
   end
 
+  # These aren't actually predicates, but are inlined in the `config-v6` branch
+  # so will go away soon.
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   defp is_one_of_sensitive(user_value, comparison_value) do
     user_value
     |> hash_value()
