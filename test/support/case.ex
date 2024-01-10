@@ -13,7 +13,7 @@ defmodule ConfigCat.Case do
   @spec adjust_log_level(String.t()) :: String.t()
   if Version.compare(System.version(), "1.15.0") == :lt do
     def adjust_log_level(log) do
-      Regex.replace(~r/^warning/, log, "warn")
+      Regex.replace(~r/^warning/m, log, "warn")
     end
   else
     def adjust_log_level(log), do: log
