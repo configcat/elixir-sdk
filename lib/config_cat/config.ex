@@ -21,7 +21,7 @@ defmodule ConfigCat.Config do
   @typedoc false
   @type settings :: %{String.t() => Setting.t()}
 
-  @typedoc "A collection of feature flags and preferences."
+  @typedoc "A collection of configuration settings and preferences."
   @type t :: %{String.t() => map()}
 
   @typedoc false
