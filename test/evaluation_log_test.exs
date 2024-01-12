@@ -70,7 +70,6 @@ defmodule ConfigCat.EvaluationLogTest do
   end
 
   test "comparators validation" do
-    # self.maxDiff = None
     test_evaluation_log("comparators.json")
   end
 
