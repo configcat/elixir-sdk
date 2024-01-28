@@ -399,6 +399,7 @@ defmodule ConfigCat.Config.UserComparator do
       {:ok, result in valid_comparisons}
     else
       {:error, :invalid_float} -> {:error, :invalid_datetime}
+      error -> error
     end
   end
 
@@ -434,25 +435,27 @@ defmodule ConfigCat.Config.UserComparator do
     user_value_to_string(value)
   end
 
-  defp user_value_to_string(nil), do: {:ok, nil}
+  @spec user_value_to_string(Config.value()) ::
+          {:ok, String.t() | nil} | {:error, :invalid_datetime | :invalid_float | :invalid_string_list}
+  def user_value_to_string(nil), do: {:ok, nil}
 
-  defp user_value_to_string(%DateTime{} = dt) do
+  def user_value_to_string(%DateTime{} = dt) do
     with {:ok, seconds} <- to_unix_seconds(dt) do
       {:ok, to_string(seconds)}
     end
   end
 
-  defp user_value_to_string(%NaiveDateTime{} = naive) do
+  def user_value_to_string(%NaiveDateTime{} = naive) do
     naive |> DateTime.from_naive!("Etc/UTC") |> user_value_to_string()
   end
 
-  defp user_value_to_string(value) when is_list(value) do
+  def user_value_to_string(value) when is_list(value) do
     with {:ok, list} <- to_string_list(value) do
       {:ok, to_string(list)}
     end
   end
 
-  defp user_value_to_string(value), do: {:ok, to_string(value)}
+  def user_value_to_string(value), do: {:ok, to_string(value)}
 
   defp to_float(value) when is_float(value), do: {:ok, value}
   defp to_float(value) when is_integer(value), do: {:ok, value * 1.0}
@@ -492,7 +495,10 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   def to_unix_seconds(value) do
-    to_float(value)
+    case to_float(value) do
+      {:ok, float} -> {:ok, float}
+      {:error, :invalid_float} -> {:error, :invalid_datetime}
+    end
   end
 
   defp to_versions(values) do

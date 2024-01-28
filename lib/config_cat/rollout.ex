@@ -553,7 +553,7 @@ defmodule ConfigCat.Rollout do
         end
 
       value ->
-        {:ok, value}
+        UserComparator.user_value_to_string(value)
     end
   end
 
