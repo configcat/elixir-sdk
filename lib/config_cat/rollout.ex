@@ -356,7 +356,7 @@ defmodule ConfigCat.Rollout do
 
       {:ok, comparison_attribute} ->
         case User.get_attribute(user, comparison_attribute) do
-          nil ->
+          missing when is_nil(missing) or missing == "" ->
             EvaluationWarnings.warn_missing_user_attribute(context.warnings, context.key, condition, comparison_attribute)
             {:error, "cannot evaluate, the User.#{comparison_attribute} attribute is missing"}
 
