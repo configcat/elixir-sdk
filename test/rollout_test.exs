@@ -56,7 +56,7 @@ defmodule ConfigCat.RolloutTest do
 
     test "variation ID" do
       # https://app.configcat.com/08d5a03c-feb7-af1e-a1fa-40b3329f8bed/08d774b9-3d05-0027-d5f4-3e76c3dba752/244cf8b0-f604-11e8-b543-f23c917f9d8d
-      test_matrix("testmatrix_variationid.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA", @variation_test_type)
+      test_matrix("testmatrix_variationId.csv", "PKDVCLf-Hq-h-kCzMp-L7Q/nQ5qkhRAUEa6beEyyrVLBA", @variation_test_type)
     end
   end
 
