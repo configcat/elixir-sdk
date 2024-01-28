@@ -367,7 +367,6 @@ defmodule ConfigCat.RolloutTest do
     test "prerequisite flag value type mismatch with key: #{key} type: #{comparison_value_type} flag_key: #{prerequisite_flag_key} value: #{inspect(prerequisite_flag_value)}" do
       sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg"
       key = unquote(key)
-      comparison_value_type = unquote(comparison_value_type)
       flag_key = unquote(prerequisite_flag_key)
       flag_value = unquote(prerequisite_flag_value)
       expected_value = unquote(expected_value)
@@ -382,10 +381,8 @@ defmodule ConfigCat.RolloutTest do
         end)
 
       unless expected_value do
-        flag_value_type = SettingType.infer_elixir_type(flag_value)
-
         expected_message =
-          "Type mismatch between comparison value type #{comparison_value_type} and type #{flag_value_type} of prerequisite flag '#{flag_key}'"
+          ~r/Type mismatch between comparison value '[^']+' and prerequisite flag '#{flag_key}'/
 
         assert logs =~ expected_message
       end

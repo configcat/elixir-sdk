@@ -466,8 +466,13 @@ defmodule ConfigCat.Rollout do
         comparison_value_type = PrerequisiteFlagCondition.inferred_setting_type(condition)
 
         unless setting_type == comparison_value_type do
+          value =
+            unless is_nil(comparison_value_type) do
+              PrerequisiteFlagCondition.comparison_value(condition, comparison_value_type)
+            end
+
           raise EvaluationError,
-                "Type mismatch between comparison value type #{SettingType.to_elixir_type(comparison_value_type)} and type #{SettingType.to_elixir_type(setting_type)} of prerequisite flag '#{prerequisite_key}'"
+                "Type mismatch between comparison value '#{value}' and prerequisite flag '#{prerequisite_key}'"
         end
 
         comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
