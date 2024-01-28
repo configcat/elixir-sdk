@@ -435,7 +435,7 @@ defmodule ConfigCat.Config.UserComparator do
     user_value_to_string(value)
   end
 
-  @spec user_value_to_string(Config.value()) ::
+  @spec user_value_to_string(Config.value() | DateTime.t() | NaiveDateTime.t() | [String.t()]) ::
           {:ok, String.t() | nil} | {:error, :invalid_datetime | :invalid_float | :invalid_string_list}
   def user_value_to_string(nil), do: {:ok, nil}
 
