@@ -6,7 +6,6 @@ defmodule ConfigCat.Client do
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
   alias ConfigCat.Config.Setting
-  alias ConfigCat.Config.SettingType
   alias ConfigCat.EvaluationDetails
   alias ConfigCat.EvaluationLogger
   alias ConfigCat.FetchTime
@@ -15,6 +14,7 @@ defmodule ConfigCat.Client do
   alias ConfigCat.Rollout
   alias ConfigCat.User
 
+  require ConfigCat.Config.SettingType, as: SettingType
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   defmodule State do
@@ -283,9 +283,9 @@ defmodule ConfigCat.Client do
   defp check_type_mismatch(_value, nil), do: :ok
 
   defp check_type_mismatch(value, default_value) do
-    value_type = SettingType.infer_elixir_type(value)
-    default_type = SettingType.infer_elixir_type(default_value)
-    number_types = ["float()", "integer()"]
+    value_type = SettingType.from_value(value)
+    default_type = SettingType.from_value(default_value)
+    number_types = [SettingType.double(), SettingType.int()]
 
     cond do
       value_type == default_type ->

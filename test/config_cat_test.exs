@@ -181,8 +181,8 @@ defmodule ConfigCatTest do
           end)
 
         if warning? do
-          default_type = SettingType.infer_elixir_type(default_value)
-          expected_type = SettingType.infer_elixir_type(expected_value)
+          default_type = SettingType.from_value(default_value)
+          expected_type = SettingType.from_value(expected_value)
 
           expected_log =
             adjust_log_level(
