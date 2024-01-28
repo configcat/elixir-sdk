@@ -55,6 +55,19 @@ defmodule ConfigCat.Config.TargetingRule do
 
   @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
   def variation_value(rule, variation_id) do
+    case percentage_rule_variation_value(rule, variation_id) do
+      nil -> simple_variation_value(rule, variation_id)
+      value -> value
+    end
+  end
+
+  defp percentage_rule_variation_value(rule, variation_id) do
+    rule
+    |> percentage_options()
+    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, variation_id))
+  end
+
+  defp simple_variation_value(rule, variation_id) do
     case simple_value(rule) do
       nil -> nil
       value -> SettingValueContainer.variation_value(value, variation_id)
