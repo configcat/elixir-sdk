@@ -477,8 +477,15 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp to_string_list(value) when is_binary(value) do
     case Jason.decode(value) do
-      {:ok, decoded} when is_list(decoded) -> {:ok, decoded}
-      _ -> {:error, :invalid_string_list}
+      {:ok, decoded} when is_list(decoded) ->
+        if Enum.all?(decoded, &is_binary/1) do
+          {:ok, decoded}
+        else
+          {:error, :invalid_string_list}
+        end
+
+      _ ->
+        {:error, :invalid_string_list}
     end
   end
 
