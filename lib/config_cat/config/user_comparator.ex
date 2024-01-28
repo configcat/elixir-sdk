@@ -459,6 +459,7 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp to_float(value) when is_binary(value) do
     value
+    |> String.trim()
     |> String.replace(",", ".")
     |> Float.parse()
     |> case do
