@@ -319,7 +319,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp handle_error({:error, error}, _state) do
     ConfigCatLogger.error(
-      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error)}",
+      "Unexpected error occurred while trying to fetch config JSON. " <>
+        "It is most likely due to a local network issue. " <>
+        "Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP. " <>
+        "#{inspect(error)}",
       event_id: 1103
     )
 
