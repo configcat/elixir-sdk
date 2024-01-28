@@ -53,24 +53,24 @@ defmodule ConfigCat.Config.TargetingRule do
     Map.update(rule, @conditions, [], &Enum.map(&1, fn condition -> Condition.inline_segments(condition, segments) end))
   end
 
-  @spec variation_value(t(), Config.variation_id()) :: Config.value() | nil
-  def variation_value(rule, variation_id) do
-    case percentage_rule_variation_value(rule, variation_id) do
-      nil -> simple_variation_value(rule, variation_id)
+  @spec variation_value(t(), SettingType.t(), Config.variation_id()) :: Config.value() | nil
+  def variation_value(rule, setting_type, variation_id) do
+    case percentage_rule_variation_value(rule, setting_type, variation_id) do
+      nil -> simple_variation_value(rule, setting_type, variation_id)
       value -> value
     end
   end
 
-  defp percentage_rule_variation_value(rule, variation_id) do
+  defp percentage_rule_variation_value(rule, setting_type, variation_id) do
     rule
     |> percentage_options()
-    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, variation_id))
+    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, setting_type, variation_id))
   end
 
-  defp simple_variation_value(rule, variation_id) do
+  defp simple_variation_value(rule, setting_type, variation_id) do
     case simple_value(rule) do
       nil -> nil
-      value -> SettingValueContainer.variation_value(value, variation_id)
+      value -> SettingValueContainer.variation_value(value, setting_type, variation_id)
     end
   end
 end

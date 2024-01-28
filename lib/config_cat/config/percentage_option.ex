@@ -13,5 +13,5 @@ defmodule ConfigCat.Config.PercentageOption do
 
   defdelegate value(option, setting_type), to: SettingValueContainer
   defdelegate variation_id(option, default \\ nil), to: SettingValueContainer
-  defdelegate variation_value(option, variation_id), to: SettingValueContainer
+  defdelegate variation_value(option, setting_type, variation_id), to: SettingValueContainer
 end

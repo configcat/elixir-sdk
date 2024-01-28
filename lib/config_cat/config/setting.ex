@@ -78,9 +78,11 @@ defmodule ConfigCat.Config.Setting do
     if variation_id(setting) == variation_id do
       value(setting)
     else
-      case targeting_rule_variation_value(setting, variation_id) do
+      setting_type = setting_type(setting)
+
+      case targeting_rule_variation_value(setting, setting_type, variation_id) do
         nil ->
-          percentage_rule_variation_value(setting, variation_id)
+          percentage_rule_variation_value(setting, setting_type, variation_id)
 
         targeting_value ->
           targeting_value
@@ -88,15 +90,15 @@ defmodule ConfigCat.Config.Setting do
     end
   end
 
-  defp targeting_rule_variation_value(setting, variation_id) do
+  defp targeting_rule_variation_value(setting, setting_type, variation_id) do
     setting
     |> targeting_rules()
-    |> Enum.find_value(nil, &TargetingRule.variation_value(&1, variation_id))
+    |> Enum.find_value(nil, &TargetingRule.variation_value(&1, setting_type, variation_id))
   end
 
-  defp percentage_rule_variation_value(setting, variation_id) do
+  defp percentage_rule_variation_value(setting, setting_type, variation_id) do
     setting
     |> percentage_options()
-    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, variation_id))
+    |> Enum.find_value(nil, &PercentageOption.variation_value(&1, setting_type, variation_id))
   end
 end

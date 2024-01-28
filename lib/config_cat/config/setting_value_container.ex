@@ -27,10 +27,16 @@ defmodule ConfigCat.Config.SettingValueContainer do
     Map.get(v, @variation_id, default)
   end
 
-  @spec variation_value(t(), Config.variation_id()) :: SettingValue.t() | nil
-  def variation_value(v, variation_id) do
+  @spec variation_value(t(), SettingType.t(), Config.variation_id()) :: Config.value() | nil
+  def variation_value(v, setting_type, variation_id) do
     if variation_id(v) == variation_id do
-      raw_value(v)
+      v |> value(setting_type) |> ensure_allowed_type()
+    end
+  end
+
+  defp ensure_allowed_type(value) do
+    unless SettingType.from_value(value) do
+      raise ValueError, "Setting value '#{value}' is of an unsupported type."
     end
   end
 
