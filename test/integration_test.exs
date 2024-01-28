@@ -24,35 +24,41 @@ defmodule ConfigCat.IntegrationTest do
       |> assert_sdk_key_required()
     end
 
-    for sdk_key <- [
-          "key",
-          "configcat-proxy/key",
-          "1234567890abcdefghijkl01234567890abcdefghijkl",
-          "configcat-sdk-2/1234567890abcdefghijkl/1234567890abcdefghijkl",
-          "configcat/1234567890abcdefghijkl/1234567890abcdefghijkl"
+    for {sdk_key, custom_base_url?, valid?} <- [
+          {"sdk-key-90123456789012", false, false},
+          {"sdk-key-9012345678901/1234567890123456789012", false, false},
+          {"sdk-key-90123456789012/123456789012345678901", false, false},
+          {"sdk-key-90123456789012/12345678901234567890123", false, false},
+          {"sdk-key-901234567890123/1234567890123456789012", false, false},
+          {"sdk-key-90123456789012/1234567890123456789012", false, true},
+          {"configcat-sdk-1/sdk-key-90123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/123456789012345678901", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123", false, false},
+          {"configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012", false, true},
+          {"configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012", false, false},
+          {"configcat-proxy/", false, false},
+          {"configcat-proxy/", true, false},
+          {"configcat-proxy/sdk-key-90123456789012", false, false},
+          {"configcat-proxy/sdk-key-90123456789012", true, true}
         ] do
-      test "raises error if SDK is invalid with SDK key: #{sdk_key}" do
+      test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
         sdk_key = unquote(sdk_key)
+        custom_base_url? = unquote(custom_base_url?)
+        valid? = unquote(valid?)
+        options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
 
-        sdk_key |> start() |> assert_sdk_key_invalid(sdk_key)
+        if valid? do
+          assert {:ok, _} = start(sdk_key, options)
+        else
+          sdk_key |> start(options) |> assert_sdk_key_invalid(sdk_key)
+        end
       end
     end
 
     test "allows older format SDK keys" do
       assert {:ok, _} = start("1234567890abcdefghijkl/1234567890abcdefghijkl")
-    end
-
-    test "allows newer format SDK keys" do
-      assert {:ok, _} = start("configcat-sdk-1/1234567890abcdefghijkl/1234567890abcdefghijkl")
-    end
-
-    test "allows proxy SDK keys if base_url is specified" do
-      assert {:ok, _} = start("configcat-proxy/key", base_url: "base_url")
-    end
-
-    test "does not allow non-proxy SDK keys even if base_url is specified" do
-      sdk_key = "not-configcat-proxy/key"
-      sdk_key |> start(base_url: "base_url") |> assert_sdk_key_invalid(sdk_key)
     end
 
     test "does not validate SDK key format in local-only mode" do
