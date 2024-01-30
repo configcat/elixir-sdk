@@ -14,9 +14,15 @@ defmodule ConfigCat.CacheTest do
   @serialized ConfigEntry.serialize(@entry)
 
   describe "generating a cache key" do
-    test "generates platform-independent cache keys" do
-      assert Cache.generate_key("test1") == "7f845c43ecc95e202b91e271435935e6d1391e5d"
-      assert Cache.generate_key("test2") == "a78b7e323ef543a272c74540387566a22415148a"
+    for {sdk_key, expected_cache_key} <- [
+          {"configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012", "f83ba5d45bceb4bb704410f51b704fb6dfa19942"},
+          {"configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012", "da7bfd8662209c8ed3f9db96daed4f8d91ba5876"}
+        ] do
+      test "generates platform-independent cache keys - #{sdk_key}" do
+        sdk_key = unquote(sdk_key)
+        expected_cache_key = unquote(expected_cache_key)
+        assert Cache.generate_key(sdk_key) == expected_cache_key
+      end
     end
   end
 
