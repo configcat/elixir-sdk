@@ -451,7 +451,7 @@ defmodule ConfigCat.Config.UserComparator do
 
   def user_value_to_string(value) when is_list(value) do
     with {:ok, list} <- to_string_list(value) do
-      {:ok, to_string(list)}
+      {:ok, inspect(list)}
     end
   end
 
