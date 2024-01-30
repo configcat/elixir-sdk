@@ -320,23 +320,20 @@ defmodule ConfigCat.Rollout do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
-    cond do
-      user_condition ->
-        result = evaluate_user_condition(user_condition, context.key, context)
-        EvaluationLogger.log_evaluating_user_condition_result(logger, result, condition_count)
-        result
+    result =
+      cond do
+        user_condition ->
+          evaluate_user_condition(user_condition, context.key, context)
 
-      segment_condition ->
-        result = evaluate_segment_condition(segment_condition, context)
-        EvaluationLogger.log_evaluating_segment_condition_final_result(logger, result, condition_count)
-        result
+        segment_condition ->
+          evaluate_segment_condition(segment_condition, context)
 
-      prerequisite_flag_condition ->
-        evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context)
+        prerequisite_flag_condition ->
+          evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context)
+      end
 
-      true ->
-        {:ok, true}
-    end
+    EvaluationLogger.log_evaluating_condition_final_result(logger, result, condition_count)
+    result
   end
 
   defp evaluate_user_condition(condition, _context_salt, %Context{user: nil} = context) do
@@ -430,7 +427,7 @@ defmodule ConfigCat.Rollout do
           result = evaluate_user_condition(condition, name, context)
           # Faking multiple conditions; may want to use actual condition count
           # eventually. Keeping it this way to match Python SDK for now.
-          EvaluationLogger.log_evaluating_user_condition_result(logger, result, 2)
+          EvaluationLogger.log_evaluating_condition_final_result(logger, result, 2)
 
           case result do
             {:ok, true} -> {:cont, acc}

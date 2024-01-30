@@ -90,12 +90,24 @@ defmodule ConfigCat.EvaluationLogger do
     logger
   end
 
+  @spec log_evaluating_condition_final_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
+  def log_evaluating_condition_final_result(nil, _result, _condition_count), do: nil
+
+  def log_evaluating_condition_final_result(logger, result, condition_count) when condition_count > 1 do
+    case result do
+      {:ok, true} -> append(logger, " => true")
+      _ -> append(logger, " => false, skipping the remaining AND conditions")
+    end
+  end
+
+  def log_evaluating_condition_final_result(logger, _result, _condition_count), do: logger
+
   @spec log_evaluating_condition_result(t() | nil, condition_result(), non_neg_integer(), Config.value() | nil) ::
           t() | nil
   def log_evaluating_condition_result(nil, _result, _condition_count, _value), do: nil
 
   def log_evaluating_condition_result(logger, result, condition_count, value) do
-    if condition_count > 1, do: new_line(logger)
+    if condition_count > 1, do: new_line(logger), else: append(logger, " ")
     formatted_value = if value, do: "'#{value}'", else: "% options"
 
     case result do
@@ -141,7 +153,6 @@ defmodule ConfigCat.EvaluationLogger do
     |> new_line("Condition (#{PrerequisiteFlagCondition.description(condition, setting_type)}) evaluates to #{result}.")
     |> decrease_indent()
     |> new_line(")")
-    |> new_line()
   end
 
   @spec log_evaluating_prerequisite_condition_start(t() | nil, PrerequisiteFlagCondition.t(), SettingType.t()) ::
@@ -198,23 +209,6 @@ defmodule ConfigCat.EvaluationLogger do
     end
   end
 
-  @spec log_evaluating_segment_condition_final_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
-  def log_evaluating_segment_condition_final_result(nil, _result, _condition_count), do: nil
-
-  def log_evaluating_segment_condition_final_result(logger, result, condition_count) when condition_count > 1 do
-    case result do
-      {:ok, true} -> append(logger, " => true")
-      _ -> append(logger, " => false, skipping the remaining AND conditions")
-    end
-  end
-
-  def log_evaluating_segment_condition_final_result(logger, result, _condition_count) do
-    case result do
-      {:error, _error} -> logger
-      _ -> new_line(logger)
-    end
-  end
-
   @spec log_evaluating_segment_condition_start(t() | nil, SegmentCondition.t(), String.t()) :: t() | nil
   def log_evaluating_segment_condition_start(nil, _condition, _segment_name), do: nil
 
@@ -226,23 +220,11 @@ defmodule ConfigCat.EvaluationLogger do
     |> new_line("Evaluating segment '#{segment_name}':")
   end
 
-  @spec log_evaluating_user_condition_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
-  def log_evaluating_user_condition_result(nil, _result, _condition_count), do: nil
-
-  def log_evaluating_user_condition_result(logger, result, condition_count) when condition_count > 1 do
-    case result do
-      {:ok, true} -> append(logger, "=> true")
-      _ -> append(logger, "=> false, skipping the remaining AND conditions")
-    end
-  end
-
-  def log_evaluating_user_condition_result(logger, _result, _condition_count), do: logger
-
   @spec log_evaluating_user_condition_start(t() | nil, UserCondition.t()) :: t() | nil
   def log_evaluating_user_condition_start(nil, _condition), do: nil
 
   def log_evaluating_user_condition_start(logger, condition) do
-    append(logger, "#{UserCondition.description(condition)} ")
+    append(logger, "#{UserCondition.description(condition)}")
   end
 
   @spec log_ignored_targeting_rule(t() | nil) :: t() | nil
@@ -297,7 +279,7 @@ defmodule ConfigCat.EvaluationLogger do
   def log_skipping_segment_condition_missing_user(nil, _condition), do: nil
 
   def log_skipping_segment_condition_missing_user(logger, condition) do
-    append(logger, "#{SegmentCondition.description(condition)} ")
+    append(logger, "#{SegmentCondition.description(condition)}")
   end
 
   @spec result(t() | nil) :: String.t()
