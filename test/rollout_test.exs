@@ -428,6 +428,127 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
+  for {key, expected_return_value} <- [
+        {"isoneof", "no trim"},
+        {"isnotoneof", "no trim"},
+        {"isoneofhashed", "no trim"},
+        {"isnotoneofhashed", "no trim"},
+        {"equalshashed", "no trim"},
+        {"notequalshashed", "no trim"},
+        {"arraycontainsanyofhashed", "no trim"},
+        {"arraynotcontainsanyofhashed", "no trim"},
+        {"equals", "no trim"},
+        {"notequals", "no trim"},
+        {"startwithanyof", "no trim"},
+        {"notstartwithanyof", "no trim"},
+        {"endswithanyof", "no trim"},
+        {"notendswithanyof", "no trim"},
+        {"arraycontainsanyof", "no trim"},
+        {"arraynotcontainsanyof", "no trim"},
+        {"startwithanyofhashed", "no trim"},
+        {"notstartwithanyofhashed", "no trim"},
+        {"endswithanyofhashed", "no trim"},
+        {"notendswithanyofhashed", "no trim"},
+        # semver comparators user values trimmed because of backward compatibility
+        {"semverisoneof", "4 trim"},
+        {"semverisnotoneof", "5 trim"},
+        {"semverless", "6 trim"},
+        {"semverlessequals", "7 trim"},
+        {"semvergreater", "8 trim"},
+        {"semvergreaterequals", "9 trim"},
+        # number and date comparators user values trimmed because of backward compatibility
+        {"numberequals", "10 trim"},
+        {"numbernotequals", "11 trim"},
+        {"numberless", "12 trim"},
+        {"numberlessequals", "13 trim"},
+        {"numbergreater", "14 trim"},
+        {"numbergreaterequals", "15 trim"},
+        {"datebefore", "18 trim"},
+        {"dateafter", "19 trim"},
+        # "contains any of" and "not contains any of" is a special case,
+        # the not trimmed user attribute checked against not trimmed comparator values.
+        {"containsanyof", "no trim"},
+        {"notcontainsanyof", "no trim"}
+      ] do
+    test "comparison attribute trimming - key: #{key}" do
+      key = unquote(key)
+      expected_return_value = unquote(expected_return_value)
+
+      config =
+        "trim_comparison_attribute.json"
+        |> fixture_file()
+        |> LocalFileDataSource.new(:local_only)
+        |> OverrideDataSource.overrides()
+
+      user =
+        User.new(" 12345 ",
+          country: ~s([" USA "]),
+          custom: %{
+            "Version" => " 1.0.0 ",
+            "Number" => " 3 ",
+            "Date" => " 1705253400 "
+          }
+        )
+
+      assert %EvaluationDetails{value: ^expected_return_value} = Rollout.evaluate(key, user, "default", nil, config)
+    end
+  end
+
+  for {key, expected_return_value} <- [
+        {"isoneof", "no trim"},
+        {"isnotoneof", "no trim"},
+        {"containsanyof", "no trim"},
+        {"notcontainsanyof", "no trim"},
+        {"isoneofhashed", "no trim"},
+        {"isnotoneofhashed", "no trim"},
+        {"equalshashed", "no trim"},
+        {"notequalshashed", "no trim"},
+        {"arraycontainsanyofhashed", "no trim"},
+        {"arraynotcontainsanyofhashed", "no trim"},
+        {"equals", "no trim"},
+        {"notequals", "no trim"},
+        {"startwithanyof", "no trim"},
+        {"notstartwithanyof", "no trim"},
+        {"endswithanyof", "no trim"},
+        {"notendswithanyof", "no trim"},
+        {"arraycontainsanyof", "no trim"},
+        {"arraynotcontainsanyof", "no trim"},
+        {"startwithanyofhashed", "no trim"},
+        {"notstartwithanyofhashed", "no trim"},
+        {"endswithanyofhashed", "no trim"},
+        {"notendswithanyofhashed", "no trim"},
+        # semver comparator values trimmed because of backward compatibility
+        {"semverisoneof", "4 trim"},
+        {"semverisnotoneof", "5 trim"},
+        {"semverless", "6 trim"},
+        {"semverlessequals", "7 trim"},
+        {"semvergreater", "8 trim"},
+        {"semvergreaterequals", "9 trim"}
+      ] do
+    test "comparison value trimming - key: #{key}" do
+      key = unquote(key)
+      expected_return_value = unquote(expected_return_value)
+
+      config =
+        "trim_comparison_value.json"
+        |> fixture_file()
+        |> LocalFileDataSource.new(:local_only)
+        |> OverrideDataSource.overrides()
+
+      user =
+        User.new("12345",
+          country: ~s(["USA"]),
+          custom: %{
+            "Version" => "1.0.0",
+            "Number" => "3",
+            "Date" => "1705253400"
+          }
+        )
+
+      assert %EvaluationDetails{value: ^expected_return_value} = Rollout.evaluate(key, user, "default", nil, config)
+    end
+  end
+
   defp test_matrix(filename, sdk_key, type \\ @value_test_type) do
     [header | test_lines] = read_test_matrix(filename)
     {custom_key, settings_keys} = parse_header(header)

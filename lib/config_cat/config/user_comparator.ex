@@ -414,8 +414,8 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp parse_comparison(value) do
     [length_string, comparison_string] = String.split(value, "_", parts: 2)
-
-    {String.to_integer(length_string), comparison_string}
+    length = String.trim(length_string)
+    {String.to_integer(length), comparison_string}
   end
 
   defp as_text(value, _context) when is_binary(value), do: {:ok, value}
