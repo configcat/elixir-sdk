@@ -473,16 +473,14 @@ defmodule ConfigCat.Config.UserComparator do
 
   defp to_float(_value), do: {:error, :invalid_float}
 
-  defp to_string_list(value) when is_list(value), do: {:ok, value}
+  defp to_string_list(value) when is_list(value) do
+    ensure_all_strings(value)
+  end
 
   defp to_string_list(value) when is_binary(value) do
     case Jason.decode(value) do
       {:ok, decoded} when is_list(decoded) ->
-        if Enum.all?(decoded, &is_binary/1) do
-          {:ok, decoded}
-        else
-          {:error, :invalid_string_list}
-        end
+        ensure_all_strings(decoded)
 
       _ ->
         {:error, :invalid_string_list}
@@ -490,6 +488,14 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   defp to_string_list(_value), do: {:error, :invalid_string_list}
+
+  defp ensure_all_strings(list) do
+    if Enum.all?(list, &is_binary/1) do
+      {:ok, list}
+    else
+      {:error, :invalid_string_list}
+    end
+  end
 
   @spec to_unix_seconds(DateTime.t() | NaiveDateTime.t() | number() | String.t()) ::
           {:ok, float()} | {:error, :invalid_float}
