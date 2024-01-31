@@ -31,9 +31,20 @@ defmodule ConfigCat.Config.SettingValue do
             raise ValueError, "Setting value is not of the expected type #{expected_type}"
 
           value ->
+            :ok = ensure_value_matches_type_key(type_key, value)
             value
         end
     end
+  end
+
+  defp ensure_value_matches_type_key(@bool, value) when is_boolean(value), do: :ok
+  defp ensure_value_matches_type_key(@string, value) when is_binary(value), do: :ok
+  defp ensure_value_matches_type_key(@int, value) when is_integer(value), do: :ok
+  # It's OK to have integer values for @double settings
+  defp ensure_value_matches_type_key(@double, value) when is_number(value), do: :ok
+
+  defp ensure_value_matches_type_key(type_key, value) do
+    raise ValueError, "Setting value '#{value}' is not of the specified type #{type_key}"
   end
 
   @spec inferred_setting_type(t()) :: SettingType.t() | nil
