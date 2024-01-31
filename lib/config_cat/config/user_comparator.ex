@@ -451,7 +451,33 @@ defmodule ConfigCat.Config.UserComparator do
 
   def user_value_to_string(value) when is_list(value) do
     with {:ok, list} <- to_string_list(value) do
-      {:ok, inspect(list)}
+      {:ok, Jason.encode!(list)}
+    end
+  end
+
+  # Per the spec, we need to match JavaScript formatting of floats, which is
+  # different from the way Elixir does it.
+  # - Float.to_string/1 doesn't include a `+` for a positive exponent.
+  #   :erlang.float_to_binary() does, but we'd have to specify a number of
+  #   decimal places which we don't know. Instead, we detect an `e` followed by
+  #   digits and replace it with `e+` and the digits.
+  # - Float.to_string/1 preserves the `.0` for values that would otherwise be
+  #   integers; JavaScript does not, converting e.g. 125.0 -> "125". We need to
+  #   handle that case specially. Note that we have to perform this check AFTER
+  #   checking for an exponent, because for very large floating point values,
+  #   `trunc(value) == value` will be true.
+  def user_value_to_string(value) when is_float(value) do
+    result = to_string(value)
+
+    cond do
+      String.contains?(result, "e") ->
+        {:ok, String.replace(result, ~r/e([\d+])/, "e+\\1")}
+
+      trunc(value) == value ->
+        {:ok, value |> trunc() |> to_string()}
+
+      true ->
+        {:ok, to_string(value)}
     end
   end
 

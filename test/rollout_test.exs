@@ -428,6 +428,42 @@ defmodule ConfigCat.RolloutTest do
     end
   end
 
+  for {key, custom_attribute_value, expected_return_value} <- [
+        {"numberToStringConversion", 0.12345, "1"},
+        {"numberToStringConversionInt", 125.0, "4"},
+        {"numberToStringConversionPositiveExp", -1.23456789e96, "2"},
+        {"numberToStringConversionNegativeExp", -12345.6789e-100, "4"},
+        # {"numberToStringConversionNaN", NaN, "3"},
+        # {"numberToStringConversionPositiveInf", Infinity, "4"},
+        # {"numberToStringConversionNegativeInf", -Infinity, "3"},
+        {"dateToStringConversion", ~U[2023-03-31T23:59:59.9990000Z], "3"},
+        {"dateToStringConversion", 1_680_307_199.999, "3"},
+        # {"dateToStringConversionNaN", NaN, "3"},
+        # {"dateToStringConversionPositiveInf", Infinity, "1"},
+        # {"dateToStringConversionNegativeInf", -Infinity, "5"},
+        {"stringArrayToStringConversion", ["read", "Write", " eXecute "], "4"},
+        {"stringArrayToStringConversionEmpty", [], "5"},
+        {"stringArrayToStringConversionSpecialChars", ["+<>%\"'\\/\t\r\n"], "3"},
+        {"stringArrayToStringConversionUnicode", ["äöüÄÖÜçéèñışğâ¢™✓😀"], "2"}
+      ] do
+    test "comparison attribute conversion to canonical string representation - key: #{key} | custom_attribute_value: #{custom_attribute_value}" do
+      key = unquote(key)
+      custom_attribute_value = unquote(Macro.escape(custom_attribute_value))
+      expected_return_value = unquote(expected_return_value)
+
+      config =
+        "comparison_attribute_conversion.json"
+        |> fixture_file()
+        |> LocalFileDataSource.new(:local_only)
+        |> OverrideDataSource.overrides()
+
+      user =
+        User.new("12345", custom: %{"Custom1" => custom_attribute_value})
+
+      assert %EvaluationDetails{value: ^expected_return_value} = Rollout.evaluate(key, user, "default", nil, config)
+    end
+  end
+
   for {key, expected_return_value} <- [
         {"isoneof", "no trim"},
         {"isnotoneof", "no trim"},
@@ -475,7 +511,7 @@ defmodule ConfigCat.RolloutTest do
       expected_return_value = unquote(expected_return_value)
 
       config =
-        "trim_comparison_attribute.json"
+        "comparison_attribute_trimming.json"
         |> fixture_file()
         |> LocalFileDataSource.new(:local_only)
         |> OverrideDataSource.overrides()
@@ -530,7 +566,7 @@ defmodule ConfigCat.RolloutTest do
       expected_return_value = unquote(expected_return_value)
 
       config =
-        "trim_comparison_value.json"
+        "comparison_value_trimming.json"
         |> fixture_file()
         |> LocalFileDataSource.new(:local_only)
         |> OverrideDataSource.overrides()
