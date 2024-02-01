@@ -90,38 +90,39 @@ defmodule ConfigCat.EvaluationLogger do
     logger
   end
 
-  @spec log_evaluating_condition_final_result(t() | nil, condition_result(), non_neg_integer()) :: t() | nil
-  def log_evaluating_condition_final_result(nil, _result, _condition_count), do: nil
-
-  def log_evaluating_condition_final_result(logger, result, condition_count) when condition_count > 1 do
-    case result do
-      {:ok, true} -> append(logger, " => true")
-      _ -> append(logger, " => false, skipping the remaining AND conditions")
-    end
-  end
-
-  def log_evaluating_condition_final_result(logger, _result, _condition_count), do: logger
-
-  @spec log_evaluating_condition_result(t() | nil, condition_result(), non_neg_integer(), Config.value() | nil) ::
+  @spec log_evaluating_condition_final_result(t() | nil, condition_result(), boolean(), Config.value() | nil) ::
           t() | nil
-  def log_evaluating_condition_result(nil, _result, _condition_count, _value), do: nil
+  def log_evaluating_condition_final_result(nil, _result, _newline?, _value), do: nil
 
-  def log_evaluating_condition_result(logger, result, condition_count, value) do
-    if condition_count > 1, do: new_line(logger), else: append(logger, " ")
+  def log_evaluating_condition_final_result(logger, result, newline?, value) do
+    increase_indent(logger)
+    if newline?, do: new_line(logger), else: append(logger, " ")
+
     formatted_value = if value, do: "'#{value}'", else: "% options"
+    append(logger, "THEN #{formatted_value} => ")
 
     case result do
       {:ok, condition_result} ->
         formatted_result = if condition_result, do: "MATCH, applying rule", else: "no match"
-        append(logger, "THEN #{formatted_value} => #{formatted_result}")
+        append(logger, formatted_result)
 
       {:error, error} ->
         logger
-        |> append("THEN #{formatted_value} => #{error}")
+        |> append(error)
         |> new_line("The current targeting rule is ignored and the evaluation continues with the next rule.")
     end
 
-    if condition_count > 0, do: decrease_indent(logger)
+    decrease_indent(logger)
+  end
+
+  @spec log_evaluating_condition_result(t() | nil, condition_result()) :: t() | nil
+  def log_evaluating_condition_result(nil, _result), do: nil
+
+  def log_evaluating_condition_result(logger, result) do
+    case result do
+      {:ok, true} -> append(logger, " => true")
+      _ -> append(logger, " => false, skipping the remaining AND conditions")
+    end
   end
 
   @spec log_evaluating_condition_start(t() | nil, non_neg_integer()) :: t() | nil
@@ -133,7 +134,9 @@ defmodule ConfigCat.EvaluationLogger do
       |> new_line("- IF ")
       |> increase_indent()
     else
-      new_line(logger, "AND ")
+      logger
+      |> increase_indent()
+      |> new_line("AND ")
     end
   end
 
@@ -167,13 +170,6 @@ defmodule ConfigCat.EvaluationLogger do
     |> new_line("(")
     |> increase_indent()
     |> new_line("Evaluating prerequisite flag '#{key}':")
-  end
-
-  @spec log_evaluating_targeting_rules(t() | nil) :: t() | nil
-  def log_evaluating_targeting_rules(nil), do: nil
-
-  def log_evaluating_targeting_rules(logger) do
-    new_line(logger, "Evaluating targeting rules and applying the first match if any:")
   end
 
   @spec log_evaluating_segment_condition_result(t() | nil, SegmentCondition.t(), boolean(), condition_result()) ::
@@ -218,6 +214,13 @@ defmodule ConfigCat.EvaluationLogger do
     |> new_line("(")
     |> increase_indent()
     |> new_line("Evaluating segment '#{segment_name}':")
+  end
+
+  @spec log_evaluating_targeting_rules(t() | nil) :: t() | nil
+  def log_evaluating_targeting_rules(nil), do: nil
+
+  def log_evaluating_targeting_rules(logger) do
+    new_line(logger, "Evaluating targeting rules and applying the first match if any:")
   end
 
   @spec log_evaluating_user_condition_start(t() | nil, UserCondition.t()) :: t() | nil

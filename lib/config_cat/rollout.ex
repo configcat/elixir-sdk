@@ -294,19 +294,19 @@ defmodule ConfigCat.Rollout do
   defp evaluate_conditions(conditions, value, context) do
     condition_count = length(conditions)
 
-    result =
+    {result, newline_before_then?} =
       conditions
       |> Enum.with_index()
-      |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
+      |> Enum.reduce_while({:ok, true}, fn {condition, index}, _acc ->
         EvaluationLogger.log_evaluating_condition_start(context.logger, index)
 
         case evaluate_condition(condition, condition_count, context) do
-          {:ok, true} -> {:cont, acc}
+          {{:ok, true}, _newline?} = result -> {:cont, result}
           result -> {:halt, result}
         end
       end)
 
-    EvaluationLogger.log_evaluating_condition_result(context.logger, result, condition_count, value)
+    EvaluationLogger.log_evaluating_condition_final_result(context.logger, result, newline_before_then?, value)
 
     case result do
       {:ok, result} -> result
@@ -320,20 +320,33 @@ defmodule ConfigCat.Rollout do
     segment_condition = Condition.segment_condition(condition)
     user_condition = Condition.user_condition(condition)
 
-    result =
+    {result, newline?} =
       cond do
         user_condition ->
-          evaluate_user_condition(user_condition, context.key, context)
+          {
+            evaluate_user_condition(user_condition, context.key, context),
+            condition_count > 1
+          }
 
         segment_condition ->
-          evaluate_segment_condition(segment_condition, context)
+          {
+            evaluate_segment_condition(segment_condition, context),
+            condition_count > 1
+          }
 
         prerequisite_flag_condition ->
-          evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context)
+          {
+            evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context),
+            true
+          }
       end
 
-    EvaluationLogger.log_evaluating_condition_final_result(logger, result, condition_count)
-    result
+    if condition_count > 1 do
+      EvaluationLogger.log_evaluating_condition_result(logger, result)
+    end
+
+    EvaluationLogger.decrease_indent(logger)
+    {result, newline?}
   end
 
   defp evaluate_user_condition(condition, _context_salt, %Context{user: nil} = context) do
@@ -425,9 +438,7 @@ defmodule ConfigCat.Rollout do
           EvaluationLogger.log_evaluating_condition_start(logger, index)
 
           result = evaluate_user_condition(condition, name, context)
-          # Faking multiple conditions; may want to use actual condition count
-          # eventually. Keeping it this way to match Python SDK for now.
-          EvaluationLogger.log_evaluating_condition_final_result(logger, result, 2)
+          EvaluationLogger.log_evaluating_condition_result(logger, result)
 
           case result do
             {:ok, true} -> {:cont, acc}
