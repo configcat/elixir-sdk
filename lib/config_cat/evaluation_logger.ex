@@ -201,7 +201,6 @@ defmodule ConfigCat.EvaluationLogger do
         |> append("failed to evaluate.")
         |> decrease_indent()
         |> new_line(")")
-        |> new_line()
     end
   end
 

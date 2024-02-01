@@ -81,6 +81,7 @@ defmodule ConfigCat.Rollout do
   end
 
   @default_percentage_option_attribute "Identifier"
+  @missing_user_error "cannot evaluate, User Object is missing"
 
   @spec evaluate(
           Config.key(),
@@ -329,10 +330,16 @@ defmodule ConfigCat.Rollout do
           }
 
         segment_condition ->
-          {
-            evaluate_segment_condition(segment_condition, context),
-            condition_count > 1
-          }
+          case evaluate_segment_condition(segment_condition, context) do
+            {:ok, _value} = result ->
+              {result, true}
+
+            {:error, @missing_user_error} = result ->
+              {result, condition_count > 1}
+
+            result ->
+              {result, true}
+          end
 
         prerequisite_flag_condition ->
           {
@@ -352,7 +359,7 @@ defmodule ConfigCat.Rollout do
   defp evaluate_user_condition(condition, _context_salt, %Context{user: nil} = context) do
     EvaluationLogger.log_evaluating_user_condition_start(context.logger, condition)
     EvaluationWarnings.warn_missing_user(context.warnings, context.key)
-    {:error, "cannot evaluate, User Object is missing"}
+    {:error, @missing_user_error}
   end
 
   defp evaluate_user_condition(condition, context_salt, %Context{} = context) do
