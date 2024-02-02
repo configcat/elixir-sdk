@@ -59,10 +59,7 @@ defmodule ConfigCat.ConfigCatLogger do
   def formatted_message(message, metadata) do
     logger_metadata = Logger.metadata()
     event_id = metadata[:event_id] || logger_metadata[:event_id] || 0
-    instance_id = metadata[:instance_id] || logger_metadata[:instance_id]
 
-    prefix = if instance_id, do: "[#{instance_id}] ", else: ""
-
-    {prefix <> "[#{event_id}] " <> message, metadata}
+    {"[#{event_id}] " <> message, metadata}
   end
 end

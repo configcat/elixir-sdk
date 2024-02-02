@@ -140,7 +140,7 @@ defmodule ConfigCat.CachePolicy.Auto do
 
   @impl GenServer
   def handle_call(:get, _from, %State{} = state) do
-    {:reply, Helpers.cached_settings(state), state}
+    {:reply, Helpers.cached_config(state), state}
   end
 
   @impl GenServer
@@ -204,10 +204,10 @@ defmodule ConfigCat.CachePolicy.Auto do
   defp be_initialized(%State{} = state) when initialized?(state), do: state
 
   defp be_initialized(%State{} = state) do
-    settings = Helpers.cached_settings(state)
+    config = Helpers.cached_config(state)
 
     for caller <- state.policy_state.callers do
-      GenServer.reply(caller, settings)
+      GenServer.reply(caller, config)
     end
 
     Helpers.on_client_ready(state)

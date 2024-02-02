@@ -9,8 +9,10 @@ defmodule ConfigCat.ClientCase do
   alias ConfigCat.MockCachePolicy
   alias ConfigCat.NullDataSource
 
-  using do
+  using opts do
     quote do
+      use ConfigCat.Case, unquote(opts)
+
       import unquote(__MODULE__)
     end
   end
@@ -31,9 +33,12 @@ defmodule ConfigCat.ClientCase do
     {:ok, instance_id}
   end
 
-  @spec stub_cached_settings({:ok, Config.settings(), FetchTime.t()} | {:error, :not_found}) ::
+  @spec stub_cached_config(
+          {:ok, Config.t(), FetchTime.t()}
+          | {:error, :not_found}
+        ) ::
           :ok
-  def stub_cached_settings(response) do
+  def stub_cached_config(response) do
     Mox.stub(MockCachePolicy, :get, fn _id -> response end)
     :ok
   end

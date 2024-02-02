@@ -8,6 +8,7 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.Config
+  alias ConfigCat.Config.Setting
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher.FetchError
   alias ConfigCat.Hooks
@@ -22,31 +23,30 @@ defmodule ConfigCat.CachePolicyCase do
   end
 
   setup do
-    settings = %{"some" => "settings"}
+    initial_settings = %{"new" => Setting.new(value: "new")}
+    config = [settings: initial_settings] |> Config.new() |> Config.inline_salt_and_segments()
+    settings = Config.settings(config)
+    entry = ConfigEntry.new(config, "ETag")
 
-    entry =
-      settings
-      |> Config.new_with_settings()
-      |> ConfigEntry.new("ETag")
-
-    %{entry: entry, settings: settings}
+    %{config: config, entry: entry, settings: settings}
   end
 
-  @spec make_old_entry :: %{entry: ConfigEntry.t(), settings: Config.settings()}
+  @spec make_old_entry :: %{config: Config.t(), entry: ConfigEntry.t(), settings: Config.settings()}
   @spec make_old_entry(non_neg_integer()) :: %{
           entry: ConfigEntry.t(),
           settings: Config.settings()
         }
   def make_old_entry(age_ms \\ 0) do
-    settings = %{"old" => "settings"}
+    initial_settings = %{"old" => Setting.new(value: "old")}
+    config = [settings: initial_settings] |> Config.new() |> Config.inline_salt_and_segments()
+    settings = Config.settings(config)
 
     entry =
-      settings
-      |> Config.new_with_settings()
+      config
       |> ConfigEntry.new("OldETag")
       |> Map.update!(:fetch_time_ms, &(&1 - age_ms))
 
-    %{entry: entry, settings: settings}
+    %{config: config, entry: entry, settings: settings}
   end
 
   @spec start_cache_policy(CachePolicy.t(), keyword()) :: {:ok, atom()}

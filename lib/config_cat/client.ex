@@ -4,15 +4,18 @@ defmodule ConfigCat.Client do
   use GenServer
 
   alias ConfigCat.CachePolicy
+  alias ConfigCat.Config
+  alias ConfigCat.Config.Setting
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.EvaluationLogger
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.OverrideDataSource
   alias ConfigCat.Rollout
   alias ConfigCat.User
 
+  require ConfigCat.Config.SettingType, as: SettingType
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
-  require ConfigCat.Constants, as: Constants
 
   defmodule State do
     @moduledoc false
@@ -96,9 +99,12 @@ defmodule ConfigCat.Client do
 
   @impl GenServer
   def handle_call({:get_key_and_value, variation_id}, _from, %State{} = state) do
-    case cached_settings(state) do
-      {:ok, settings, _fetch_time_ms} ->
-        result = Enum.find_value(settings, nil, &entry_matching(&1, variation_id))
+    case cached_config(state) do
+      {:ok, config, _fetch_time_ms} ->
+        result =
+          config
+          |> Config.settings()
+          |> Enum.find_value(nil, &entry_matching(&1, variation_id))
 
         if is_nil(result) do
           ConfigCatLogger.error(
@@ -183,9 +189,9 @@ defmodule ConfigCat.Client do
   end
 
   defp do_get_all_keys(%State{} = state) do
-    case cached_settings(state) do
-      {:ok, settings, _fetch_time_ms} ->
-        Map.keys(settings)
+    case cached_config(state) do
+      {:ok, config, _fetch_time_ms} ->
+        config |> Config.settings() |> Map.keys()
 
       _ ->
         ConfigCatLogger.error("Config JSON is not present. Returning empty result.",
@@ -197,29 +203,26 @@ defmodule ConfigCat.Client do
   end
 
   defp entry_matching({key, setting}, variation_id) do
-    value_matching(key, setting, variation_id) ||
-      value_matching(key, Map.get(setting, Constants.rollout_rules()), variation_id) ||
-      value_matching(key, Map.get(setting, Constants.percentage_rules()), variation_id)
-  end
-
-  defp value_matching(key, value, variation_id) when is_list(value) do
-    Enum.find_value(value, nil, &value_matching(key, &1, variation_id))
-  end
-
-  defp value_matching(key, value, variation_id) do
-    if Map.get(value, Constants.variation_id(), nil) == variation_id do
-      {key, Map.get(value, Constants.value())}
+    case Setting.variation_value(setting, variation_id) do
+      nil -> nil
+      value -> {key, value}
     end
   end
 
   defp evaluate(key, user, default_value, default_variation_id, %State{} = state) do
     user = if user != nil, do: user, else: state.default_user
 
-    details =
-      case cached_settings(state) do
-        {:ok, settings, fetch_time_ms} ->
+    %EvaluationDetails{} =
+      details =
+      with {:ok, config, fetch_time_ms} <- cached_config(state),
+           {:ok, _settings} <- Config.fetch_settings(config),
+           {:ok, logger} <- EvaluationLogger.start() do
+        try do
           %EvaluationDetails{} =
-            details = Rollout.evaluate(key, user, default_value, default_variation_id, settings)
+            details =
+            Rollout.evaluate(key, user, default_value, default_variation_id, config, logger)
+
+          check_type_mismatch(details.value, default_value)
 
           fetch_time =
             case FetchTime.to_datetime(fetch_time_ms) do
@@ -228,7 +231,14 @@ defmodule ConfigCat.Client do
             end
 
           %{details | fetch_time: fetch_time}
+        after
+          logger
+          |> EvaluationLogger.result()
+          |> ConfigCatLogger.debug(event_id: 5000)
 
+          EvaluationLogger.stop(logger)
+        end
+      else
         _ ->
           message =
             "Config JSON is not present when evaluating setting '#{key}'. Returning the `default_value` parameter that you specified in your application: '#{default_value}'."
@@ -249,23 +259,48 @@ defmodule ConfigCat.Client do
     details
   end
 
-  defp cached_settings(%State{} = state) do
+  defp cached_config(%State{} = state) do
     %{cache_policy: policy, flag_overrides: flag_overrides, instance_id: instance_id} = state
-    local_settings = OverrideDataSource.overrides(flag_overrides)
+    local_config = OverrideDataSource.overrides(flag_overrides)
 
     case OverrideDataSource.behaviour(flag_overrides) do
       :local_only ->
-        {:ok, local_settings, 0}
+        {:ok, local_config, 0}
 
       :local_over_remote ->
-        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(remote_settings, local_settings), fetch_time_ms}
+        with {:ok, remote_config, fetch_time_ms} <- policy.get(instance_id) do
+          {:ok, Config.merge(remote_config, local_config), fetch_time_ms}
         end
 
       :remote_over_local ->
-        with {:ok, remote_settings, fetch_time_ms} <- policy.get(instance_id) do
-          {:ok, Map.merge(local_settings, remote_settings), fetch_time_ms}
+        with {:ok, remote_config, fetch_time_ms} <- policy.get(instance_id) do
+          merged = Config.merge(local_config, remote_config)
+          {:ok, merged, fetch_time_ms}
         end
+    end
+  end
+
+  defp check_type_mismatch(_value, nil), do: :ok
+
+  defp check_type_mismatch(value, default_value) do
+    value_type = SettingType.from_value(value)
+    default_type = SettingType.from_value(default_value)
+    number_types = [SettingType.double(), SettingType.int()]
+
+    cond do
+      value_type == default_type ->
+        :ok
+
+      value_type in number_types and default_type in number_types ->
+        :ok
+
+      true ->
+        ConfigCatLogger.warning(
+          "The type of a setting does not match the type of the specified default value (#{default_value}). " <>
+            "Setting's type was #{value_type} but the default value's type was #{default_type}. " <>
+            "Please make sure that using a default value not matching the setting's type was intended.",
+          event_id: 4002
+        )
     end
   end
 end

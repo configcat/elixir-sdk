@@ -7,13 +7,12 @@ defmodule ConfigCat.LocalMapDataSource do
   use TypedStruct
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.Setting
   alias ConfigCat.OverrideDataSource
 
-  require ConfigCat.Constants, as: Constants
-
   typedstruct enforce: true do
+    field :config, Config.t()
     field :override_behaviour, OverrideDataSource.behaviour()
-    field :settings, Config.settings()
   end
 
   @doc """
@@ -23,12 +22,12 @@ defmodule ConfigCat.LocalMapDataSource do
   def new(overrides, override_behaviour) do
     settings =
       overrides
-      |> Enum.map(fn {key, value} -> {key, %{Constants.value() => value}} end)
+      |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
       |> Map.new()
 
     %__MODULE__{
-      override_behaviour: override_behaviour,
-      settings: settings
+      config: Config.new(settings: settings),
+      override_behaviour: override_behaviour
     }
   end
 
@@ -38,7 +37,7 @@ defmodule ConfigCat.LocalMapDataSource do
     @spec behaviour(LocalMapDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(%{override_behaviour: behaviour}), do: behaviour
 
-    @spec overrides(LocalMapDataSource.t()) :: Config.settings()
-    def overrides(%{settings: settings}), do: settings
+    @spec overrides(LocalMapDataSource.t()) :: Config.t()
+    def overrides(%{config: config}), do: config
   end
 end

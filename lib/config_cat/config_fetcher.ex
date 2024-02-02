@@ -39,6 +39,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   use GenServer
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.Preferences
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigCat.ConfigFetcher.FetchError
@@ -225,12 +226,15 @@ defmodule ConfigCat.CacheControlConfigFetcher do
        when code >= 200 and code < 300 do
     ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
 
-    with {:ok, config} <- Jason.decode(raw_config),
+    with {:ok, decoded_config} <- Jason.decode(raw_config),
+         config = Config.inline_salt_and_segments(decoded_config),
          new_etag = extract_etag(headers),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
-           state,
-         {base_url, redirect_mode} <- Config.preferences(config) do
+           state do
+      preferences = Config.preferences(config)
       followed? = Map.has_key?(redirects, new_base_url)
+      base_url = Preferences.base_url(preferences)
+      redirect_mode = Preferences.redirect_mode(preferences)
 
       new_state =
         cond do
@@ -315,7 +319,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   defp handle_error({:error, error}, _state) do
     ConfigCatLogger.error(
-      "Unexpected error occurred while trying to fetch config JSON: #{inspect(error)}",
+      "Unexpected error occurred while trying to fetch config JSON. " <>
+        "It is most likely due to a local network issue. " <>
+        "Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP. " <>
+        "#{inspect(error)}",
       event_id: 1103
     )
 

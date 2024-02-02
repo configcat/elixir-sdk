@@ -1,0 +1,2 @@
+debug [5000] Evaluating 'doubleDefaultPi'
+  Returning '3.1415'.

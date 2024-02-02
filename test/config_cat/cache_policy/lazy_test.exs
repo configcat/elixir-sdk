@@ -3,8 +3,10 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
   import Mox
 
+  alias ConfigCat.Cache
   alias ConfigCat.CachePolicy
   alias ConfigCat.CachePolicy.Lazy
+  alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
 
   @policy CachePolicy.lazy(cache_refresh_interval_seconds: 300)
@@ -21,30 +23,30 @@ defmodule ConfigCat.CachePolicy.LazyTest do
   end
 
   describe "getting the config" do
-    test "fetches config when first requested", %{entry: entry, settings: settings} do
+    test "fetches config when first requested", %{config: config, entry: entry} do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
 
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
     test "skips initial fetch if cache is already populated with a recent entry",
-         %{entry: entry, settings: settings} do
+         %{config: config, entry: entry} do
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
 
       expect_not_refreshed()
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
     test "performs initial fetch if cache is already populated with an older entry",
-         %{entry: entry, settings: settings} do
+         %{config: config, entry: entry} do
       %{entry: old_entry} = make_old_entry(@policy.cache_refresh_interval_ms + 1)
 
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: old_entry)
 
       expect_refresh(entry)
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
     test "doesn't re-fetch if cache has not expired", %{entry: entry} do
@@ -57,7 +59,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       CachePolicy.get(instance_id)
     end
 
-    test "re-fetches if cache has expired", %{entry: entry, settings: settings} do
+    test "re-fetches if cache has expired", %{config: config, entry: entry} do
       policy = CachePolicy.lazy(cache_refresh_interval_seconds: 0)
       {:ok, instance_id} = start_cache_policy(policy)
       %{entry: old_entry} = make_old_entry()
@@ -66,18 +68,35 @@ defmodule ConfigCat.CachePolicy.LazyTest do
       :ok = CachePolicy.force_refresh(instance_id)
 
       expect_refresh(entry)
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+    end
+
+    test "doesn't re-fetch after expiry if cache has been updated", %{config: config, entry: entry} do
+      policy = CachePolicy.lazy(cache_refresh_interval_seconds: 1)
+      %{config: old_config, entry: old_entry} = make_old_entry()
+      {:ok, instance_id} = start_cache_policy(policy, initial_entry: old_entry)
+
+      expect_not_refreshed()
+      assert {:ok, old_config, old_entry.fetch_time_ms} == CachePolicy.get(instance_id)
+
+      Process.sleep(policy.cache_refresh_interval_ms)
+
+      new_entry = ConfigEntry.refresh(entry)
+      Cache.set(instance_id, new_entry)
+
+      expect_not_refreshed()
+      assert {:ok, config, new_entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
   end
 
   describe "refreshing the config" do
-    test "stores new config in the cache", %{entry: entry, settings: settings} do
+    test "stores new config in the cache", %{config: config, entry: entry} do
       {:ok, instance_id} = start_cache_policy(@policy)
 
       expect_refresh(entry)
 
       assert :ok = CachePolicy.force_refresh(instance_id)
-      assert {:ok, settings, entry.fetch_time_ms} == CachePolicy.get(instance_id)
+      assert {:ok, config, entry.fetch_time_ms} == CachePolicy.get(instance_id)
     end
 
     test "fetches new config even if cache is not expired", %{entry: entry} do
@@ -91,8 +110,8 @@ defmodule ConfigCat.CachePolicy.LazyTest do
     end
 
     test "updates fetch time when server responds that the config hasn't changed", %{
-      entry: entry,
-      settings: settings
+      config: config,
+      entry: entry
     } do
       entry = Map.update!(entry, :fetch_time_ms, &(&1 - 200))
       {:ok, instance_id} = start_cache_policy(@policy, initial_entry: entry)
@@ -103,7 +122,7 @@ defmodule ConfigCat.CachePolicy.LazyTest do
 
       assert :ok = CachePolicy.force_refresh(instance_id)
 
-      assert {:ok, ^settings, new_fetch_time_ms} = CachePolicy.get(instance_id)
+      assert {:ok, ^config, new_fetch_time_ms} = CachePolicy.get(instance_id)
       assert before <= new_fetch_time_ms && new_fetch_time_ms <= FetchTime.now_ms()
     end
 

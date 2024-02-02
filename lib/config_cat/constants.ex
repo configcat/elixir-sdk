@@ -5,16 +5,8 @@ defmodule ConfigCat.Constants do
   defmacro base_url_eu_only, do: "https://cdn-eu.configcat.com"
 
   defmacro base_path, do: "configuration-files"
-  defmacro config_filename, do: "config_v5.json"
+  defmacro config_filename, do: "config_v6.json"
   defmacro serialization_format_version, do: "v2"
 
-  defmacro comparator, do: "t"
-  defmacro comparison_attribute, do: "a"
-  defmacro comparison_value, do: "c"
-  defmacro rollout_rules, do: "r"
-  defmacro percentage_rules, do: "p"
-  defmacro percentage, do: "p"
-  defmacro value, do: "v"
-  defmacro variation_id, do: "i"
   defmacro fetch_timeout, do: 10_000
 end

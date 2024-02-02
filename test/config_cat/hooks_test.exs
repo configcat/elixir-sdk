@@ -1,42 +1,25 @@
 defmodule ConfigCat.HooksTest do
   use ConfigCat.CachePolicyCase, async: true
 
-  import Jason.Sigil
   import Mox
 
   alias ConfigCat.CachePolicy
   alias ConfigCat.Client
   alias ConfigCat.Config
+  alias ConfigCat.Config.TargetingRule
   alias ConfigCat.ConfigEntry
   alias ConfigCat.EvaluationDetails
+  alias ConfigCat.Factory
   alias ConfigCat.Hooks
   alias ConfigCat.MockFetcher
   alias ConfigCat.NullDataSource
   alias ConfigCat.User
 
-  require ConfigCat.Constants, as: Constants
+  require ConfigCat.Config.SettingType, as: SettingType
 
   @moduletag capture_log: true
 
-  @config ~J"""
-  {
-    "p": {
-      "u": "https://cdn-global.configcat.com",
-      "r": 0
-    },
-    "f": {
-      "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-      "testStringKey": {"v": "testValue", "i": "id", "t": 1, "p": [],"r": [
-        {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-        {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-      ]},
-      "testIntKey": {"v": 1,"t": 2, "p": [],"r": []},
-      "testDoubleKey": {"v": 1.1,"t": 3,"p": [],"r": []},
-      "key1": {"v": true, "i": "fakeId1","p": [], "r": []},
-      "key2": {"v": false, "i": "fakeId2","p": [], "r": []}
-    }
-  }
-  """
+  @config Config.inline_salt_and_segments(Factory.config())
   @policy CachePolicy.manual()
 
   defmodule TestHooks do
@@ -84,7 +67,7 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    settings = Config.settings(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
@@ -112,7 +95,7 @@ defmodule ConfigCat.HooksTest do
 
     value = ConfigCat.get_value("testStringKey", "", client: instance_id)
 
-    {:ok, settings} = Config.fetch_settings(@config)
+    settings = Config.settings(@config)
 
     assert value == "testValue"
     assert_received :on_client_ready
@@ -144,17 +127,15 @@ defmodule ConfigCat.HooksTest do
              default_value?: false,
              error: nil,
              key: "testStringKey",
-             matched_evaluation_rule: %{
-               Constants.comparator() => 2,
-               Constants.comparison_attribute() => "Identifier",
-               Constants.comparison_value() => "@test1.com",
-               Constants.value() => "fake1"
-             },
-             matched_evaluation_percentage_rule: nil,
+             matched_targeting_rule: rule,
+             matched_percentage_option: nil,
              user: ^user,
              value: "fake1",
              variation_id: "id1"
            } = details
+
+    assert TargetingRule.value(rule, SettingType.string()) == "fake1"
+    assert TargetingRule.variation_id(rule) == "id1"
   end
 
   test "doesn't fail when callbacks raise errors" do

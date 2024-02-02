@@ -74,7 +74,7 @@ defmodule ConfigCat.ConfigEntry do
   defp parse_config(config_json) do
     case Jason.decode(config_json) do
       {:ok, config} ->
-        {:ok, config}
+        {:ok, Config.inline_salt_and_segments(config)}
 
       {:error, error} ->
         {:error, "Invalid config JSON: #{config_json}. #{Exception.message(error)}"}

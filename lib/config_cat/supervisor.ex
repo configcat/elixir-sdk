@@ -18,14 +18,12 @@ defmodule ConfigCat.Supervisor do
 
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(options) when is_list(options) do
+    options = Keyword.merge(default_options(), options)
     sdk_key = options[:sdk_key]
-    validate_sdk_key(sdk_key)
+    validate_sdk_key(sdk_key, options)
     ensure_unique_sdk_key(sdk_key)
 
-    options =
-      default_options()
-      |> Keyword.merge(options)
-      |> put_cache_key(sdk_key)
+    options = put_cache_key(options, sdk_key)
 
     # Rename name -> instance_id for everything downstream
     {instance_id, options} = Keyword.pop!(options, :name)
@@ -34,9 +32,34 @@ defmodule ConfigCat.Supervisor do
     Supervisor.start_link(__MODULE__, options, name: via_tuple(instance_id, sdk_key))
   end
 
-  defp validate_sdk_key(nil), do: raise(ArgumentError, "SDK Key is required")
-  defp validate_sdk_key(""), do: raise(ArgumentError, "SDK Key is required")
-  defp validate_sdk_key(sdk_key) when is_binary(sdk_key), do: :ok
+  defp validate_sdk_key(nil, _options), do: raise(ArgumentError, "SDK Key is required")
+  defp validate_sdk_key("", _options), do: raise(ArgumentError, "SDK Key is required")
+
+  defp validate_sdk_key(sdk_key, options) when is_binary(sdk_key) do
+    has_base_url? = !is_nil(options[:base_url])
+    overrides = options[:flag_overrides]
+
+    cond do
+      OverrideDataSource.behaviour(overrides) == :local_only ->
+        :ok
+
+      sdk_key =~ ~r[^.{22}/.{22}$] ->
+        :ok
+
+      sdk_key =~ ~r[^configcat-sdk-1/.{22}/.{22}$] ->
+        :ok
+
+      has_base_url? and sdk_key =~ ~r[^configcat-proxy/.+$] ->
+        :ok
+
+      true ->
+        raise ArgumentError, "SDK Key `#{sdk_key}` is invalid."
+    end
+  end
+
+  defp validate_sdk_key(sdk_key, _options) do
+    raise ArgumentError, "SDK Key `#{inspect(sdk_key)}` is invalid."
+  end
 
   defp ensure_unique_sdk_key(sdk_key) do
     ConfigCat.Registry

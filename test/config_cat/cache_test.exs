@@ -9,14 +9,20 @@ defmodule ConfigCat.CacheTest do
   alias ConfigCat.Hooks
   alias ConfigCat.MockConfigCache
 
-  @config Config.new_with_settings(%{})
+  @config Config.new()
   @entry ConfigEntry.new(@config, "ETAG")
   @serialized ConfigEntry.serialize(@entry)
 
   describe "generating a cache key" do
-    test "generates platform-independent cache keys" do
-      assert Cache.generate_key("test1") == "147c5b4c2b2d7c77e1605b1a4309f0ea6684a0c6"
-      assert Cache.generate_key("test2") == "c09513b1756de9e4bc48815ec7a142b2441ed4d5"
+    for {sdk_key, expected_cache_key} <- [
+          {"configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012", "f83ba5d45bceb4bb704410f51b704fb6dfa19942"},
+          {"configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012", "da7bfd8662209c8ed3f9db96daed4f8d91ba5876"}
+        ] do
+      test "generates platform-independent cache keys - #{sdk_key}" do
+        sdk_key = unquote(sdk_key)
+        expected_cache_key = unquote(expected_cache_key)
+        assert Cache.generate_key(sdk_key) == expected_cache_key
+      end
     end
   end
 

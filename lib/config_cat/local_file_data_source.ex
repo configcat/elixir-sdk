@@ -19,7 +19,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
     typedstruct do
       field :cached_timestamp, non_neg_integer(), default: 0
-      field :settings, Config.settings()
+      field :config, Config.t()
     end
 
     @spec start_link(GenServer.options()) :: Agent.on_start()
@@ -27,11 +27,11 @@ defmodule ConfigCat.LocalFileDataSource do
       Agent.start_link(fn -> %__MODULE__{} end)
     end
 
-    @spec cached_settings(Agent.agent()) :: {:ok, Config.t()} | {:error, :not_found}
-    def cached_settings(cache) do
-      case Agent.get(cache, fn %__MODULE__{settings: settings} -> settings end) do
+    @spec cached_config(Agent.agent()) :: {:ok, Config.t()} | {:error, :not_found}
+    def cached_config(cache) do
+      case Agent.get(cache, fn %__MODULE__{config: config} -> config end) do
         nil -> {:error, :not_found}
-        settings -> {:ok, settings}
+        config -> {:ok, config}
       end
     end
 
@@ -41,9 +41,9 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     @spec update(Agent.agent(), Config.t(), integer()) :: :ok
-    def update(cache, settings, timestamp) do
+    def update(cache, config, timestamp) do
       Agent.update(cache, fn %__MODULE__{} = state ->
-        %{state | cached_timestamp: timestamp, settings: settings}
+        %{state | cached_timestamp: timestamp, config: config}
       end)
     end
   end
@@ -72,19 +72,18 @@ defmodule ConfigCat.LocalFileDataSource do
   end
 
   defimpl OverrideDataSource do
+    alias ConfigCat.Config.Setting
     alias ConfigCat.LocalFileDataSource
-
-    require ConfigCat.Constants, as: Constants
 
     @spec behaviour(LocalFileDataSource.t()) :: OverrideDataSource.behaviour()
     def behaviour(data_source), do: data_source.override_behaviour
 
-    @spec overrides(LocalFileDataSource.t()) :: Config.settings()
+    @spec overrides(LocalFileDataSource.t()) :: Config.t()
     def overrides(%{cache: cache} = data_source) do
       refresh_cache(cache, data_source.filename)
 
-      case FileCache.cached_settings(cache) do
-        {:ok, settings} -> settings
+      case FileCache.cached_config(cache) do
+        {:ok, config} -> config
         _ -> %{}
       end
     end
@@ -94,8 +93,8 @@ defmodule ConfigCat.LocalFileDataSource do
         unless FileCache.cached_timestamp(cache) == timestamp do
           with {:ok, contents} <- File.read(filename),
                {:ok, data} <- Jason.decode(contents) do
-            settings = normalize(data)
-            FileCache.update(cache, settings, timestamp)
+            config = normalize(data)
+            FileCache.update(cache, config, timestamp)
           else
             error ->
               log_error(error, filename)
@@ -120,16 +119,16 @@ defmodule ConfigCat.LocalFileDataSource do
     end
 
     defp normalize(%{"flags" => source} = _data) do
-      source
-      |> Enum.map(fn {key, value} -> {key, %{Constants.value() => value}} end)
-      |> Map.new()
+      settings =
+        source
+        |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
+        |> Map.new()
+
+      Config.new(settings: settings)
     end
 
     defp normalize(source) do
-      case Config.fetch_settings(source) do
-        {:ok, settings} -> settings
-        _ -> %{}
-      end
+      Config.inline_salt_and_segments(source)
     end
   end
 end

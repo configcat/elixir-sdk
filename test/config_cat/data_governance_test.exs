@@ -5,6 +5,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
   alias ConfigCat.CacheControlConfigFetcher, as: ConfigFetcher
   alias ConfigCat.Config
+  alias ConfigCat.Config.Preferences
   alias ConfigCat.ConfigEntry
   alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
@@ -272,8 +273,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   end
 
   defp stub_response(response_uri, redirect_mode) do
-    response_uri
-    |> Config.new_with_preferences(redirect_mode)
+    preferences = Preferences.new(base_url: response_uri, redirect_mode: redirect_mode)
+
+    [preferences: preferences]
+    |> Config.new()
     |> Jason.encode!()
   end
 

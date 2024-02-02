@@ -2,58 +2,208 @@ defmodule ConfigCat.Rollout do
   @moduledoc false
 
   alias ConfigCat.Config
+  alias ConfigCat.Config.ComparisonContext
+  alias ConfigCat.Config.Condition
+  alias ConfigCat.Config.PercentageOption
+  alias ConfigCat.Config.PrerequisiteFlagComparator
+  alias ConfigCat.Config.PrerequisiteFlagCondition
+  alias ConfigCat.Config.Segment
+  alias ConfigCat.Config.SegmentComparator
+  alias ConfigCat.Config.SegmentCondition
+  alias ConfigCat.Config.Setting
+  alias ConfigCat.Config.SettingType
+  alias ConfigCat.Config.TargetingRule
+  alias ConfigCat.Config.UserComparator
+  alias ConfigCat.Config.UserCondition
   alias ConfigCat.EvaluationDetails
-  alias ConfigCat.Rollout.Comparator
+  alias ConfigCat.EvaluationLogger
+  alias ConfigCat.EvaluationWarnings
   alias ConfigCat.User
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
-  require ConfigCat.Constants, as: Constants
+
+  defmodule CircularDependencyError do
+    @moduledoc false
+    @enforce_keys [:prerequisite_key, :visited_keys]
+    defexception [:prerequisite_key, :visited_keys]
+
+    @type option :: {:prerequisite_key, String.t()} | {:visited_keys, [String.t()]}
+    @type t :: %__MODULE__{
+            prerequisite_key: String.t(),
+            visited_keys: [String.t()]
+          }
+
+    @impl Exception
+    def exception(options) do
+      struct!(__MODULE__, options)
+    end
+
+    @impl Exception
+    def message(%__MODULE__{} = error) do
+      depending_flags =
+        [error.prerequisite_key | error.visited_keys]
+        |> Enum.reverse()
+        |> Enum.map_join(" -> ", &"'#{&1}'")
+
+      "Circular dependency detected between the following depending flags: #{depending_flags}"
+    end
+  end
+
+  defmodule EvaluationError do
+    @moduledoc false
+    @enforce_keys [:message]
+    defexception [:message]
+
+    @type t :: %__MODULE__{
+            message: String.t()
+          }
+  end
+
+  defmodule Context do
+    @moduledoc false
+    use TypedStruct
+
+    alias ConfigCat.Config.SettingType
+
+    typedstruct enforce: true do
+      field :config, Config.t()
+      field :default_value, Config.value() | nil
+      field :default_variation_id, Config.variation_id() | nil
+      field :key, Config.key()
+      field :logger, pid() | nil
+      field :percentage_option_attribute, String.t()
+      field :salt, Config.salt()
+      field :setting_type, SettingType.t()
+      field :user, User.t(), enforce: false
+      field :visited_keys, [String.t()]
+      field :warnings, pid()
+    end
+  end
+
+  @default_percentage_option_attribute "Identifier"
+  @missing_user_error "cannot evaluate, User Object is missing"
 
   @spec evaluate(
           Config.key(),
           User.t() | nil,
-          Config.value(),
+          Config.value() | nil,
           Config.variation_id() | nil,
-          Config.settings()
+          Config.t(),
+          pid() | nil,
+          [String.t()]
         ) :: EvaluationDetails.t()
-  def evaluate(key, user, default_value, default_variation_id, settings) do
-    {:ok, logs} = Agent.start(fn -> [] end)
+  def evaluate(key, user, default_value, default_variation_id, config, logger \\ nil, visited_keys \\ []) do
+    settings = Config.settings(config)
 
-    try do
-      log_evaluating(logs, key, user)
+    case setting(settings, key, default_value) do
+      {:ok, setting} ->
+        {:ok, warnings} = EvaluationWarnings.start()
 
-      with {:ok, valid_user} <- validate_user(user),
-           {:ok, setting_descriptor} <- setting_descriptor(settings, key, default_value),
-           setting_variation =
-             Map.get(setting_descriptor, Constants.variation_id(), default_variation_id),
-           rollout_rules = Map.get(setting_descriptor, Constants.rollout_rules(), []),
-           percentage_rules = Map.get(setting_descriptor, Constants.percentage_rules(), []),
-           {value, variation, rule, percentage_rule} <-
-             evaluate_rules(rollout_rules, percentage_rules, valid_user, key, logs) do
-        variation = variation || setting_variation
+        try do
+          validated_user =
+            case user do
+              nil ->
+                nil
 
-        value =
-          if value == :none do
-            base_value(setting_descriptor, default_value, logs)
-          else
-            value
-          end
+              %User{} = user ->
+                user
+
+              _ ->
+                EvaluationWarnings.warn_invalid_user(warnings, key)
+                nil
+            end
+
+          context = %Context{
+            config: config,
+            default_value: default_value,
+            default_variation_id: default_variation_id,
+            key: key,
+            logger: logger,
+            percentage_option_attribute:
+              Setting.percentage_option_attribute(setting) || @default_percentage_option_attribute,
+            salt: Setting.salt(setting),
+            setting_type: Setting.setting_type(setting),
+            user: validated_user,
+            visited_keys: visited_keys,
+            warnings: warnings
+          }
+
+          evaluate_setting(setting, context)
+        after
+          EvaluationWarnings.stop(warnings)
+        end
+
+      {:error, message} ->
+        ConfigCatLogger.error(message, event_id: 1001)
 
         EvaluationDetails.new(
+          default_value?: true,
+          error: message,
           key: key,
-          matched_evaluation_rule: rule,
-          matched_evaluation_percentage_rule: percentage_rule,
-          user: user,
-          value: value,
-          variation_id: variation
+          value: default_value,
+          variation_id: default_variation_id
         )
-      else
-        {:error, :invalid_user} ->
-          log_invalid_user(key)
-          evaluate(key, nil, default_value, default_variation_id, settings)
+    end
+  end
 
-        {:error, message} ->
-          ConfigCatLogger.error(message, event_id: 1001)
+  defp evaluate_setting(setting, %Context{} = context) do
+    %Context{
+      default_value: default_value,
+      default_variation_id: default_variation_id,
+      key: key,
+      logger: logger,
+      user: user,
+      visited_keys: visited_keys
+    } = context
+
+    root_flag_evaluation? = visited_keys == []
+    percentage_options = Setting.percentage_options(setting)
+    targeting_rules = Setting.targeting_rules(setting)
+
+    try do
+      if root_flag_evaluation? do
+        logger
+        |> EvaluationLogger.log_evaluating(key, user)
+        |> EvaluationLogger.increase_indent()
+      end
+
+      case evaluate_rules(targeting_rules, percentage_options, context) do
+        {:none, _variation_id, _matching_rule, _matching_option} ->
+          value = Setting.value(setting)
+
+          if root_flag_evaluation? do
+            EvaluationLogger.log_return_value(logger, value)
+          end
+
+          EvaluationDetails.new(
+            key: key,
+            user: user,
+            value: value,
+            variation_id: Setting.variation_id(setting, default_variation_id)
+          )
+
+        {value, variation_id, rule, percentage_option} ->
+          if root_flag_evaluation? do
+            EvaluationLogger.log_return_value(logger, value)
+          end
+
+          EvaluationDetails.new(
+            key: key,
+            matched_targeting_rule: rule,
+            matched_percentage_option: percentage_option,
+            user: user,
+            value: value,
+            variation_id: variation_id
+          )
+      end
+    rescue
+      error ->
+        if root_flag_evaluation? do
+          message =
+            "Failed to evaluate setting '#{key}'. (#{Exception.message(error)}). " <>
+              "Returning the default_value parameter that you specified in your application: '#{default_value}'."
+
+          ConfigCatLogger.error(message, event_id: 2001)
 
           EvaluationDetails.new(
             default_value?: true,
@@ -62,26 +212,16 @@ defmodule ConfigCat.Rollout do
             value: default_value,
             variation_id: default_variation_id
           )
-      end
-    after
-      logs
-      |> Agent.get(& &1)
-      |> Enum.reverse()
-      |> Enum.join("\n")
-      |> ConfigCatLogger.debug(event_id: 5000)
-
-      Agent.stop(logs)
+        else
+          reraise(error, __STACKTRACE__)
+        end
     end
   end
 
-  defp validate_user(nil), do: {:ok, nil}
-  defp validate_user(%User{} = user), do: {:ok, user}
-  defp validate_user(_), do: {:error, :invalid_user}
-
-  defp setting_descriptor(settings, key, default_value) do
+  defp setting(settings, key, default_value) do
     case Map.fetch(settings, key) do
-      {:ok, descriptor} ->
-        {:ok, descriptor}
+      {:ok, setting} ->
+        {:ok, setting}
 
       :error ->
         available_keys =
@@ -98,103 +238,341 @@ defmodule ConfigCat.Rollout do
     end
   end
 
-  defp evaluate_rules([], [], _user, _key, _logs), do: {:none, nil, nil, nil}
+  defp evaluate_rules([], [], _context), do: {:none, nil, nil, nil}
 
-  defp evaluate_rules(_rollout_rules, _percentage_rules, nil, key, _logs) do
-    log_nil_user(key)
-    {:none, nil, nil, nil}
-  end
+  defp evaluate_rules(targeting_rules, percentage_options, context) do
+    case evaluate_targeting_rules(targeting_rules, context) do
+      {:none, _, _, _} ->
+        {value, variation, option} = evaluate_percentage_options(percentage_options, context)
+        {value, variation, nil, option}
 
-  defp evaluate_rules(rollout_rules, percentage_rules, user, key, logs) do
-    case evaluate_rollout_rules(rollout_rules, user, key, logs) do
-      {:none, _, _} ->
-        {value, variation, rule} = evaluate_percentage_rules(percentage_rules, user, key)
-        {value, variation, nil, rule}
-
-      {value, variation, rule} ->
-        {value, variation, rule, nil}
+      {value, variation, rule, option} ->
+        {value, variation, rule, option}
     end
   end
 
-  defp evaluate_rollout_rules(rules, user, _key, logs) do
-    Enum.reduce_while(rules, {:none, nil, nil}, &evaluate_rollout_rule(&1, &2, user, logs))
+  defp evaluate_targeting_rules([], _context), do: {:none, nil, nil, nil}
+
+  defp evaluate_targeting_rules(rules, %Context{} = context) do
+    EvaluationLogger.log_evaluating_targeting_rules(context.logger)
+
+    Enum.reduce_while(rules, {:none, nil, nil, nil}, fn rule, acc ->
+      case evaluate_targeting_rule(rule, context) do
+        {:none, _, _, _} -> {:cont, acc}
+        result -> {:halt, result}
+      end
+    end)
   end
 
-  defp evaluate_rollout_rule(rule, default, user, logs) do
-    comparison_attribute = Map.get(rule, Constants.comparison_attribute())
-    comparison_value = Map.get(rule, Constants.comparison_value())
-    comparator = Map.get(rule, Constants.comparator())
-    value = Map.get(rule, Constants.value())
-    variation = Map.get(rule, Constants.variation_id())
+  defp evaluate_targeting_rule(rule, %Context{} = context) do
+    %Context{logger: logger} = context
+    conditions = TargetingRule.conditions(rule)
+    value = TargetingRule.value(rule, context.setting_type)
 
-    case User.get_attribute(user, comparison_attribute) do
-      nil ->
-        log_no_match(logs, comparison_attribute, nil, comparator, comparison_value)
-        {:cont, default}
+    if evaluate_conditions(conditions, value, context) do
+      case TargetingRule.simple_value(rule) do
+        nil ->
+          EvaluationLogger.increase_indent(logger)
+          percentage_options = TargetingRule.percentage_options(rule)
+          {value, variation_id, option} = evaluate_percentage_options(percentage_options, context)
 
-      user_value ->
-        case Comparator.compare(comparator, to_string(user_value), to_string(comparison_value)) do
-          {:ok, true} ->
-            log_match(
-              logs,
-              comparison_attribute,
-              user_value,
-              comparator,
-              comparison_value,
-              value
-            )
+          if value == :none do
+            EvaluationLogger.log_ignored_targeting_rule(logger)
+          end
 
-            {:halt, {value, variation, rule}}
+          EvaluationLogger.decrease_indent(logger)
+          {value, variation_id, rule, option}
 
-          {:ok, false} ->
-            log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value)
-            {:cont, default}
+        _ ->
+          variation_id = TargetingRule.variation_id(rule, context.default_variation_id)
+          {value, variation_id, rule, nil}
+      end
+    else
+      {:none, nil, nil, nil}
+    end
+  end
 
-          {:error, error} ->
-            log_validation_error(
-              logs,
-              comparison_attribute,
-              user_value,
-              comparator,
-              comparison_value,
-              error
-            )
+  defp evaluate_conditions(conditions, value, context) do
+    condition_count = length(conditions)
 
-            {:cont, default}
+    {result, newline_before_then?} =
+      conditions
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, true}, fn {condition, index}, _acc ->
+        EvaluationLogger.log_evaluating_condition_start(context.logger, index)
+
+        case evaluate_condition(condition, condition_count, context) do
+          {{:ok, true}, _newline?} = result -> {:cont, result}
+          result -> {:halt, result}
+        end
+      end)
+
+    EvaluationLogger.log_evaluating_condition_final_result(context.logger, result, newline_before_then?, value)
+
+    case result do
+      {:ok, result} -> result
+      {:error, _error} -> false
+    end
+  end
+
+  defp evaluate_condition(condition, condition_count, %Context{} = context) do
+    %Context{logger: logger} = context
+    prerequisite_flag_condition = Condition.prerequisite_flag_condition(condition)
+    segment_condition = Condition.segment_condition(condition)
+    user_condition = Condition.user_condition(condition)
+
+    {result, newline?} =
+      cond do
+        user_condition ->
+          {
+            evaluate_user_condition(user_condition, context.key, context),
+            condition_count > 1
+          }
+
+        segment_condition ->
+          case evaluate_segment_condition(segment_condition, context) do
+            {:ok, _value} = result ->
+              {result, true}
+
+            {:error, @missing_user_error} = result ->
+              {result, condition_count > 1}
+
+            result ->
+              {result, true}
+          end
+
+        prerequisite_flag_condition ->
+          {
+            evaluate_prerequisite_flag_condition(prerequisite_flag_condition, context),
+            true
+          }
+      end
+
+    if condition_count > 1 do
+      EvaluationLogger.log_evaluating_condition_result(logger, result)
+    end
+
+    EvaluationLogger.decrease_indent(logger)
+    {result, newline?}
+  end
+
+  defp evaluate_user_condition(condition, _context_salt, %Context{user: nil} = context) do
+    EvaluationLogger.log_evaluating_user_condition_start(context.logger, condition)
+    EvaluationWarnings.warn_missing_user(context.warnings, context.key)
+    {:error, @missing_user_error}
+  end
+
+  defp evaluate_user_condition(condition, context_salt, %Context{} = context) do
+    %Context{logger: logger, user: user} = context
+
+    EvaluationLogger.log_evaluating_user_condition_start(logger, condition)
+
+    case UserCondition.fetch_comparison_attribute(condition) do
+      {:error, :not_found} ->
+        raise EvaluationError, "Comparison attribute name missing"
+
+      {:ok, comparison_attribute} ->
+        case User.get_attribute(user, comparison_attribute) do
+          missing when is_nil(missing) or missing == "" ->
+            EvaluationWarnings.warn_missing_user_attribute(context.warnings, context.key, condition, comparison_attribute)
+            {:error, "cannot evaluate, the User.#{comparison_attribute} attribute is missing"}
+
+          user_value ->
+            compare(condition, user_value, context_salt, context)
         end
     end
   end
 
-  defp evaluate_percentage_rules([] = _percentage_rules, _user, _key), do: {:none, nil, nil}
+  defp compare(condition, user_value, context_salt, %Context{} = context) do
+    %Context{key: key, salt: salt} = context
 
-  defp evaluate_percentage_rules(percentage_rules, user, key) do
-    hash_val = hash_user(user, key)
+    comparison_context = %ComparisonContext{
+      condition: condition,
+      context_salt: context_salt,
+      key: key,
+      salt: salt
+    }
 
-    Enum.reduce_while(
-      percentage_rules,
-      {0, nil, nil},
-      &evaluate_percentage_rule(&1, &2, hash_val)
-    )
-  end
+    comparator = UserCondition.comparator(condition)
+    comparison_value = UserCondition.comparison_value(condition)
 
-  defp evaluate_percentage_rule(rule, increment, hash_val) do
-    {bucket, _v, _r} = increment
-    bucket = increment_bucket(bucket, rule)
+    case UserComparator.compare(comparator, user_value, comparison_value, comparison_context) do
+      {:ok, result} ->
+        {:ok, result}
 
-    if hash_val < bucket do
-      percentage_value = Map.get(rule, Constants.value())
-      variation_value = Map.get(rule, Constants.variation_id())
+      {:error, :invalid_datetime} ->
+        message = "'#{user_value}' is not a valid Unix timestamp (number of seconds elapsed since Unix epoch)"
+        handle_invalid_user_attribute(condition, message, context)
 
-      {:halt, {percentage_value, variation_value, rule}}
-    else
-      {:cont, {bucket, nil, nil}}
+      {:error, :invalid_float} ->
+        message = "'#{user_value}' is not a valid decimal number"
+        handle_invalid_user_attribute(condition, message, context)
+
+      {:error, :invalid_string_list} ->
+        message = "'#{user_value}' is not a valid string array"
+        handle_invalid_user_attribute(condition, message, context)
+
+      {:error, :invalid_version} ->
+        trimmed = user_value |> to_string() |> String.trim()
+        message = "'#{trimmed}' is not a valid semantic version"
+        handle_invalid_user_attribute(condition, message, context)
     end
   end
 
-  defp increment_bucket(bucket, rule), do: bucket + Map.get(rule, Constants.percentage(), 0)
+  defp evaluate_segment_condition(condition, %Context{user: nil} = context) do
+    EvaluationWarnings.warn_missing_user(context.warnings, context.key)
+    EvaluationLogger.log_skipping_segment_condition_missing_user(context.logger, condition)
+    {:error, "cannot evaluate, User Object is missing"}
+  end
 
-  defp hash_user(user, key) do
-    user_key = User.get_attribute(user, "Identifier")
+  defp evaluate_segment_condition(condition, %Context{} = context) do
+    %Context{logger: logger} = context
+
+    case SegmentCondition.fetch_segment(condition) do
+      {:error, :not_found} ->
+        raise EvaluationError, "Segment reference is invalid."
+
+      {:ok, segment} ->
+        comparator = SegmentCondition.segment_comparator(condition)
+        name = Segment.name(segment)
+
+        EvaluationLogger.log_evaluating_segment_condition_start(logger, condition, name)
+
+        segment
+        |> Segment.conditions()
+        |> Enum.with_index()
+        |> Enum.reduce_while({:ok, true}, fn {condition, index}, acc ->
+          EvaluationLogger.log_evaluating_condition_start(logger, index)
+
+          result = evaluate_user_condition(condition, name, context)
+          EvaluationLogger.log_evaluating_condition_result(logger, result)
+
+          case result do
+            {:ok, true} -> {:cont, acc}
+            {:ok, false} -> {:halt, {:ok, false}}
+            {:error, error} -> {:halt, {:error, error}}
+          end
+        end)
+        |> case do
+          {:ok, in_segment?} ->
+            result = {:ok, SegmentComparator.compare(comparator, in_segment?)}
+            EvaluationLogger.log_evaluating_segment_condition_result(logger, condition, in_segment?, result)
+            result
+
+          {:error, _error} = result ->
+            EvaluationLogger.log_evaluating_segment_condition_result(logger, condition, false, result)
+            result
+        end
+    end
+  end
+
+  defp evaluate_prerequisite_flag_condition(condition, %Context{} = context) do
+    %Context{config: config, logger: logger, user: user, visited_keys: visited_keys} = context
+    settings = Config.settings(config)
+    prerequisite_key = PrerequisiteFlagCondition.prerequisite_flag_key(condition)
+    comparator = PrerequisiteFlagCondition.comparator(condition)
+
+    case Map.get(settings, prerequisite_key) do
+      nil ->
+        raise EvaluationError, "Prerequisite flag key is missing or invalid."
+
+      setting ->
+        setting_type = Setting.setting_type(setting)
+        comparison_value_type = PrerequisiteFlagCondition.inferred_setting_type(condition)
+
+        unless setting_type == comparison_value_type do
+          value =
+            unless is_nil(comparison_value_type) do
+              PrerequisiteFlagCondition.comparison_value(condition, comparison_value_type)
+            end
+
+          raise EvaluationError,
+                "Type mismatch between comparison value '#{value}' and prerequisite flag '#{prerequisite_key}'"
+        end
+
+        comparison_value = PrerequisiteFlagCondition.comparison_value(condition, setting_type)
+        next_visited_keys = [context.key | visited_keys]
+
+        if prerequisite_key in visited_keys do
+          raise CircularDependencyError, prerequisite_key: prerequisite_key, visited_keys: next_visited_keys
+        else
+          EvaluationLogger.log_evaluating_prerequisite_condition_start(logger, condition, setting_type)
+
+          %EvaluationDetails{value: prerequisite_value} =
+            evaluate(prerequisite_key, user, nil, nil, config, logger, next_visited_keys)
+
+          result = PrerequisiteFlagComparator.compare(comparator, prerequisite_value, comparison_value)
+
+          EvaluationLogger.log_evaluating_prerequisite_condition_result(
+            logger,
+            condition,
+            setting_type,
+            prerequisite_value,
+            result
+          )
+
+          {:ok, result}
+        end
+    end
+  end
+
+  defp evaluate_percentage_options([] = _percentage_options, _context), do: {:none, nil, nil}
+
+  defp evaluate_percentage_options(_percentage_options, %Context{user: nil} = context) do
+    EvaluationWarnings.warn_missing_user(context.warnings, context.key)
+    EvaluationLogger.log_skipping_percentage_options_missing_user(context.logger)
+    {:none, nil, nil}
+  end
+
+  defp evaluate_percentage_options(percentage_options, %Context{} = context) do
+    case extract_user_key(context) do
+      {:ok, user_key} ->
+        hash_val = hash_user(user_key, context.key)
+        Enum.reduce_while(percentage_options, {0, 1}, &evaluate_percentage_option(&1, &2, hash_val, context))
+
+      {:error, :missing_user_key} ->
+        attribute_name = context.percentage_option_attribute
+        EvaluationWarnings.warn_missing_user_attribute(context.warnings, context.key, attribute_name)
+        EvaluationLogger.log_skipping_percentage_options_missing_user_attribute(context.logger, attribute_name)
+        {:none, nil, nil}
+    end
+  end
+
+  defp evaluate_percentage_option(option, increment, hash_val, %Context{} = context) do
+    percentage = PercentageOption.percentage(option)
+    {last_bucket, index} = increment
+    bucket = last_bucket + percentage
+
+    if hash_val < bucket do
+      value = PercentageOption.value(option, context.setting_type)
+      variation_id = PercentageOption.variation_id(option, context.default_variation_id)
+      attribute_name = context.percentage_option_attribute
+
+      EvaluationLogger.log_matching_percentage_option(context.logger, attribute_name, hash_val, index, percentage, value)
+
+      {:halt, {value, variation_id, option}}
+    else
+      {:cont, {bucket, index + 1}}
+    end
+  end
+
+  defp extract_user_key(%Context{} = context) do
+    attribute = context.percentage_option_attribute
+
+    case User.get_attribute(context.user, attribute) do
+      nil ->
+        if attribute == @default_percentage_option_attribute do
+          {:ok, nil}
+        else
+          {:error, :missing_user_key}
+        end
+
+      value ->
+        UserComparator.user_value_to_string(value)
+    end
+  end
+
+  defp hash_user(user_key, key) do
     hash_candidate = "#{key}#{user_key}"
 
     {hash_value, _} =
@@ -207,56 +585,10 @@ defmodule ConfigCat.Rollout do
     rem(hash_value, 100)
   end
 
-  defp base_value(setting_descriptor, default_value, logs) do
-    result = Map.get(setting_descriptor, Constants.value(), default_value)
-    log(logs, "Returning #{result}")
+  defp handle_invalid_user_attribute(condition, message, %Context{} = context) do
+    EvaluationWarnings.warn_type_mismatch(context.warnings, context.key, condition, message)
 
-    result
-  end
-
-  defp log_evaluating(logs, key, user) do
-    log(logs, "Evaluating get_value('#{key}). User object:\n#{inspect(user)}")
-  end
-
-  defp log_match(logs, comparison_attribute, user_value, comparator, comparison_value, value) do
-    log(
-      logs,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => match, returning: #{value}"
-    )
-  end
-
-  defp log_no_match(logs, comparison_attribute, user_value, comparator, comparison_value) do
-    log(
-      logs,
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => no match"
-    )
-  end
-
-  defp log_validation_error(logs, comparison_attribute, user_value, comparator, comparison_value, error) do
-    message =
-      "Evaluating rule: [#{comparison_attribute}:#{user_value}] [#{Comparator.description(comparator)}] [#{comparison_value}] => SKIP rule. Validation error: #{inspect(error)}"
-
-    ConfigCatLogger.warning(message)
-    log(logs, message)
-  end
-
-  defp log_nil_user(key) do
-    ConfigCatLogger.warning(
-      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is missing). " <>
-        "You should pass a User Object to the evaluation functions like `get_value()` in order to make targeting work properly. " <>
-        "Read more: https://configcat.com/docs/advanced/user-object/",
-      event_id: 3001
-    )
-  end
-
-  defp log_invalid_user(key) do
-    ConfigCatLogger.warning(
-      "Cannot evaluate targeting rules and % options for setting '#{key}' (User Object is not an instance of User struct).",
-      event_id: 4001
-    )
-  end
-
-  defp log(logs, message) do
-    Agent.update(logs, &[message | &1])
+    attribute = UserCondition.comparison_attribute(condition)
+    {:error, "cannot evaluate, the User.#{attribute} attribute is invalid (#{message})"}
   end
 end

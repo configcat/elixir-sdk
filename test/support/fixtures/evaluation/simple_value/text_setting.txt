@@ -1,0 +1,2 @@
+debug [5000] Evaluating 'stringDefaultCat'
+  Returning 'Cat'.

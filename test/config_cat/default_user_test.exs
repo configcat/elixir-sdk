@@ -1,27 +1,16 @@
 defmodule ConfigCat.DefaultUserTest do
   use ConfigCat.ClientCase, async: true
 
-  import Jason.Sigil
-
+  alias ConfigCat.Config
+  alias ConfigCat.Factory
   alias ConfigCat.FetchTime
   alias ConfigCat.User
 
   @moduletag capture_log: true
 
   setup do
-    settings = ~J"""
-      {
-        "testBoolKey": {"v": true,"t": 0, "p": [],"r": []},
-        "testStringKey": {
-          "v": "testValue", "i": "id", "t": 1, "p": [], "r": [
-            {"i":"id1","v":"fake1","a":"Identifier","t":2,"c":"@test1.com"},
-            {"i":"id2","v":"fake2","a":"Identifier","t":2,"c":"@test2.com"}
-          ]
-        }
-      }
-    """
-
-    stub_cached_settings({:ok, settings, FetchTime.now_ms()})
+    config = Config.inline_salt_and_segments(Factory.config())
+    stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok
   end
@@ -48,18 +37,31 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the default user if no user is passed", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake1"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "fake1"
+        }
 
-      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client)
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
-      expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
+      expected = %{
+        "key1" => true,
+        "key2" => false,
+        "testBoolKey" => true,
+        "testIntKey" => 1,
+        "testDoubleKey" => 1.1,
+        "testStringKey" => "fake2"
+      }
 
       user = User.new("test@test2.com")
-      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client)
       assert actual == expected
     end
   end
@@ -86,18 +88,32 @@ defmodule ConfigCat.DefaultUserTest do
 
     test "get_all_values/1 uses the undefined user case if no user is passed", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "testValue"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "testValue"
+        }
 
-      actual = nil |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(nil, client: client)
       assert actual == expected
     end
 
     test "get_all_values/1 uses the passed user", %{client: client} do
       expected =
-        Enum.sort(%{"testBoolKey" => true, "testStringKey" => "fake2"})
+        %{
+          "key1" => true,
+          "key2" => false,
+          "testBoolKey" => true,
+          "testIntKey" => 1,
+          "testDoubleKey" => 1.1,
+          "testStringKey" => "fake2"
+        }
 
       user = User.new("test@test2.com")
-      actual = user |> ConfigCat.get_all_values(client: client) |> Enum.sort()
+      actual = ConfigCat.get_all_values(user, client: client)
       assert actual == expected
     end
   end

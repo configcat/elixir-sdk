@@ -1,22 +1,29 @@
 defmodule ConfigCat.FlagOverrideTest do
-  use ConfigCat.ClientCase, async: true
+  # Must be async: false to avoid a collision with other tests.
+  # Now that we only allow a single ConfigCat instance to use the same SDK key,
+  # one of the async tests would fail due to the existing running instance.
+  use ConfigCat.ClientCase, async: false
 
   import Jason.Sigil
 
+  alias ConfigCat.Config
   alias ConfigCat.FetchTime
   alias ConfigCat.LocalFileDataSource
   alias ConfigCat.LocalMapDataSource
+  alias ConfigCat.NullDataSource
+  alias ConfigCat.User
 
   @moduletag capture_log: true
 
   setup do
     settings = ~J"""
       {
-        "fakeKey": {"v": false, "t": 0, "p": [],"r": []}
+        "fakeKey": {"v": {"b": false}, "t": 0}
       }
     """
 
-    stub_cached_settings({:ok, settings, FetchTime.now_ms()})
+    config = Config.new(settings: settings)
+    stub_cached_config({:ok, config, FetchTime.now_ms()})
 
     :ok
   end
@@ -151,10 +158,87 @@ defmodule ConfigCat.FlagOverrideTest do
     end
   end
 
-  defp fixture_file(name) do
-    __ENV__.file
-    |> Path.dirname()
-    |> Path.join("fixtures/" <> name)
+  for {key, user_id, email, override_behaviour, expected_value} <- [
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", nil, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :remote_over_local, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnString", "1", "john@sensitivecompany.com", :local_only, nil},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", nil, "Cat"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :remote_over_local, "Cat"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnString", "2", "john@notsensitivecompany.com", :local_only, nil},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", nil, "Dog"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :remote_over_local, "Dog"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :local_over_remote, "Cat"},
+        {"stringDependsOnInt", "1", "john@sensitivecompany.com", :local_only, nil},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", nil, "Cat"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :remote_over_local, "Cat"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
+        {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_only, nil}
+      ] do
+    test "prerequisite flag override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+      # The flag override alters the definition of the following flags:
+      # * 'mainStringFlag': to check the case where a prerequisite flag is
+      #   overridden (dependent flag: 'stringDependsOnString')
+      # * 'stringDependsOnInt': to check the case where a dependent flag is
+      #   overridden (prerequisite flag: 'mainIntFlag')
+      key = unquote(key)
+      user_id = unquote(user_id)
+      email = unquote(email)
+      override_behaviour = unquote(override_behaviour)
+      expected_value = unquote(expected_value)
+
+      user = User.new(user_id, email: email)
+
+      overrides =
+        if override_behaviour do
+          LocalFileDataSource.new(fixture_file("test_override_flagdependency_v6.json"), override_behaviour)
+        else
+          NullDataSource.new()
+        end
+
+      {:ok, client} =
+        start_config_cat("configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg", flag_overrides: overrides)
+
+      assert expected_value == ConfigCat.get_value(key, nil, user, client: client)
+    end
+  end
+
+  for {key, user_id, email, override_behaviour, expected_value} <- [
+        {"developerAndBetaUserSegment", "1", "john@example.com", nil, false},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :remote_over_local, false},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :local_over_remote, true},
+        {"developerAndBetaUserSegment", "1", "john@example.com", :local_only, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", nil, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :remote_over_local, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_over_remote, true},
+        {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_only, nil}
+      ] do
+    test "salt/segment override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+      # The flag override uses a different config json salt than the downloaded one and
+      # overrides the following segments:
+      # * "Beta Users": User.Email IS ONE OF ["jane@example.com"]
+      # * "Developers": User.Email IS ONE OF ["john@example.com"]
+      key = unquote(key)
+      user_id = unquote(user_id)
+      email = unquote(email)
+      override_behaviour = unquote(override_behaviour)
+      expected_value = unquote(expected_value)
+
+      user = User.new(user_id, email: email)
+
+      overrides =
+        if override_behaviour do
+          LocalFileDataSource.new(fixture_file("test_override_segments_v6.json"), override_behaviour)
+        else
+          NullDataSource.new()
+        end
+
+      {:ok, client} =
+        start_config_cat("configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/h99HYXWWNE2bH8eWyLAVMA", flag_overrides: overrides)
+
+      assert expected_value == ConfigCat.get_value(key, nil, user, client: client)
+    end
   end
 
   defp temporary_file(name) do
