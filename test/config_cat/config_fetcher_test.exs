@@ -138,6 +138,18 @@ defmodule ConfigCat.ConfigFetcherTest do
     assert {:ok, :unchanged} = ConfigFetcher.fetch(fetcher, @etag)
   end
 
+  test "returns unchanged response (with lowercase 'etag') when server responds that the config hasn't changed" do
+    {:ok, fetcher} = start_fetcher(@fetcher_options)
+
+    response = %Response{
+      status_code: 304,
+      headers: [{"etag", @etag}]
+    }
+
+    stub(MockAPI, :get, fn _url, _headers, _options -> {:ok, response} end)
+    assert {:ok, :unchanged} = ConfigFetcher.fetch(fetcher, @etag)
+  end
+
   @tag capture_log: true
   test "returns error for non-200 response from ConfigCat" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
