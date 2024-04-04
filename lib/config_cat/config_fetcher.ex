@@ -330,7 +330,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp extract_etag(headers) do
-    case List.keyfind(headers, "ETag", 0) do
+    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "etag" end) do
       nil -> nil
       {_key, value} -> value
     end
