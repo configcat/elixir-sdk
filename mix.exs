@@ -9,7 +9,7 @@ defmodule ConfigCat.MixProject do
       name: "ConfigCat",
       source_url: @source_url,
       homepage_url: "https://configcat.com/",
-      version: "4.0.0",
+      version: "4.0.1",
       elixir: "~> 1.12",
       description: description(),
       package: package(),
