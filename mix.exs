@@ -77,7 +77,7 @@ defmodule ConfigCat.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:ex_doc, "~> 0.31.0", only: :dev, runtime: false},
       {:excoveralls, "~> 0.18.0", only: :test},
-      {:httpoison, "~> 1.7"},
+      {:httpoison, "~> 1.7 or ~> 2.0"},
       {:jason, "~> 1.2"},
       {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
       {:mox, "~> 1.1", only: :test},
