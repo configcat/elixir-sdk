@@ -120,9 +120,7 @@ defmodule ConfigCat.LocalFileDataSource do
 
     defp normalize(%{"flags" => source} = _data) do
       settings =
-        source
-        |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
-        |> Map.new()
+        Map.new(source, fn {key, value} -> {key, Setting.new(value: value)} end)
 
       Config.new(settings: settings)
     end

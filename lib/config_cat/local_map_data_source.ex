@@ -21,9 +21,7 @@ defmodule ConfigCat.LocalMapDataSource do
   @spec new(map, OverrideDataSource.behaviour()) :: t
   def new(overrides, override_behaviour) do
     settings =
-      overrides
-      |> Enum.map(fn {key, value} -> {key, Setting.new(value: value)} end)
-      |> Map.new()
+      Map.new(overrides, fn {key, value} -> {key, Setting.new(value: value)} end)
 
     %__MODULE__{
       config: Config.new(settings: settings),
