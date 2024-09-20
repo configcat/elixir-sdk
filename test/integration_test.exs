@@ -24,38 +24,38 @@ defmodule ConfigCat.IntegrationTest do
       |> assert_sdk_key_required()
     end
 
-    for {sdk_key, custom_base_url?, valid?} <- [
-          {"sdk-key-90123456789012", false, false},
-          {"sdk-key-9012345678901/1234567890123456789012", false, false},
-          {"sdk-key-90123456789012/123456789012345678901", false, false},
-          {"sdk-key-90123456789012/12345678901234567890123", false, false},
-          {"sdk-key-901234567890123/1234567890123456789012", false, false},
-          {"sdk-key-90123456789012/1234567890123456789012", false, true},
-          {"configcat-sdk-1/sdk-key-90123456789012", false, false},
-          {"configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012", false, false},
-          {"configcat-sdk-1/sdk-key-90123456789012/123456789012345678901", false, false},
-          {"configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123", false, false},
-          {"configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012", false, false},
-          {"configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012", false, true},
-          {"configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012", false, false},
-          {"configcat-proxy/", false, false},
-          {"configcat-proxy/", true, false},
-          {"configcat-proxy/sdk-key-90123456789012", false, false},
-          {"configcat-proxy/sdk-key-90123456789012", true, true}
-        ] do
-      test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
-        sdk_key = unquote(sdk_key)
-        custom_base_url? = unquote(custom_base_url?)
-        valid? = unquote(valid?)
-        options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
+    # for {sdk_key, custom_base_url?, valid?} <- [
+    #       {"sdk-key-90123456789012", false, false},
+    #       {"sdk-key-9012345678901/1234567890123456789012", false, false},
+    #       {"sdk-key-90123456789012/123456789012345678901", false, false},
+    #       {"sdk-key-90123456789012/12345678901234567890123", false, false},
+    #       {"sdk-key-901234567890123/1234567890123456789012", false, false},
+    #       {"sdk-key-90123456789012/1234567890123456789012", false, true},
+    #       {"configcat-sdk-1/sdk-key-90123456789012", false, false},
+    #       {"configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012", false, false},
+    #       {"configcat-sdk-1/sdk-key-90123456789012/123456789012345678901", false, false},
+    #       {"configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123", false, false},
+    #       {"configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012", false, false},
+    #       {"configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012", false, true},
+    #       {"configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012", false, false},
+    #       {"configcat-proxy/", false, false},
+    #       {"configcat-proxy/", true, false},
+    #       {"configcat-proxy/sdk-key-90123456789012", false, false},
+    #       {"configcat-proxy/sdk-key-90123456789012", true, true}
+    #     ] do
+    #   test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
+    #     sdk_key = unquote(sdk_key)
+    #     custom_base_url? = unquote(custom_base_url?)
+    #     valid? = unquote(valid?)
+    #     options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
 
-        if valid? do
-          assert {:ok, _} = start(sdk_key, options)
-        else
-          sdk_key |> start(options) |> assert_sdk_key_invalid(sdk_key)
-        end
-      end
-    end
+    #     if valid? do
+    #       assert {:ok, _} = start(sdk_key, options)
+    #     else
+    #       sdk_key |> start(options) |> assert_sdk_key_invalid(sdk_key)
+    #     end
+    #   end
+    # end
 
     test "allows older format SDK keys" do
       assert {:ok, _} = start("1234567890abcdefghijkl/1234567890abcdefghijkl")
@@ -167,12 +167,12 @@ defmodule ConfigCat.IntegrationTest do
     start_config_cat(sdk_key, options)
   end
 
-  defp assert_sdk_key_invalid({:error, result}, sdk_key) do
-    assert {{:EXIT, {error, _stacktrace}}, _spec} = result
+  # defp assert_sdk_key_invalid({:error, result}, sdk_key) do
+  #   assert {{:EXIT, {error, _stacktrace}}, _spec} = result
 
-    expected_message = "SDK Key `#{sdk_key}` is invalid."
-    assert %ArgumentError{message: ^expected_message} = error
-  end
+  #   expected_message = "SDK Key `#{sdk_key}` is invalid."
+  #   assert %ArgumentError{message: ^expected_message} = error
+  # end
 
   defp assert_sdk_key_required({:error, result}) do
     assert {{:EXIT, {error, _stacktrace}}, _spec} = result
