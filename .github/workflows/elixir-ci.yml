@@ -58,7 +58,7 @@ jobs:
       run: mix dialyzer
 
     - name: Execute tests
-      run: mix coveralls.json --warnings-as-errors
+      run: mix coveralls.json --warnings-as-errors --trace
 
     - name: Upload coverage report
       run: bash <(curl -s https://codecov.io/bash)
