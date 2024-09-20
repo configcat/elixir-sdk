@@ -1,5 +1,5 @@
 defmodule ConfigCatTest do
-  use ConfigCat.ClientCase, async: true
+  use ConfigCat.ClientCase, async: false
 
   import ExUnit.CaptureLog
   import Jason.Sigil

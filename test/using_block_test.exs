@@ -2,7 +2,7 @@ defmodule ConfigCat.UsingBlockTest do
   # Must be async: false to avoid a collision with the integration tests.
   # Now that we only allow a single ConfigCat instance to use the same SDK key,
   # one of the async tests would fail due to the existing running instance.
-  use ExUnit.Case, async: false
+  use ConfigCat.Case, async: false
 
   defmodule CustomModule do
     @moduledoc false
