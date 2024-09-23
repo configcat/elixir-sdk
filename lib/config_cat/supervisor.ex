@@ -61,19 +61,6 @@ defmodule ConfigCat.Supervisor do
     raise ArgumentError, "SDK Key `#{inspect(sdk_key)}` is invalid."
   end
 
-  defp retrieve_and_print_registry_entries do
-    # Define a pattern to match all entries in the registry
-    pattern = [{{{ConfigCat.Registry, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
-
-    # Select all items from the registry
-    all_items = Registry.select(ConfigCat.Registry, pattern)
-
-    # Print each item using Enum.each and IO.inspect
-    Enum.each(all_items, fn item ->
-      IO.inspect(item)
-    end)
-  end
-
   defp ensure_unique_sdk_key(sdk_key) do
     ConfigCat.Registry
     |> Registry.select([{{{__MODULE__, :"$1"}, :_, sdk_key}, [], [:"$1"]}])
@@ -82,13 +69,17 @@ defmodule ConfigCat.Supervisor do
         :ok
 
       [instance_id] ->
+        # Define a pattern to match all entries in the registry
+        pattern = [{{{ConfigCat.Registry, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
+        # Select all items from the registry
+        registry_items = Registry.select(ConfigCat.Registry, pattern)
+
         message =
           "There is an existing ConfigCat instance for the specified SDK Key. " <>
             "No new instance will be created and the specified options are ignored. " <>
             "You can use the existing instance by passing `client: #{instance_id}` to the ConfigCat API functions. " <>
-            "SDK Key: '#{sdk_key}'."
+            "SDK Key: '#{sdk_key}'. Registry: #{registry_items}"
 
-        retrieve_and_print_registry_entries()
         ConfigCatLogger.warning(message, event_id: 3000)
 
         raise ArgumentError, message
