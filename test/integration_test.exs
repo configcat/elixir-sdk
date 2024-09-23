@@ -11,6 +11,21 @@ defmodule ConfigCat.IntegrationTest do
 
   @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
+  setup context do
+    # This will run after every individual test
+    on_exit(fn ->
+      IO.puts("Test finished: #{context.test}")
+
+      # Define a pattern to match all entries in the registry
+      pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
+      # Select all items from the registry
+      registry_items = Registry.select(ConfigCat.Registry, pattern)
+      IO.puts("Registry: #{inspect(registry_items)}")
+    end)
+
+    :ok
+  end
+
   describe "SDK key validation" do
     test "raises error if SDK key is missing" do
       nil
