@@ -11,6 +11,13 @@ defmodule ConfigCat.IntegrationTest do
 
   @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
+  setup_all do
+    # Restart the Registry before running tests
+    clear_registry()
+
+    :ok
+  end
+
   setup context do
     # This will run after every individual test
     on_exit(fn ->
@@ -201,6 +208,17 @@ defmodule ConfigCat.IntegrationTest do
     pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
     # Select all items from the registry
     registry_items = Registry.select(ConfigCat.Registry, pattern)
-    IO.puts("Registry: #{inspect(registry_items)}")
+    IO.puts("print_registry_contents: #{inspect(registry_items)}")
+  end
+
+  defp clear_registry do
+    # Define a pattern to match all entries in the registry
+    pattern = [{{{__MODULE__, :"$1"}, :_, :_}, [], [{{:"$1"}}]}]
+    # Select all items from the registry
+    keys = Registry.select(ConfigCat.Registry, pattern)
+    # Unregister each key
+    Enum.each(keys, fn key ->
+      Registry.unregister(ConfigCat.Registry, key)
+    end)
   end
 end
