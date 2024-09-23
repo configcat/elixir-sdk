@@ -15,12 +15,7 @@ defmodule ConfigCat.IntegrationTest do
     # This will run after every individual test
     on_exit(fn ->
       IO.puts("Test finished: #{context.test}")
-
-      # Define a pattern to match all entries in the registry
-      pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
-      # Select all items from the registry
-      registry_items = Registry.select(ConfigCat.Registry, pattern)
-      IO.puts("Registry: #{inspect(registry_items)}")
+      print_registry_contents()
     end)
 
     :ok
@@ -94,6 +89,8 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "fetches config" do
+    print_registry_contents()
+
     {:ok, client} = start(@sdk_key)
 
     :ok = ConfigCat.force_refresh(client: client)
@@ -152,6 +149,8 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles invalid base_url" do
+    print_registry_contents()
+
     {:ok, client} = start(@sdk_key, base_url: "https://invalidcdn.configcat.com")
 
     assert {:error, _message} = ConfigCat.force_refresh(client: client)
@@ -159,6 +158,8 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles data_governance: eu_only" do
+    print_registry_contents()
+
     {:ok, client} = start(@sdk_key, data_governance: :eu_only)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
@@ -193,5 +194,13 @@ defmodule ConfigCat.IntegrationTest do
     assert {{:EXIT, {error, _stacktrace}}, _spec} = result
 
     assert %ArgumentError{message: "SDK Key is required"} = error
+  end
+
+  defp print_registry_contents do
+    # Define a pattern to match all entries in the registry
+    pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
+    # Select all items from the registry
+    registry_items = Registry.select(ConfigCat.Registry, pattern)
+    IO.puts("Registry: #{inspect(registry_items)}")
   end
 end
