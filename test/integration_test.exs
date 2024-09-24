@@ -85,6 +85,8 @@ defmodule ConfigCat.IntegrationTest do
 
     @tag capture_log: true
     test "raises error when starting another instance with the same SDK key" do
+      print_registry_contents()
+
       {:ok, _} = start(@sdk_key, name: :original)
 
       assert {:error, {{:EXIT, {error, _stacktrace}}, _spec}} =
@@ -107,6 +109,8 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "maintains previous configuration when config has not changed between refreshes" do
+    print_registry_contents()
+
     {:ok, client} = start(@sdk_key)
 
     :ok = ConfigCat.force_refresh(client: client)
@@ -117,6 +121,8 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "lazily fetches configuration when using lazy loading" do
+    print_registry_contents()
+
     {:ok, client} =
       start(
         @sdk_key,
@@ -129,6 +135,8 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "does not fetch config when offline mode is set" do
+    print_registry_contents()
+
     {:ok, client} = start(@sdk_key, offline: true)
 
     assert ConfigCat.offline?(client: client)
@@ -175,6 +183,8 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles timeout" do
+    print_registry_contents()
+
     {:ok, client} =
       start(@sdk_key, connect_timeout_milliseconds: 0, read_timeout_milliseconds: 0)
 
