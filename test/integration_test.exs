@@ -161,6 +161,20 @@ defmodule ConfigCat.IntegrationTest do
              "default value"
   end
 
+  defmodule CustomModule do
+    @moduledoc false
+    use ConfigCat, sdk_key: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
+  end
+
+  test "can call API through using block" do
+    _pid = start_supervised!(CustomModule)
+
+    :ok = CustomModule.force_refresh()
+
+    assert CustomModule.get_value("keySampleText", "default value") ==
+             "This text came from ConfigCat"
+  end
+
   defp start(sdk_key, options \\ []) do
     sdk_key
     |> Cache.generate_key()
