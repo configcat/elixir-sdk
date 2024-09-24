@@ -11,22 +11,7 @@ defmodule ConfigCat.IntegrationTest do
 
   @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
-  setup_all do
-    # Restart the Registry before running tests
-    clear_registry()
-
-    :ok
-  end
-
-  setup context do
-    # This will run after every individual test
-    on_exit(fn ->
-      IO.puts("Test finished: #{context.test}")
-      print_registry_contents()
-    end)
-
-    :ok
-  end
+  setup :clear_registry
 
   describe "SDK key validation" do
     test "raises error if SDK key is missing" do
@@ -41,38 +26,38 @@ defmodule ConfigCat.IntegrationTest do
       |> assert_sdk_key_required()
     end
 
-    # for {sdk_key, custom_base_url?, valid?} <- [
-    #       {"sdk-key-90123456789012", false, false},
-    #       {"sdk-key-9012345678901/1234567890123456789012", false, false},
-    #       {"sdk-key-90123456789012/123456789012345678901", false, false},
-    #       {"sdk-key-90123456789012/12345678901234567890123", false, false},
-    #       {"sdk-key-901234567890123/1234567890123456789012", false, false},
-    #       {"sdk-key-90123456789012/1234567890123456789012", false, true},
-    #       {"configcat-sdk-1/sdk-key-90123456789012", false, false},
-    #       {"configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012", false, false},
-    #       {"configcat-sdk-1/sdk-key-90123456789012/123456789012345678901", false, false},
-    #       {"configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123", false, false},
-    #       {"configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012", false, false},
-    #       {"configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012", false, true},
-    #       {"configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012", false, false},
-    #       {"configcat-proxy/", false, false},
-    #       {"configcat-proxy/", true, false},
-    #       {"configcat-proxy/sdk-key-90123456789012", false, false},
-    #       {"configcat-proxy/sdk-key-90123456789012", true, true}
-    #     ] do
-    #   test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
-    #     sdk_key = unquote(sdk_key)
-    #     custom_base_url? = unquote(custom_base_url?)
-    #     valid? = unquote(valid?)
-    #     options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
+    for {sdk_key, custom_base_url?, valid?} <- [
+          {"sdk-key-90123456789012", false, false},
+          {"sdk-key-9012345678901/1234567890123456789012", false, false},
+          {"sdk-key-90123456789012/123456789012345678901", false, false},
+          {"sdk-key-90123456789012/12345678901234567890123", false, false},
+          {"sdk-key-901234567890123/1234567890123456789012", false, false},
+          {"sdk-key-90123456789012/1234567890123456789012", false, true},
+          {"configcat-sdk-1/sdk-key-90123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-9012345678901/1234567890123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/123456789012345678901", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/12345678901234567890123", false, false},
+          {"configcat-sdk-1/sdk-key-901234567890123/1234567890123456789012", false, false},
+          {"configcat-sdk-1/sdk-key-90123456789012/1234567890123456789012", false, true},
+          {"configcat-sdk-2/sdk-key-90123456789012/1234567890123456789012", false, false},
+          {"configcat-proxy/", false, false},
+          {"configcat-proxy/", true, false},
+          {"configcat-proxy/sdk-key-90123456789012", false, false},
+          {"configcat-proxy/sdk-key-90123456789012", true, true}
+        ] do
+      test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
+        sdk_key = unquote(sdk_key)
+        custom_base_url? = unquote(custom_base_url?)
+        valid? = unquote(valid?)
+        options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
 
-    #     if valid? do
-    #       assert {:ok, _} = start(sdk_key, options)
-    #     else
-    #       sdk_key |> start(options) |> assert_sdk_key_invalid(sdk_key)
-    #     end
-    #   end
-    # end
+        if valid? do
+          assert {:ok, _} = start(sdk_key, options)
+        else
+          sdk_key |> start(options) |> assert_sdk_key_invalid(sdk_key)
+        end
+      end
+    end
 
     test "allows older format SDK keys" do
       assert {:ok, _} = start("1234567890abcdefghijkl/1234567890abcdefghijkl")
@@ -85,8 +70,6 @@ defmodule ConfigCat.IntegrationTest do
 
     @tag capture_log: true
     test "raises error when starting another instance with the same SDK key" do
-      print_registry_contents()
-
       {:ok, _} = start(@sdk_key, name: :original)
 
       assert {:error, {{:EXIT, {error, _stacktrace}}, _spec}} =
@@ -98,8 +81,6 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "fetches config" do
-    print_registry_contents()
-
     {:ok, client} = start(@sdk_key)
 
     :ok = ConfigCat.force_refresh(client: client)
@@ -109,8 +90,6 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "maintains previous configuration when config has not changed between refreshes" do
-    print_registry_contents()
-
     {:ok, client} = start(@sdk_key)
 
     :ok = ConfigCat.force_refresh(client: client)
@@ -121,8 +100,6 @@ defmodule ConfigCat.IntegrationTest do
   end
 
   test "lazily fetches configuration when using lazy loading" do
-    print_registry_contents()
-
     {:ok, client} =
       start(
         @sdk_key,
@@ -135,8 +112,6 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "does not fetch config when offline mode is set" do
-    print_registry_contents()
-
     {:ok, client} = start(@sdk_key, offline: true)
 
     assert ConfigCat.offline?(client: client)
@@ -164,8 +139,6 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles invalid base_url" do
-    print_registry_contents()
-
     {:ok, client} = start(@sdk_key, base_url: "https://invalidcdn.configcat.com")
 
     assert {:error, _message} = ConfigCat.force_refresh(client: client)
@@ -173,8 +146,6 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles data_governance: eu_only" do
-    print_registry_contents()
-
     {:ok, client} = start(@sdk_key, data_governance: :eu_only)
 
     assert ConfigCat.get_value("keySampleText", "default value", client: client) ==
@@ -183,8 +154,6 @@ defmodule ConfigCat.IntegrationTest do
 
   @tag capture_log: true
   test "handles timeout" do
-    print_registry_contents()
-
     {:ok, client} =
       start(@sdk_key, connect_timeout_milliseconds: 0, read_timeout_milliseconds: 0)
 
@@ -200,12 +169,12 @@ defmodule ConfigCat.IntegrationTest do
     start_config_cat(sdk_key, options)
   end
 
-  # defp assert_sdk_key_invalid({:error, result}, sdk_key) do
-  #   assert {{:EXIT, {error, _stacktrace}}, _spec} = result
+  defp assert_sdk_key_invalid({:error, result}, sdk_key) do
+    assert {{:EXIT, {error, _stacktrace}}, _spec} = result
 
-  #   expected_message = "SDK Key `#{sdk_key}` is invalid."
-  #   assert %ArgumentError{message: ^expected_message} = error
-  # end
+    expected_message = "SDK Key `#{sdk_key}` is invalid."
+    assert %ArgumentError{message: ^expected_message} = error
+  end
 
   defp assert_sdk_key_required({:error, result}) do
     assert {{:EXIT, {error, _stacktrace}}, _spec} = result
@@ -213,22 +182,11 @@ defmodule ConfigCat.IntegrationTest do
     assert %ArgumentError{message: "SDK Key is required"} = error
   end
 
-  defp print_registry_contents do
-    # Define a pattern to match all entries in the registry
-    pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
-    # Select all items from the registry
-    registry_items = Registry.select(ConfigCat.Registry, pattern)
-    IO.puts("print_registry_contents: #{inspect(registry_items)}")
-  end
+  defp clear_registry(_context) do
+    ConfigCat.Registry
+    |> Registry.match({__MODULE__, :_}, :_)
+    |> Enum.each(fn {key, _} -> Registry.unregister(ConfigCat.Registry, key) end)
 
-  defp clear_registry do
-    # Define a pattern to match all entries in the registry
-    pattern = [{{{__MODULE__, :"$1"}, :_, :_}, [], [{{:"$1"}}]}]
-    # Select all items from the registry
-    keys = Registry.select(ConfigCat.Registry, pattern)
-    # Unregister each key
-    Enum.each(keys, fn key ->
-      Registry.unregister(ConfigCat.Registry, key)
-    end)
+    :ok
   end
 end

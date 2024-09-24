@@ -69,16 +69,11 @@ defmodule ConfigCat.Supervisor do
         :ok
 
       [instance_id] ->
-        # Define a pattern to match all entries in the registry
-        pattern = [{{{__MODULE__, :"$1"}, :"$2", :"$3"}, [], [{{:"$1", :"$2", :"$3"}}]}]
-        # Select all items from the registry
-        registry_items = Registry.select(ConfigCat.Registry, pattern)
-
         message =
           "There is an existing ConfigCat instance for the specified SDK Key. " <>
             "No new instance will be created and the specified options are ignored. " <>
             "You can use the existing instance by passing `client: #{instance_id}` to the ConfigCat API functions. " <>
-            "SDK Key: '#{sdk_key}'. Registry: #{inspect(registry_items)} ."
+            "SDK Key: '#{sdk_key}'."
 
         ConfigCatLogger.warning(message, event_id: 3000)
 
