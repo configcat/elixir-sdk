@@ -198,7 +198,7 @@ defmodule ConfigCat.IntegrationTest do
 
   defp clear_registry(_context) do
     ConfigCat.Registry
-    |> Registry.match({__MODULE__, :_}, :_)
+    |> Registry.match({ConfigCat.Supervisor, :_}, :_)
     |> Enum.each(fn {key, _} -> Registry.unregister(ConfigCat.Registry, key) end)
 
     :ok
