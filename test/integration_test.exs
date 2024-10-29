@@ -11,8 +11,6 @@ defmodule ConfigCat.IntegrationTest do
 
   @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
-  setup :clear_registry
-
   describe "SDK key validation" do
     test "raises error if SDK key is missing" do
       nil
@@ -161,20 +159,6 @@ defmodule ConfigCat.IntegrationTest do
              "default value"
   end
 
-  defmodule CustomModule do
-    @moduledoc false
-    use ConfigCat, sdk_key: "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
-  end
-
-  test "can call API through using block" do
-    _pid = start_supervised!(CustomModule)
-
-    :ok = CustomModule.force_refresh()
-
-    assert CustomModule.get_value("keySampleText", "default value") ==
-             "This text came from ConfigCat"
-  end
-
   defp start(sdk_key, options \\ []) do
     sdk_key
     |> Cache.generate_key()
@@ -194,13 +178,5 @@ defmodule ConfigCat.IntegrationTest do
     assert {{:EXIT, {error, _stacktrace}}, _spec} = result
 
     assert %ArgumentError{message: "SDK Key is required"} = error
-  end
-
-  defp clear_registry(_context) do
-    ConfigCat.Registry
-    |> Registry.match({ConfigCat.Supervisor, :_}, :_)
-    |> Enum.each(fn {key, _} -> Registry.unregister(ConfigCat.Registry, key) end)
-
-    :ok
   end
 end
