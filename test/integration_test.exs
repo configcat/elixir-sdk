@@ -68,10 +68,11 @@ defmodule ConfigCat.IntegrationTest do
 
     @tag capture_log: true
     test "raises error when starting another instance with the same SDK key" do
-      {:ok, _} = start(@sdk_key, name: :original)
+      registry = start_registry()
+      {:ok, _} = start(@sdk_key, name: :original, registry: registry)
 
       assert {:error, {{:EXIT, {error, _stacktrace}}, _spec}} =
-               start(@sdk_key, name: :duplicate)
+               start(@sdk_key, name: :duplicate, registry: registry)
 
       assert %ArgumentError{message: message} = error
       assert message =~ ~r/existing ConfigCat instance/

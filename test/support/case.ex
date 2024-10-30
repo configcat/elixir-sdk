@@ -28,6 +28,7 @@ defmodule ConfigCat.Case do
 
   @spec start_config_cat(String.t(), keyword) :: {:ok, GenServer.name()}
   def start_config_cat(sdk_key, options \\ []) do
+    {registry, options} = Keyword.pop_lazy(options, :registry, &start_registry/0)
     name = String.to_atom(UUID.uuid4())
 
     default_options = [
@@ -36,8 +37,18 @@ defmodule ConfigCat.Case do
       sdk_key: sdk_key
     ]
 
+    Process.put(:registry, registry)
+
     with {:ok, _pid} <- start_supervised({ConfigCat, Keyword.merge(default_options, options)}, id: name) do
       {:ok, name}
     end
+  end
+
+  @spec start_registry :: GenServer.name()
+  def start_registry do
+    name = String.to_atom(UUID.uuid4())
+    _pid = start_supervised!({Registry, keys: :unique, name: name})
+
+    name
   end
 end

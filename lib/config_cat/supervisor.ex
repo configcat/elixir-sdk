@@ -62,7 +62,7 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp ensure_unique_sdk_key(sdk_key) do
-    ConfigCat.Registry
+    ConfigCat.Registry.instance()
     |> Registry.select([{{{__MODULE__, :"$1"}, :_, sdk_key}, [], [:"$1"]}])
     |> case do
       [] ->
