@@ -9,6 +9,8 @@ defmodule ConfigCat.IntegrationTest do
   alias ConfigCat.InMemoryCache
   alias ConfigCat.LocalMapDataSource
 
+  @tag :integration
+
   @sdk_key "configcat-sdk-1/PKDVCLf-Hq-h-kCzMp-L7Q/1cGEJXUwYUGZCBOL-E2sOw"
 
   describe "SDK key validation" do
