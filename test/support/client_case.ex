@@ -4,6 +4,7 @@ defmodule ConfigCat.ClientCase do
   use ExUnit.CaseTemplate
 
   alias ConfigCat.Client
+  alias ConfigCat.Config
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.MockCachePolicy

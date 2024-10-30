@@ -95,7 +95,7 @@ defmodule ConfigCat.Supervisor do
   end
 
   defp via_tuple(instance_id, sdk_key) do
-    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}, sdk_key}}
+    ConfigCat.Registry.via_tuple(__MODULE__, instance_id, sdk_key)
   end
 
   @impl Supervisor

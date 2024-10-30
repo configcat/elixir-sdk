@@ -184,7 +184,7 @@ defmodule ConfigCat.Hooks do
   end
 
   defp via_tuple(instance_id) do
-    {:via, Registry, {ConfigCat.Registry, {__MODULE__, instance_id}}}
+    ConfigCat.Registry.via_tuple(__MODULE__, instance_id)
   end
 
   @impl GenServer
