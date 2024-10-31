@@ -59,7 +59,7 @@ jobs:
 
     - name: Execute tests
       run: |
-        mix test --only integration --warnings-as-errors --max-cases 1 --cover --export-coverage integration-coverage
+        mix test --only integration --warnings-as-errors --cover --export-coverage integration-coverage
         mix coveralls --exclude integration --warnings-as-errors --import-cover cover
 
     - name: Upload coverage report
