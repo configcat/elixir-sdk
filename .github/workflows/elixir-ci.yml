@@ -95,12 +95,3 @@ jobs:
       run: mix hex.publish --yes
       env:
         HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
-
-  # Prevent GitHub from suspending your cronjob based triggers due to repository inactivity
-  keepalive:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gautamkrishnar/keepalive-workflow@v2
