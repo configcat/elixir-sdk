@@ -30,7 +30,7 @@ jobs:
         otp-version: ${{ env.OTP_VERSION }}
 
     - name: Restore cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           deps
@@ -79,7 +79,7 @@ jobs:
         otp-version: ${{ env.OTP_VERSION }}
 
     - name: Restore cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: deps
         key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
