@@ -9,7 +9,6 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
-  alias HTTPoison.Response
 
   require ConfigCat.Constants, as: Constants
   require ConfigCat.RedirectMode, as: RedirectMode
@@ -30,7 +29,7 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     start_supervised!({Hooks, instance_id: instance_id})
 
-    default_options = [api: MockAPI, instance_id: instance_id, mode: mode, sdk_key: sdk_key]
+    default_options = [http_client: MockAPI, instance_id: instance_id, mode: mode, sdk_key: sdk_key]
     {:ok, pid} = start_supervised({ConfigFetcher, Keyword.merge(default_options, options)})
 
     allow(MockAPI, self(), pid)
@@ -50,13 +49,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 2, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
     |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
 
     assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
@@ -75,13 +74,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
     |> expect(:get, 2, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
     |> expect(:get, 0, fn ^redirect_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: raw_config}}
+      {:ok, %{status: 200, headers: [], body: raw_config}}
     end)
 
     assert {:ok, %ConfigEntry{config: ^config}} = ConfigFetcher.fetch(fetcher, nil)
@@ -99,10 +98,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_eu}}
+      {:ok, %{status: 200, headers: [], body: config_to_eu}}
     end)
     |> expect(:get, 2, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_eu}}
+      {:ok, %{status: 200, headers: [], body: config_eu}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
@@ -120,10 +119,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_eu}}
+      {:ok, %{status: 200, headers: [], body: config_to_eu}}
     end)
     |> expect(:get, 2, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_eu}}
+      {:ok, %{status: 200, headers: [], body: config_eu}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
@@ -145,13 +144,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 2, fn ^custom_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_global}}
+      {:ok, %{status: 200, headers: [], body: config_to_global}}
     end)
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
@@ -173,13 +172,13 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 2, fn ^custom_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_eu}}
+      {:ok, %{status: 200, headers: [], body: config_to_eu}}
     end)
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
@@ -197,10 +196,10 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_forced}}
+      {:ok, %{status: 200, headers: [], body: config_to_forced}}
     end)
     |> expect(:get, 2, fn ^forced_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: "{}"}}
+      {:ok, %{status: 200, headers: [], body: "{}"}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
       :not_called
@@ -226,16 +225,16 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 0, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
     |> expect(:get, 0, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: %{}}}
+      {:ok, %{status: 200, headers: [], body: %{}}}
     end)
     |> expect(:get, 1, fn ^custom_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_forced}}
+      {:ok, %{status: 200, headers: [], body: config_to_forced}}
     end)
     |> expect(:get, 3, fn ^forced_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_forced}}
+      {:ok, %{status: 200, headers: [], body: config_to_forced}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
@@ -253,20 +252,20 @@ defmodule ConfigCat.ConfigFetcher.DataGovernanceTest do
 
     MockAPI
     |> expect(:get, 1, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_eu}}
+      {:ok, %{status: 200, headers: [], body: config_to_eu}}
     end)
     |> expect(:get, 1, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_global}}
+      {:ok, %{status: 200, headers: [], body: config_to_global}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
 
     MockAPI
     |> expect(:get, 1, fn ^eu_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_global}}
+      {:ok, %{status: 200, headers: [], body: config_to_global}}
     end)
     |> expect(:get, 1, fn ^global_url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: config_to_eu}}
+      {:ok, %{status: 200, headers: [], body: config_to_eu}}
     end)
 
     assert {:ok, _} = ConfigFetcher.fetch(fetcher, nil)

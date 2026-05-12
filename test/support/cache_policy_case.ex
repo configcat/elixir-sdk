@@ -14,7 +14,6 @@ defmodule ConfigCat.CachePolicyCase do
   alias ConfigCat.Hooks
   alias ConfigCat.InMemoryCache
   alias ConfigCat.MockFetcher
-  alias HTTPoison.Response
 
   using do
     quote do
@@ -112,7 +111,7 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec assert_returns_error(function()) :: true
   def assert_returns_error(force_refresh_fn) do
-    response = %Response{status_code: 503}
+    response = %{status: 503, body: "", headers: []}
     error = FetchError.exception(reason: response, transient?: true)
 
     stub(MockFetcher, :fetch, fn _id, _etag -> {:error, error} end)

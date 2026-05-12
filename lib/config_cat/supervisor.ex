@@ -135,6 +135,7 @@ defmodule ConfigCat.Supervisor do
       |> Keyword.put(:mode, options[:cache_policy].mode)
       |> Keyword.take([
         :base_url,
+        :http_client,
         :http_proxy,
         :connect_timeout_milliseconds,
         :read_timeout_milliseconds,

@@ -95,6 +95,17 @@ defmodule ConfigCat do
   - `hooks`: **OPTIONAL** Specify callback functions to be called when
     particular events are fired by the SDK. See `ConfigCat.Hooks`.
 
+  - `http_client`: **OPTIONAL** Module implementing the `ConfigCat.HTTPClient`
+    behaviour, used to perform HTTP requests against the ConfigCat CDN. Defaults
+    to `ConfigCat.API`, which is built on
+    [HTTPoison](https://hex.pm/packages/httpoison). Provide your own adapter to
+    route requests through Finch, Req, Mint, Tesla, or any other client (or to
+    stub HTTP in tests).
+
+    ```elixir
+    {ConfigCat, [sdk_key: "YOUR SDK KEY", http_client: MyApp.ConfigCatClient]}
+    ```
+
   - `http_proxy`: **OPTIONAL** Specify this option if you need to use a proxy
     server to access your ConfigCat settings. You can provide a simple URL, like
     `https://my_proxy.example.com` or include authentication information, like
@@ -261,6 +272,7 @@ defmodule ConfigCat do
           | {:default_user, User.t()}
           | {:flag_overrides, OverrideDataSource.t()}
           | {:hooks, [Hooks.option()]}
+          | {:http_client, module()}
           | {:http_proxy, String.t()}
           | {:name, instance_id()}
           | {:offline, boolean()}

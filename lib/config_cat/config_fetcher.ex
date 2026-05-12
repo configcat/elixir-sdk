@@ -2,7 +2,6 @@ defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
   alias ConfigCat.ConfigEntry
-  alias HTTPoison.Response
 
   defmodule FetchError do
     @moduledoc false
@@ -43,7 +42,6 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigCat.ConfigFetcher.FetchError
-  alias HTTPoison.Response
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
   require ConfigCat.Constants, as: Constants
@@ -54,7 +52,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     use TypedStruct
 
     typedstruct enforce: true do
-      field :api, module(), default: ConfigCat.API
+      field :http_client, module(), default: ConfigCat.API
       field :base_url, String.t()
       field :callers, [GenServer.from()], default: []
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
@@ -104,6 +102,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
           {:base_url, String.t()}
           | {:connect_timeout_milliseconds, non_neg_integer()}
           | {:data_governance, ConfigCat.data_governance()}
+          | {:http_client, module()}
           | {:http_proxy, String.t()}
           | {:instance_id, ConfigCat.instance_id()}
           | {:mode, String.t()}
@@ -174,11 +173,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   defp do_fetch(%State{} = state, etag) do
     ConfigCatLogger.debug("Fetching configuration from ConfigCat")
 
-    case state.api.get(url(state), headers(state, etag), http_options(state)) do
+    case state.http_client.get(url(state), headers(state, etag), http_options(state)) do
       {:ok, response} ->
         handle_response(response, state, etag)
 
-      error ->
+      {:error, error} ->
         {:error, handle_error(error, state), state}
     end
   end
@@ -222,7 +221,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, %State{} = state, etag)
+  defp handle_response(%{status: code, body: raw_config, headers: headers}, %State{} = state, etag)
        when code >= 200 and code < 300 do
     ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
 
@@ -282,11 +281,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp handle_response(%Response{status_code: 304}, %State{} = state, _etag) do
+  defp handle_response(%{status: 304}, %State{} = state, _etag) do
     {:ok, :unchanged, state}
   end
 
-  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag) when status in [403, 404] do
+  defp handle_response(%{status: status} = response, %State{} = state, _etag) when status in [403, 404] do
     ConfigCatLogger.error(
       "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}",
       event_id: 1100
@@ -308,25 +307,28 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:error, error, state}
   end
 
-  defp handle_error({:error, %HTTPoison.Error{reason: :checkout_timeout} = error}, %State{} = state) do
+  @timeout_reasons ~w(checkout_timeout timeout connect_timeout)a
+
+  defp handle_error(%{reason: reason, transient?: transient?}, %State{} = state)
+       when reason in @timeout_reasons do
     ConfigCatLogger.error(
       "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
       event_id: 1102
     )
 
-    FetchError.exception(reason: error, transient?: true)
+    FetchError.exception(reason: reason, transient?: transient?)
   end
 
-  defp handle_error({:error, error}, _state) do
+  defp handle_error(%{reason: reason, transient?: transient?}, _state) do
     ConfigCatLogger.error(
       "Unexpected error occurred while trying to fetch config JSON. " <>
         "It is most likely due to a local network issue. " <>
         "Please make sure your application can reach the ConfigCat CDN servers (or your proxy server) over HTTP. " <>
-        "#{inspect(error)}",
+        "#{inspect(reason)}",
       event_id: 1103
     )
 
-    FetchError.exception(reason: error, transient?: true)
+    FetchError.exception(reason: reason, transient?: transient?)
   end
 
   defp extract_etag(headers) do
