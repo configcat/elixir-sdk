@@ -34,7 +34,7 @@ defmodule ConfigCat.API do
     if Code.ensure_loaded?(HTTPoison) do
       :ok
     else
-      raise """
+      raise ArgumentError, """
       ConfigCat.API requires the optional :httpoison dependency.
 
       Either add it to your deps:
