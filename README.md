@@ -24,7 +24,9 @@ ConfigCat is a [hosted feature flag service](http://configcat.com). Manage featu
 ```elixir
 def deps do
   [
-    {:configcat, "~> 4.0.4"}
+    {:configcat, "~> 4.0.4"},
+    # pick an HTTP client (see "HTTP Client" below) — the SDK ships none by default
+    {:httpoison, "~> 2.0"}
   ]
 end
 ```
@@ -81,6 +83,58 @@ end
 ## Polling Modes
 
 The ConfigCat SDK supports 3 different polling mechanisms to acquire the setting values from ConfigCat. After latest setting values are downloaded, they are stored in the internal cache then all requests are served from there. Read more about Polling Modes and how to use them at [ConfigCat Docs](https://configcat.com/docs/sdk-reference/elixir/).
+
+## HTTP Client
+
+The SDK fetches configurations over HTTP through a swappable transport that
+implements the `ConfigCat.HTTPClient` behaviour.
+
+Both `:httpoison` and `:finch` are declared as **optional** dependencies. Add
+whichever you prefer to your own `mix.exs`.
+
+### Default — HTTPoison
+
+```elixir
+def deps do
+  [
+    {:configcat, "~> 4.0.4"},
+    {:httpoison, "~> 2.0"}
+  ]
+end
+```
+
+No further configuration needed — `ConfigCat.API` is used by default.
+
+### Finch
+
+```elixir
+def deps do
+  [
+    {:configcat, "~> 4.0.4"},
+    {:finch, "~> 0.18"}
+  ]
+end
+```
+
+```elixir
+# config/config.exs
+config :configcat, ConfigCat.HTTPClient.Finch, name: MyApp.Finch
+
+# application.ex
+children = [
+  {Finch, name: MyApp.Finch},
+  {ConfigCat, sdk_key: "YOUR SDK KEY", http_client: ConfigCat.HTTPClient.Finch}
+]
+```
+
+### Custom adapter
+
+Implement `ConfigCat.HTTPClient` to use any other HTTP client (Req, Mint,
+Tesla, a test stub, ...) and pass the module via `:http_client`:
+
+```elixir
+{ConfigCat, sdk_key: "YOUR SDK KEY", http_client: MyApp.ConfigCatClient}
+```
 
 ## Need help?
 
