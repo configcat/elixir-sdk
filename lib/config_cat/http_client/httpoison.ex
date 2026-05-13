@@ -1,4 +1,4 @@
-defmodule ConfigCat.API do
+defmodule ConfigCat.HTTPClient.HTTPoison do
   @moduledoc """
   Default `ConfigCat.HTTPClient` adapter built on
   [HTTPoison](https://hex.pm/packages/httpoison).
@@ -35,7 +35,7 @@ defmodule ConfigCat.API do
       :ok
     else
       raise ArgumentError, """
-      ConfigCat.API requires the optional :httpoison dependency.
+      #{inspect(__MODULE__)} requires the optional :httpoison dependency.
 
       Either add it to your deps:
 

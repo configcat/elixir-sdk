@@ -52,7 +52,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     use TypedStruct
 
     typedstruct enforce: true do
-      field :http_client, module(), default: ConfigCat.API
+      field :http_client, module(), default: ConfigCat.HTTPClient.HTTPoison
       field :base_url, String.t()
       field :callers, [GenServer.from()], default: []
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000

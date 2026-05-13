@@ -97,7 +97,7 @@ defmodule ConfigCat do
 
   - `http_client`: **OPTIONAL** Module implementing the `ConfigCat.HTTPClient`
     behaviour, used to perform HTTP requests against the ConfigCat CDN. Defaults
-    to `ConfigCat.API`, which is built on
+    to `ConfigCat.HTTPClient.HTTPoison`, which is built on
     [HTTPoison](https://hex.pm/packages/httpoison). Provide your own adapter to
     route requests through Finch, Req, Mint, Tesla, or any other client (or to
     stub HTTP in tests).

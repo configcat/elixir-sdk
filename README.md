@@ -103,7 +103,7 @@ def deps do
 end
 ```
 
-No further configuration needed — `ConfigCat.API` is used by default.
+No further configuration needed — `ConfigCat.HTTPClient.HTTPoison` is used by default.
 
 ### Finch
 
