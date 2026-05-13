@@ -35,7 +35,7 @@ defmodule ConfigCat.HTTPClient.Finch do
 
   @behaviour ConfigCat.HTTPClient
 
-  @compile {:no_warn_undefined, [Finch, Finch.Request, Finch.Response, Mint.TransportError]}
+  @compile {:no_warn_undefined, [Finch]}
 
   @transient_reasons ~w(timeout closed econnrefused nxdomain)a
 
@@ -48,7 +48,7 @@ defmodule ConfigCat.HTTPClient.Finch do
     request_opts = build_request_opts(opts)
 
     case Finch.request(request, finch_name(), request_opts) do
-      {:ok, %Finch.Response{status: status, body: body, headers: response_headers}} ->
+      {:ok, %{status: status, body: body, headers: response_headers}} ->
         {:ok, %{status: status, body: body, headers: response_headers}}
 
       {:error, %{reason: reason}} ->
