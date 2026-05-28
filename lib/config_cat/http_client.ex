@@ -4,7 +4,7 @@ defmodule ConfigCat.HTTPClient do
 
   The SDK ships with `ConfigCat.HTTPClient.HTTPoison`, a default adapter built on
   [HTTPoison](https://hex.pm/packages/httpoison). To plug in a different HTTP
-  client (Finch, Req, Mint, Tesla, a test stub, ...) implement this behaviour
+  client (Req, Mint, Tesla, a test stub, ...) implement this behaviour
   and pass the module via the `:http_client` option to `ConfigCat.start_link/1`.
 
       defmodule MyApp.ConfigCatClient do

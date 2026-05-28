@@ -99,8 +99,8 @@ defmodule ConfigCat do
     behaviour, used to perform HTTP requests against the ConfigCat CDN. Defaults
     to `ConfigCat.HTTPClient.HTTPoison`, which is built on
     [HTTPoison](https://hex.pm/packages/httpoison). Provide your own adapter to
-    route requests through Finch, Req, Mint, Tesla, or any other client (or to
-    stub HTTP in tests).
+    route requests through Req, Mint, Tesla, or any other client (or to stub
+    HTTP in tests).
 
     ```elixir
     {ConfigCat, [sdk_key: "YOUR SDK KEY", http_client: MyApp.ConfigCatClient]}

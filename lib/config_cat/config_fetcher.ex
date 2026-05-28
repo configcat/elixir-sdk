@@ -309,8 +309,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
 
   @timeout_reasons ~w(checkout_timeout timeout connect_timeout)a
 
-  defp handle_error(%{reason: reason, transient?: transient?}, %State{} = state)
-       when reason in @timeout_reasons do
+  defp handle_error(%{reason: reason, transient?: transient?}, %State{} = state) when reason in @timeout_reasons do
     ConfigCatLogger.error(
       "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
       event_id: 1102

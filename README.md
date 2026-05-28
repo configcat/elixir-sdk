@@ -89,10 +89,7 @@ The ConfigCat SDK supports 3 different polling mechanisms to acquire the setting
 The SDK fetches configurations over HTTP through a swappable transport that
 implements the `ConfigCat.HTTPClient` behaviour.
 
-Both `:httpoison` and `:finch` are declared as **optional** dependencies. Add
-whichever you prefer to your own `mix.exs`.
-
-### Default — HTTPoison
+`:httpoison` is declared as an **optional** dependency. Add it to your own `mix.exs`:
 
 ```elixir
 def deps do
@@ -105,31 +102,9 @@ end
 
 No further configuration needed — `ConfigCat.HTTPClient.HTTPoison` is used by default.
 
-### Finch
-
-```elixir
-def deps do
-  [
-    {:configcat, "~> 4.0.4"},
-    {:finch, "~> 0.18"}
-  ]
-end
-```
-
-```elixir
-# config/config.exs
-config :configcat, ConfigCat.HTTPClient.Finch, name: MyApp.Finch
-
-# application.ex
-children = [
-  {Finch, name: MyApp.Finch},
-  {ConfigCat, sdk_key: "YOUR SDK KEY", http_client: ConfigCat.HTTPClient.Finch}
-]
-```
-
 ### Custom adapter
 
-Implement `ConfigCat.HTTPClient` to use any other HTTP client (Req, Mint,
+Implement `ConfigCat.HTTPClient` to use any other HTTP client (Finch, Req, Mint,
 Tesla, a test stub, ...) and pass the module via `:http_client`:
 
 ```elixir
