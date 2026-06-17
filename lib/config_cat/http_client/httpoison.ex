@@ -12,6 +12,7 @@ defmodule ConfigCat.HTTPClient.HTTPoison do
   @behaviour ConfigCat.HTTPClient
 
   @compile {:no_warn_undefined, [HTTPoison]}
+  @dialyzer {:nowarn_function, get: 3}
 
   @timeout_reasons ~w(checkout_timeout timeout connect_timeout)a
   @transient_reasons @timeout_reasons ++ ~w(closed econnrefused nxdomain)a
