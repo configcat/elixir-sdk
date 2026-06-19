@@ -12,7 +12,6 @@ defmodule ConfigCat.HTTPClient.HTTPoison do
   @behaviour ConfigCat.HTTPClient
 
   @compile {:no_warn_undefined, [HTTPoison]}
-  @dialyzer {:nowarn_function, get: 3}
 
   @timeout_reasons ~w(checkout_timeout timeout connect_timeout)a
   @transient_reasons @timeout_reasons ++ ~w(closed econnrefused nxdomain)a
@@ -22,7 +21,7 @@ defmodule ConfigCat.HTTPClient.HTTPoison do
     ensure_httpoison!()
     headers = [{"Accept", "application/json"} | headers]
 
-    case HTTPoison.get(url, headers, opts) do
+    case apply(HTTPoison, :get, [url, headers, opts]) do
       {:ok, %{status_code: status, body: body, headers: response_headers}} ->
         {:ok, %{status: status, body: body, headers: response_headers}}
 
