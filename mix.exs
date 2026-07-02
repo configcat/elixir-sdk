@@ -79,7 +79,7 @@ defmodule ConfigCat.MixProject do
       {:excoveralls, "~> 0.18.0", only: :test},
       {:httpoison, "~> 2.0 or ~> 3.0"},
       {:jason, "~> 1.2"},
-      {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
+      {:mix_test_interactive, "~> 5.1", only: :dev, runtime: false},
       {:mox, "~> 1.1", only: :test},
       {:styler, "~> 0.11", only: [:dev, :test], runtime: false},
       {:typed_struct, "~> 0.3.0"},
