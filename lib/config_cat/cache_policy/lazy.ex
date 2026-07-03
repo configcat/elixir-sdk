@@ -7,10 +7,9 @@ defmodule ConfigCat.CachePolicy.Lazy do
 
   alias ConfigCat.CachePolicy.Helpers
   alias ConfigCat.CachePolicy.Helpers.State
+  alias ConfigCat.ConfigCatLogger
   alias ConfigCat.ConfigEntry
   alias ConfigCat.FetchTime
-
-  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
 
   typedstruct enforce: true do
     field :cache_refresh_interval_ms, non_neg_integer()
