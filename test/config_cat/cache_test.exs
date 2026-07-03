@@ -18,9 +18,12 @@ defmodule ConfigCat.CacheTest do
           {"configcat-sdk-1/TEST_KEY-0123456789012/1234567890123456789012", "f83ba5d45bceb4bb704410f51b704fb6dfa19942"},
           {"configcat-sdk-1/TEST_KEY2-123456789012/1234567890123456789012", "da7bfd8662209c8ed3f9db96daed4f8d91ba5876"}
         ] do
-      test "generates platform-independent cache keys - #{sdk_key}" do
-        sdk_key = unquote(sdk_key)
-        expected_cache_key = unquote(expected_cache_key)
+      @tag expected_cache_key: expected_cache_key,
+           sdk_key: sdk_key
+      test "generates platform-independent cache keys - #{sdk_key}", %{
+        expected_cache_key: expected_cache_key,
+        sdk_key: sdk_key
+      } do
         assert Cache.generate_key(sdk_key) == expected_cache_key
       end
     end

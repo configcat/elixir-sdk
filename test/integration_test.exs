@@ -45,10 +45,14 @@ defmodule ConfigCat.IntegrationTest do
           {"configcat-proxy/sdk-key-90123456789012", false, false},
           {"configcat-proxy/sdk-key-90123456789012", true, true}
         ] do
-      test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}" do
-        sdk_key = unquote(sdk_key)
-        custom_base_url? = unquote(custom_base_url?)
-        valid? = unquote(valid?)
+      @tag custom_base_url?: custom_base_url?,
+           sdk_key: sdk_key,
+           valid?: valid?
+      test "validates SDK key format - sdk_key: #{sdk_key} | custom_base_url: #{custom_base_url?}", %{
+        custom_base_url?: custom_base_url?,
+        sdk_key: sdk_key,
+        valid?: valid?
+      } do
         options = if custom_base_url?, do: [base_url: "https://my-configcat-proxy"], else: []
 
         if valid? do
