@@ -18,10 +18,10 @@ defmodule ConfigCat.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       dialyzer: [
-        # When we clean out the dialyzer ignore file, we should uncomment this
-        # line. It's commented out for now because different Elixir versions
-        # find different dialyzer issues.
-        # list_unused_filters: true,
+        # When we clean out the dialyzer ignore file, we should set
+        # list_unused_filters back to `true`. It's `false` for now because
+        # different Elixir versions find different dialyzer issues.
+        list_unused_filters: false,
         plt_local_path: "priv/plts/dialyzer.plt"
       ],
       docs: [
