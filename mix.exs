@@ -28,13 +28,7 @@ defmodule ConfigCat.MixProject do
         logo: "assets/logo.png",
         main: "readme"
       ],
-      test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.travis": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ]
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -42,6 +36,17 @@ defmodule ConfigCat.MixProject do
     [
       extra_applications: [:logger],
       mod: {ConfigCat.Application, []}
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.travis": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
