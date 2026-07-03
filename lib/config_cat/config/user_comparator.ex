@@ -524,7 +524,7 @@ defmodule ConfigCat.Config.UserComparator do
   end
 
   @spec to_unix_seconds(DateTime.t() | NaiveDateTime.t() | number() | String.t()) ::
-          {:ok, float()} | {:error, :invalid_float}
+          {:ok, float()} | {:error, :invalid_datetime | :invalid_float}
   def to_unix_seconds(%DateTime{} = value) do
     {:ok, DateTime.to_unix(value, :millisecond) / 1000.0}
   end
