@@ -9,8 +9,8 @@ defmodule ConfigCat.MixProject do
       name: "ConfigCat",
       source_url: @source_url,
       homepage_url: "https://configcat.com/",
-      version: "4.0.4",
-      elixir: "~> 1.12",
+      version: "5.0.0",
+      elixir: "~> 1.16",
       description: description(),
       package: package(),
       elixirc_options: elixirc_options(Mix.env()),
@@ -28,13 +28,7 @@ defmodule ConfigCat.MixProject do
         logo: "assets/logo.png",
         main: "readme"
       ],
-      test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.travis": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ]
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -42,6 +36,17 @@ defmodule ConfigCat.MixProject do
     [
       extra_applications: [:logger],
       mod: {ConfigCat.Application, []}
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.travis": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
@@ -77,9 +82,9 @@ defmodule ConfigCat.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:ex_doc, "~> 0.31.0", only: :dev, runtime: false},
       {:excoveralls, "~> 0.18.0", only: :test},
-      {:httpoison, "~> 1.7 or ~> 2.0"},
+      {:httpoison, "~> 2.0 or ~> 3.0"},
       {:jason, "~> 1.2"},
-      {:mix_test_interactive, "~> 1.2", only: :dev, runtime: false},
+      {:mix_test_interactive, "~> 5.1", only: :dev, runtime: false},
       {:mox, "~> 1.1", only: :test},
       {:styler, "~> 0.11", only: [:dev, :test], runtime: false},
       {:typed_struct, "~> 0.3.0"},

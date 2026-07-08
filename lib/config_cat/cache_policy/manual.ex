@@ -7,8 +7,7 @@ defmodule ConfigCat.CachePolicy.Manual do
 
   alias ConfigCat.CachePolicy.Helpers
   alias ConfigCat.CachePolicy.Helpers.State
-
-  require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
+  alias ConfigCat.ConfigCatLogger
 
   typedstruct enforce: true do
     field :mode, String.t(), default: "m"

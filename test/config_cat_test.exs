@@ -169,13 +169,20 @@ defmodule ConfigCatTest do
           {"testBoolKey", nil, 0.1, true, true},
           {"testBoolKey", nil, "default", true, true}
         ] do
+      @tag default_value: default_value,
+           expected_value: expected_value,
+           key: key,
+           user_id: user_id,
+           warning?: warning?
       test "default value and setting type mismatch with key: #{key} user_id: #{user_id} default_value: #{default_value}",
-           %{client: client} do
-        key = unquote(key)
-        user_id = unquote(user_id)
-        default_value = unquote(default_value)
-        expected_value = unquote(expected_value)
-        warning? = unquote(warning?)
+           %{
+             client: client,
+             default_value: default_value,
+             expected_value: expected_value,
+             key: key,
+             user_id: user_id,
+             warning?: warning?
+           } do
         user = if user_id, do: User.new(user_id)
 
         logs =

@@ -180,15 +180,23 @@ defmodule ConfigCat.RolloutTest do
         {"12345", "b@configcat.com", "", "Falcon", false, true},
         {"12345", "b@configcat.com", "US", "Spider", false, true}
       ] do
-    test "matched evaluation rule and percentage option with user_id: #{inspect(user_id)} email: #{inspect(email)} percentage_base: #{inspect(percentage_base)}" do
+    @tag email: email,
+         expected_matched_percentage_option: expected_matched_percentage_option,
+         expected_matched_targeting_rule: expected_matched_targeting_rule,
+         expected_return_value: expected_return_value,
+         percentage_base: percentage_base,
+         user_id: user_id
+    test "matched evaluation rule and percentage option with user_id: #{inspect(user_id)} email: #{inspect(email)} percentage_base: #{inspect(percentage_base)}",
+         %{
+           email: email,
+           expected_matched_percentage_option: expected_matched_percentage_option,
+           expected_matched_targeting_rule: expected_matched_targeting_rule,
+           expected_return_value: expected_return_value,
+           percentage_base: percentage_base,
+           user_id: user_id
+         } do
       sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/P4e3fAz_1ky2-Zg2e4cbkw"
       key = "stringMatchedTargetingRuleAndOrPercentageOption"
-      user_id = unquote(user_id)
-      email = unquote(email)
-      percentage_base = unquote(percentage_base)
-      expected_return_value = unquote(expected_return_value)
-      expected_matched_targeting_rule = unquote(expected_matched_targeting_rule)
-      expected_matched_percentage_option = unquote(expected_matched_percentage_option)
 
       {:ok, client} = start_config_cat(sdk_key)
 
@@ -330,13 +338,18 @@ defmodule ConfigCat.RolloutTest do
         {"configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/OfQqcTjfFUGBwMKqtyEOrQ", "stringArrayContainsAnyOfDogDefaultCat",
          "x, read", "Cat"}
       ] do
-    test "attribute value conversion with key: '#{key}' value: '#{inspect(custom_attribute_value)}" do
-      sdk_key = unquote(sdk_key)
-      key = unquote(key)
+    @tag custom_attribute_value: custom_attribute_value,
+         expected_return_value: expected_return_value,
+         key: key,
+         sdk_key: sdk_key
+    test "attribute value conversion with key: '#{key}' value: '#{inspect(custom_attribute_value)}", %{
+      custom_attribute_value: custom_attribute_value,
+      expected_return_value: expected_return_value,
+      key: key,
+      sdk_key: sdk_key
+    } do
       user_id = "12345"
       custom_attribute_name = "Custom1"
-      custom_attribute_value = unquote(Macro.escape(custom_attribute_value))
-      expected_return_value = unquote(expected_return_value)
 
       {:ok, client} = start_config_cat(sdk_key)
 
@@ -352,10 +365,12 @@ defmodule ConfigCat.RolloutTest do
         {"key2", "'key2' -> 'key3' -> 'key2'"},
         {"key4", "'key4' -> 'key3' -> 'key2' -> 'key3'"}
       ] do
-    test "prerequisite flag circular dependency for key: #{key}" do
-      key = unquote(key)
-      dependency_cycle = unquote(dependency_cycle)
-
+    @tag dependency_cycle: dependency_cycle,
+         key: key
+    test "prerequisite flag circular dependency for key: #{key}", %{
+      dependency_cycle: dependency_cycle,
+      key: key
+    } do
       config =
         "test_circulardependency_v6.json"
         |> fixture_file()
@@ -403,14 +418,21 @@ defmodule ConfigCat.RolloutTest do
         {"stringDependsOnDouble", "float()", "mainDoubleFlag", [0.1], nil},
         {"stringDependsOnDouble", "float()", "mainDoubleFlag", nil, nil}
       ] do
-    test "prerequisite flag value type mismatch with key: #{key} type: #{comparison_value_type} flag_key: #{prerequisite_flag_key} value: #{inspect(prerequisite_flag_value)}" do
+    @tag comparison_value_type: comparison_value_type,
+         expected_value: expected_value,
+         key: key,
+         prerequisite_flag_key: prerequisite_flag_key,
+         prerequisite_flag_value: prerequisite_flag_value
+    test "prerequisite flag value type mismatch with key: #{key} type: #{comparison_value_type} flag_key: #{prerequisite_flag_key} value: #{inspect(prerequisite_flag_value)}",
+         %{
+           comparison_value_type: _comparison_value_type,
+           expected_value: expected_value,
+           key: key,
+           prerequisite_flag_key: prerequisite_flag_key,
+           prerequisite_flag_value: prerequisite_flag_value
+         } do
       sdk_key = "configcat-sdk-1/JcPbCGl_1E-K9M-fJOyKyQ/JoGwdqJZQ0K2xDy7LnbyOg"
-      key = unquote(key)
-      flag_key = unquote(prerequisite_flag_key)
-      flag_value = unquote(prerequisite_flag_value)
-      expected_value = unquote(expected_value)
-
-      flag_overrides = LocalMapDataSource.new(%{flag_key => flag_value}, :local_over_remote)
+      flag_overrides = LocalMapDataSource.new(%{prerequisite_flag_key => prerequisite_flag_value}, :local_over_remote)
 
       {:ok, client} = start_config_cat(sdk_key, flag_overrides: flag_overrides)
 
@@ -421,7 +443,7 @@ defmodule ConfigCat.RolloutTest do
 
       unless expected_value do
         expected_message =
-          ~r/Type mismatch between comparison value '[^']+' and prerequisite flag '#{flag_key}'/
+          ~r/Type mismatch between comparison value '[^']+' and prerequisite flag '#{prerequisite_flag_key}'/
 
         assert logs =~ expected_message
       end
@@ -446,11 +468,15 @@ defmodule ConfigCat.RolloutTest do
         {"stringArrayToStringConversionSpecialChars", ["+<>%\"'\\/\t\r\n"], "3"},
         {"stringArrayToStringConversionUnicode", ["äöüÄÖÜçéèñışğâ¢™✓😀"], "2"}
       ] do
-    test "comparison attribute conversion to canonical string representation - key: #{key} | custom_attribute_value: #{custom_attribute_value}" do
-      key = unquote(key)
-      custom_attribute_value = unquote(Macro.escape(custom_attribute_value))
-      expected_return_value = unquote(expected_return_value)
-
+    @tag custom_attribute_value: custom_attribute_value,
+         expected_return_value: expected_return_value,
+         key: key
+    test "comparison attribute conversion to canonical string representation - key: #{key} | custom_attribute_value: #{custom_attribute_value}",
+         %{
+           custom_attribute_value: custom_attribute_value,
+           expected_return_value: expected_return_value,
+           key: key
+         } do
       config =
         "comparison_attribute_conversion.json"
         |> fixture_file()
@@ -506,10 +532,12 @@ defmodule ConfigCat.RolloutTest do
         {"containsanyof", "no trim"},
         {"notcontainsanyof", "no trim"}
       ] do
-    test "comparison attribute trimming - key: #{key}" do
-      key = unquote(key)
-      expected_return_value = unquote(expected_return_value)
-
+    @tag expected_return_value: expected_return_value,
+         key: key
+    test "comparison attribute trimming - key: #{key}", %{
+      expected_return_value: expected_return_value,
+      key: key
+    } do
       config =
         "comparison_attribute_trimming.json"
         |> fixture_file()
@@ -561,10 +589,12 @@ defmodule ConfigCat.RolloutTest do
         {"semvergreater", "8 trim"},
         {"semvergreaterequals", "9 trim"}
       ] do
-    test "comparison value trimming - key: #{key}" do
-      key = unquote(key)
-      expected_return_value = unquote(expected_return_value)
-
+    @tag expected_return_value: expected_return_value,
+         key: key
+    test "comparison value trimming - key: #{key}", %{
+      expected_return_value: expected_return_value,
+      key: key
+    } do
       config =
         "comparison_value_trimming.json"
         |> fixture_file()

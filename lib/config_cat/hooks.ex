@@ -87,7 +87,7 @@ defmodule ConfigCat.Hooks do
           | {:on_error, on_error_callback()}
           | {:on_flag_evaluated, on_flag_evaluated_callback()}
   @type start_option :: {:hooks, t()} | {:instance_id, ConfigCat.instance_id()}
-  @opaque t :: ConfigCat.instance_id()
+  @type t :: ConfigCat.instance_id()
 
   @doc false
   @spec start_link([start_option()]) :: GenServer.on_start()

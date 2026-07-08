@@ -176,18 +176,24 @@ defmodule ConfigCat.FlagOverrideTest do
         {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_over_remote, "Dog"},
         {"stringDependsOnInt", "2", "john@notsensitivecompany.com", :local_only, nil}
       ] do
-    test "prerequisite flag override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+    @tag email: email,
+         expected_value: expected_value,
+         key: key,
+         override_behaviour: override_behaviour,
+         user_id: user_id
+    test "prerequisite flag override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}",
+         %{
+           email: email,
+           expected_value: expected_value,
+           key: key,
+           override_behaviour: override_behaviour,
+           user_id: user_id
+         } do
       # The flag override alters the definition of the following flags:
       # * 'mainStringFlag': to check the case where a prerequisite flag is
       #   overridden (dependent flag: 'stringDependsOnString')
       # * 'stringDependsOnInt': to check the case where a dependent flag is
       #   overridden (prerequisite flag: 'mainIntFlag')
-      key = unquote(key)
-      user_id = unquote(user_id)
-      email = unquote(email)
-      override_behaviour = unquote(override_behaviour)
-      expected_value = unquote(expected_value)
-
       user = User.new(user_id, email: email)
 
       overrides =
@@ -214,17 +220,23 @@ defmodule ConfigCat.FlagOverrideTest do
         {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_over_remote, true},
         {"notDeveloperAndNotBetaUserSegment", "2", "kate@example.com", :local_only, nil}
       ] do
-    test "salt/segment override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}" do
+    @tag email: email,
+         expected_value: expected_value,
+         key: key,
+         override_behaviour: override_behaviour,
+         user_id: user_id
+    test "salt/segment override with key: #{key} user_id: #{user_id} email: #{email} override behaviour: #{inspect(override_behaviour)}",
+         %{
+           email: email,
+           expected_value: expected_value,
+           key: key,
+           override_behaviour: override_behaviour,
+           user_id: user_id
+         } do
       # The flag override uses a different config json salt than the downloaded one and
       # overrides the following segments:
       # * "Beta Users": User.Email IS ONE OF ["jane@example.com"]
       # * "Developers": User.Email IS ONE OF ["john@example.com"]
-      key = unquote(key)
-      user_id = unquote(user_id)
-      email = unquote(email)
-      override_behaviour = unquote(override_behaviour)
-      expected_value = unquote(expected_value)
-
       user = User.new(user_id, email: email)
 
       overrides =
