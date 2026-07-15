@@ -9,14 +9,14 @@ defmodule ConfigCat.ConfigFetcherTest do
   alias ConfigCat.FetchTime
   alias ConfigCat.Hooks
   alias ConfigCat.MockAPI
-  alias HTTPoison.Response
+  alias Req.Response
 
   require ConfigCat.Constants, as: Constants
 
   setup :verify_on_exit!
 
   @config %{"key" => "value"}
-  @etag "ETAG"
+  @etag "etag"
   @mode "m"
   @raw_config Jason.encode!(@config)
   @sdk_key "SDK_KEY"
@@ -42,7 +42,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     url = global_config_url()
 
     stub(MockAPI, :get, fn ^url, _headers, _options ->
-      {:ok, %Response{status_code: 200, body: @raw_config, headers: [{"ETag", @etag}]}}
+      {:ok, %Response{status: 200, body: @raw_config, headers: [{"etag", @etag}]}}
     end)
 
     before = FetchTime.now_ms()
@@ -65,7 +65,7 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     expect(MockAPI, :get, 1, fn ^url, _headers, _options ->
       Process.sleep(50)
-      {:ok, %Response{status_code: 200, body: @raw_config, headers: [{"ETag", @etag}]}}
+      {:ok, %Response{status: 200, body: @raw_config, headers: [{"etag", @etag}]}}
     end)
 
     results =
@@ -86,7 +86,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   test "user agent header that includes the fetch mode" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    response = %Response{status_code: 200, body: @raw_config}
+    response = %Response{status: 200, body: @raw_config}
 
     stub(MockAPI, :get, fn _url, headers, _options ->
       assert_user_agent_matches(headers, ~r"^ConfigCat-Elixir/#{@mode}-")
@@ -101,21 +101,21 @@ defmodule ConfigCat.ConfigFetcherTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     initial_response = %Response{
-      status_code: 200,
+      status: 200,
       body: @raw_config,
-      headers: [{"ETag", @etag}]
+      headers: [{"etag", @etag}]
     }
 
     stub(MockAPI, :get, fn _url, headers, _options ->
-      assert List.keyfind(headers, "ETag", 0) == nil
+      assert List.keyfind(headers, "etag", 0) == nil
       {:ok, initial_response}
     end)
 
     {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
 
     not_modified_response = %Response{
-      status_code: 304,
-      headers: [{"ETag", @etag}]
+      status: 304,
+      headers: [{"etag", @etag}]
     }
 
     expect(MockAPI, :get, fn _url, headers, _options ->
@@ -130,8 +130,8 @@ defmodule ConfigCat.ConfigFetcherTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     response = %Response{
-      status_code: 304,
-      headers: [{"ETag", @etag}]
+      status: 304,
+      headers: [{"etag", @etag}]
     }
 
     stub(MockAPI, :get, fn _url, _headers, _options -> {:ok, response} end)
@@ -142,7 +142,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
     response = %Response{
-      status_code: 304,
+      status: 304,
       headers: [{"etag", @etag}]
     }
 
@@ -154,7 +154,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   test "returns error for non-200 response from ConfigCat" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    response = %Response{status_code: 503}
+    response = %Response{status: 503}
 
     stub(MockAPI, :get, fn _url, _headers, _options -> {:ok, response} end)
     assert {:error, %FetchError{reason: ^response}} = ConfigFetcher.fetch(fetcher, nil)
@@ -164,7 +164,7 @@ defmodule ConfigCat.ConfigFetcherTest do
   test "returns error for error response from ConfigCat" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    error = %HTTPoison.Error{reason: "failed"}
+    error = %Req.TransportError{reason: "failed"}
 
     stub(MockAPI, :get, fn _url, _headers, _options -> {:error, error} end)
     assert {:error, %FetchError{reason: ^error}} = ConfigFetcher.fetch(fetcher, nil)
@@ -177,14 +177,14 @@ defmodule ConfigCat.ConfigFetcherTest do
 
     url = config_url(base_url, @sdk_key)
 
-    expect(MockAPI, :get, fn ^url, _headers, _options -> {:ok, %Response{status_code: 200, body: @raw_config}} end)
+    expect(MockAPI, :get, fn ^url, _headers, _options -> {:ok, %Response{status: 200, body: @raw_config}} end)
     {:ok, _} = ConfigFetcher.fetch(fetcher, nil)
   end
 
   test "uses default timeouts if none provided" do
     {:ok, fetcher} = start_fetcher(@fetcher_options)
 
-    response = %Response{status_code: 200, body: @raw_config}
+    response = %Response{status: 200, body: @raw_config}
 
     expect(MockAPI, :get, fn _url, _headers, options ->
       assert Keyword.get(options, :recv_timeout) == 5000
@@ -205,7 +205,7 @@ defmodule ConfigCat.ConfigFetcherTest do
         read_timeout_milliseconds: read_timeout
       )
 
-    response = %Response{status_code: 200, body: @raw_config}
+    response = %Response{status: 200, body: @raw_config}
 
     expect(MockAPI, :get, fn _url, _headers, options ->
       assert Keyword.get(options, :recv_timeout) == read_timeout
@@ -220,7 +220,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     proxy = "https://PROXY"
     {:ok, fetcher} = start_fetcher(@fetcher_options, http_proxy: proxy)
 
-    response = %Response{status_code: 200, body: @raw_config}
+    response = %Response{status: 200, body: @raw_config}
 
     expect(MockAPI, :get, fn _url, _headers, options ->
       assert Keyword.get(options, :proxy) == proxy

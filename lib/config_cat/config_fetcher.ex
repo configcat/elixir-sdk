@@ -42,7 +42,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigCat.ConfigFetcher.FetchError
-  alias HTTPoison.Response
+  alias Req.Response
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
   require ConfigCat.Constants, as: Constants
@@ -221,7 +221,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, %State{} = state, etag)
+  defp handle_response(%Response{status: code, body: raw_config, headers: headers}, %State{} = state, etag)
        when code >= 200 and code < 300 do
     ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
 
@@ -281,11 +281,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp handle_response(%Response{status_code: 304}, %State{} = state, _etag) do
+  defp handle_response(%Response{status: 304}, %State{} = state, _etag) do
     {:ok, :unchanged, state}
   end
 
-  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag) when status in [403, 404] do
+  defp handle_response(%Response{status: status} = response, %State{} = state, _etag) when status in [403, 404] do
     ConfigCatLogger.error(
       "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}",
       event_id: 1100
@@ -307,7 +307,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:error, error, state}
   end
 
-  defp handle_error({:error, %HTTPoison.Error{reason: :checkout_timeout} = error}, %State{} = state) do
+  defp handle_error({:error, %Req.TransportError{reason: :timeout} = error}, %State{} = state) do
     ConfigCatLogger.error(
       "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
       event_id: 1102
