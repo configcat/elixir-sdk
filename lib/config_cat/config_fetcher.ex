@@ -2,7 +2,6 @@ defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
   alias ConfigCat.ConfigEntry
-  alias HTTPoison.Response
 
   defmodule FetchError do
     @moduledoc false
@@ -54,7 +53,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     use TypedStruct
 
     typedstruct enforce: true do
-      field :api, module(), default: ConfigCat.API
+      field :api, module(), default: ConfigCat.API.Impl
       field :base_url, String.t()
       field :callers, [GenServer.from()], default: []
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
