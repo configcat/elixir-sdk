@@ -221,13 +221,13 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status: code, body: raw_config, headers: headers}, %State{} = state, etag)
+  defp handle_response(%Response{status: code, body: raw_config} = response, %State{} = state, etag)
        when code >= 200 and code < 300 do
-    ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
+    ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(response)}")
 
     with {:ok, decoded_config} <- Jason.decode(raw_config),
          config = Config.inline_salt_and_segments(decoded_config),
-         new_etag = extract_etag(headers),
+         new_etag = extract_etag(response),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state do
       preferences = Config.preferences(config)
@@ -328,10 +328,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     FetchError.exception(reason: error, transient?: true)
   end
 
-  defp extract_etag(headers) do
-    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "etag" end) do
-      nil -> nil
-      {_key, value} -> value
+  defp extract_etag(%Response{} = response) do
+    case Response.get_header(response, "etag") do
+      [] -> nil
+      [etag] -> etag
     end
   end
 end

@@ -112,7 +112,7 @@ defmodule ConfigCat.CachePolicyCase do
 
   @spec assert_returns_error(function()) :: true
   def assert_returns_error(force_refresh_fn) do
-    response = %Response{status: 503}
+    response = Response.new(status: 503)
     error = FetchError.exception(reason: response, transient?: true)
 
     stub(MockFetcher, :fetch, fn _id, _etag -> {:error, error} end)
