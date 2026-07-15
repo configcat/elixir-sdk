@@ -197,8 +197,8 @@ defmodule ConfigCat.ConfigFetcherTest do
     response = Response.new(body: @raw_config, status: 200)
 
     expect(MockAPI, :get, fn _url, _headers, options ->
-      assert Keyword.get(options, :recv_timeout) == 5000
-      assert Keyword.get(options, :timeout) == 8000
+      assert Keyword.get(options, :connect_timeout_milliseconds) == 8000
+      assert Keyword.get(options, :read_timeout_milliseconds) == 5000
       {:ok, response}
     end)
 
@@ -218,8 +218,8 @@ defmodule ConfigCat.ConfigFetcherTest do
     response = Response.new(body: @raw_config, status: 200)
 
     expect(MockAPI, :get, fn _url, _headers, options ->
-      assert Keyword.get(options, :recv_timeout) == read_timeout
-      assert Keyword.get(options, :timeout) == connect_timeout
+      assert Keyword.get(options, :connect_timeout_milliseconds) == connect_timeout
+      assert Keyword.get(options, :read_timeout_milliseconds) == read_timeout
       {:ok, response}
     end)
 
@@ -233,7 +233,7 @@ defmodule ConfigCat.ConfigFetcherTest do
     response = Response.new(body: @raw_config, status: 200)
 
     expect(MockAPI, :get, fn _url, _headers, options ->
-      assert Keyword.get(options, :proxy) == proxy
+      assert Keyword.get(options, :http_proxy) == proxy
       {:ok, response}
     end)
 

@@ -1,6 +1,11 @@
 defmodule ConfigCat.API do
   @moduledoc false
-  @callback get(binary(), [{binary(), binary()}], Keyword.t()) :: {:ok, struct()} | {:error, struct()}
+  @type option ::
+          {:connect_timeout_milliseconds, non_neg_integer()}
+          | {:http_proxy, String.t() | nil}
+          | {:read_timeout_milliseconds, non_neg_integer()}
+
+  @callback get(binary(), [{binary(), binary()}], [option]) :: {:ok, Req.Request.t()} | {:error, Exception.t()}
 end
 
 defmodule ConfigCat.API.ReqAPI do
@@ -18,14 +23,19 @@ defmodule ConfigCat.API.ReqAPI do
   @doc false
   @spec build_request(binary(), [{binary(), binary()}], Keyword.t()) :: Req.Request.t()
   def build_request(url, headers, options) do
+    options = Keyword.validate!(options, [:connect_timeout_milliseconds, :http_proxy, :read_timeout_milliseconds])
     req = Req.new(decode_body: false, headers: headers, url: url)
 
     Enum.reduce(options, req, &apply_option/2)
   end
 
-  defp apply_option({:proxy, nil}, req), do: req
+  defp apply_option({:connect_timeout_milliseconds, timeout}, req) do
+    merge_connect_option(req, :timeout, timeout)
+  end
 
-  defp apply_option({:proxy, url}, req) do
+  defp apply_option({:http_proxy, nil}, req), do: req
+
+  defp apply_option({:http_proxy, url}, req) do
     uri = URI.parse(url)
     proxy = {String.to_existing_atom(uri.scheme), uri.host, uri.port, []}
 
@@ -34,15 +44,9 @@ defmodule ConfigCat.API.ReqAPI do
     |> add_userinfo(uri.userinfo)
   end
 
-  defp apply_option({:recv_timeout, timeout}, req) do
+  defp apply_option({:read_timeout_milliseconds, timeout}, req) do
     Request.put_option(req, :receive_timeout, timeout)
   end
-
-  defp apply_option({:timeout, timeout}, req) do
-    merge_connect_option(req, :timeout, timeout)
-  end
-
-  defp apply_option(_unused, req), do: req
 
   defp add_userinfo(req, nil), do: req
 

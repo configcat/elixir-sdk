@@ -28,14 +28,14 @@ defmodule ConfigCat.API.ReqAPITest do
 
     test "handles read timeout option" do
       timeout = 10
-      request = ReqAPI.build_request(@url, [], recv_timeout: timeout)
+      request = ReqAPI.build_request(@url, [], read_timeout_milliseconds: timeout)
 
       assert Request.get_option(request, :receive_timeout) == timeout
     end
 
     test "handles connection timeout option" do
       timeout = 15
-      request = ReqAPI.build_request(@url, [], timeout: timeout)
+      request = ReqAPI.build_request(@url, [], connect_timeout_milliseconds: timeout)
 
       connect_options = Request.get_option(request, :connect_options, [])
       assert connect_options[:timeout] == timeout
@@ -43,7 +43,7 @@ defmodule ConfigCat.API.ReqAPITest do
 
     test "handles simple proxy" do
       proxy_url = "https://example.com"
-      request = ReqAPI.build_request(@url, [], proxy: proxy_url)
+      request = ReqAPI.build_request(@url, [], http_proxy: proxy_url)
 
       connect_options = Request.get_option(request, :connect_options, [])
       assert connect_options[:proxy] == {:https, "example.com", 443, []}
@@ -51,7 +51,7 @@ defmodule ConfigCat.API.ReqAPITest do
 
     test "handles proxy with custom port" do
       proxy_url = "https://example.com:1234"
-      request = ReqAPI.build_request(@url, [], proxy: proxy_url)
+      request = ReqAPI.build_request(@url, [], http_proxy: proxy_url)
 
       connect_options = Request.get_option(request, :connect_options, [])
       assert connect_options[:proxy] == {:https, "example.com", 1234, []}
@@ -59,7 +59,7 @@ defmodule ConfigCat.API.ReqAPITest do
 
     test "handles proxy with username/password" do
       proxy_url = "https://user:pass@example.com"
-      request = ReqAPI.build_request(@url, [], proxy: proxy_url)
+      request = ReqAPI.build_request(@url, [], http_proxy: proxy_url)
 
       connect_options = Request.get_option(request, :connect_options, [])
       assert connect_options[:proxy] == {:https, "example.com", 443, []}
@@ -71,7 +71,13 @@ defmodule ConfigCat.API.ReqAPITest do
       receive_timeout = 8
       timeout = 12
       proxy_url = "https://user:pass@example.com:1234"
-      request = ReqAPI.build_request(@url, [], proxy: proxy_url, recv_timeout: receive_timeout, timeout: timeout)
+
+      request =
+        ReqAPI.build_request(@url, [],
+          connect_timeout_milliseconds: timeout,
+          http_proxy: proxy_url,
+          read_timeout_milliseconds: receive_timeout
+        )
 
       connect_options = Request.get_option(request, :connect_options, [])
       assert Request.get_option(request, :receive_timeout) == receive_timeout

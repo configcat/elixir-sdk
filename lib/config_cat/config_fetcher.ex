@@ -208,14 +208,9 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp http_options(%State{} = state) do
-    options =
-      Map.take(state, [:http_proxy, :connect_timeout_milliseconds, :read_timeout_milliseconds])
-
-    Enum.map(options, fn
-      {:http_proxy, value} -> {:proxy, value}
-      {:connect_timeout_milliseconds, value} -> {:timeout, value}
-      {:read_timeout_milliseconds, value} -> {:recv_timeout, value}
-    end)
+    state
+    |> Map.take([:connect_timeout_milliseconds, :http_proxy, :read_timeout_milliseconds])
+    |> Keyword.new()
   end
 
   # This function is slightly complex, but still reasonably understandable.
