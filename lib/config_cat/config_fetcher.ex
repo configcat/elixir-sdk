@@ -2,7 +2,6 @@ defmodule ConfigCat.ConfigFetcher do
   @moduledoc false
 
   alias ConfigCat.ConfigEntry
-  alias HTTPoison.Response
 
   defmodule FetchError do
     @moduledoc false
@@ -43,7 +42,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   alias ConfigCat.ConfigEntry
   alias ConfigCat.ConfigFetcher
   alias ConfigCat.ConfigFetcher.FetchError
-  alias HTTPoison.Response
+  alias Req.Response
 
   require ConfigCat.ConfigCatLogger, as: ConfigCatLogger
   require ConfigCat.Constants, as: Constants
@@ -54,7 +53,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     use TypedStruct
 
     typedstruct enforce: true do
-      field :api, module(), default: ConfigCat.API
+      field :api, module(), default: ConfigCat.API.ReqAPI
       field :base_url, String.t()
       field :callers, [GenServer.from()], default: []
       field :connect_timeout_milliseconds, non_neg_integer(), default: 8_000
@@ -209,26 +208,21 @@ defmodule ConfigCat.CacheControlConfigFetcher do
   end
 
   defp http_options(%State{} = state) do
-    options =
-      Map.take(state, [:http_proxy, :connect_timeout_milliseconds, :read_timeout_milliseconds])
-
-    Enum.map(options, fn
-      {:http_proxy, value} -> {:proxy, value}
-      {:connect_timeout_milliseconds, value} -> {:timeout, value}
-      {:read_timeout_milliseconds, value} -> {:recv_timeout, value}
-    end)
+    state
+    |> Map.take([:connect_timeout_milliseconds, :http_proxy, :read_timeout_milliseconds])
+    |> Keyword.new()
   end
 
   # This function is slightly complex, but still reasonably understandable.
   # Breaking it up doesn't seem like it will help much.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  defp handle_response(%Response{status_code: code, body: raw_config, headers: headers}, %State{} = state, etag)
+  defp handle_response(%Response{status: code, body: raw_config} = response, %State{} = state, etag)
        when code >= 200 and code < 300 do
-    ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(headers)}")
+    ConfigCatLogger.debug("ConfigCat configuration json fetch response code: #{code} Cached: #{extract_etag(response)}")
 
     with {:ok, decoded_config} <- Jason.decode(raw_config),
          config = Config.inline_salt_and_segments(decoded_config),
-         new_etag = extract_etag(headers),
+         new_etag = extract_etag(response),
          %{base_url: new_base_url, custom_endpoint?: custom_endpoint?, redirects: redirects} <-
            state do
       preferences = Config.preferences(config)
@@ -282,11 +276,11 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     end
   end
 
-  defp handle_response(%Response{status_code: 304}, %State{} = state, _etag) do
+  defp handle_response(%Response{status: 304}, %State{} = state, _etag) do
     {:ok, :unchanged, state}
   end
 
-  defp handle_response(%Response{status_code: status} = response, %State{} = state, _etag) when status in [403, 404] do
+  defp handle_response(%Response{status: status} = response, %State{} = state, _etag) when status in [403, 404] do
     ConfigCatLogger.error(
       "Your SDK Key seems to be wrong. You can find the valid SDKKey at https://app.configcat.com/sdkkey. Received unexpected response: #{inspect(response)}",
       event_id: 1100
@@ -308,7 +302,7 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     {:error, error, state}
   end
 
-  defp handle_error({:error, %HTTPoison.Error{reason: :checkout_timeout} = error}, %State{} = state) do
+  defp handle_error({:error, %Req.TransportError{reason: :timeout} = error}, %State{} = state) do
     ConfigCatLogger.error(
       "Request timed out while trying to fetch config JSON. Timeout values: [connect: #{state.connect_timeout_milliseconds}ms, read: #{state.read_timeout_milliseconds}ms]",
       event_id: 1102
@@ -329,10 +323,10 @@ defmodule ConfigCat.CacheControlConfigFetcher do
     FetchError.exception(reason: error, transient?: true)
   end
 
-  defp extract_etag(headers) do
-    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "etag" end) do
-      nil -> nil
-      {_key, value} -> value
+  defp extract_etag(%Response{} = response) do
+    case Response.get_header(response, "etag") do
+      [] -> nil
+      [etag] -> etag
     end
   end
 end
