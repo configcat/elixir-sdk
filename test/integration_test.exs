@@ -165,6 +165,36 @@ defmodule ConfigCat.IntegrationTest do
              "default value"
   end
 
+  @tag capture_log: true
+  @tag skip:
+         unless(
+           System.get_env("CONFIGCAT_RUN_PROXY_TEST") in ["1", "true", "TRUE"],
+           do: "set CONFIGCAT_RUN_PROXY_TEST=true to enable proxy integration test"
+         )
+  test "fetches config through proxy" do
+    # Run a local Squid proxy for this test:
+    # docker run -d --name squid-container -e TZ=UTC -p 3128:3128 ubuntu/squid:5.2-22.04_beta
+    #
+    # Verify the proxy:
+    # curl --proxy localhost:3128 https://cdn-global.configcat.com/configuration-files/PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A/config_v6.json
+    #
+    # Run the test:
+    # CONFIGCAT_RUN_PROXY_TEST=true mix test --no-deps-check test/integration_test.exs
+    proxy_sdk_key = "PKDVCLf-Hq-h-kCzMp-L7Q/psuH7BGHoUmdONrzzUOY7A"
+    proxy_url = System.get_env("CONFIGCAT_PROXY_URL") || "http://localhost:3128"
+
+    {:ok, client} =
+      start(
+        proxy_sdk_key,
+        cache_policy: CachePolicy.manual(),
+        http_proxy: proxy_url
+      )
+
+    :ok = ConfigCat.force_refresh(client: client)
+
+    assert ConfigCat.get_value("stringDefaultCat", "", client: client) == "Cat"
+  end
+
   defp start(sdk_key, options \\ []) do
     sdk_key
     |> Cache.generate_key()
